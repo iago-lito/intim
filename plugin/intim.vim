@@ -259,21 +259,34 @@ endfunction
 " Maps:
 " Provide user mapping opportunities "{{{
 
-" Declare the <Plug> specific maps "
-nnoremap <unique> <script> <Plug>IntimLaunchSession <SID>LaunchSession
-nnoremap <unique> <script> <Plug>IntimEndSession <SID>EndSession
+" Convenience macro for declaring and guarding default maps: "{{{
+function! s:declareMap(type, name, effect, default)
+    " Declare the <Plug> specific map prefixed with Intim-
+    execute a:type . "noremap <unique> <script> <Plug>Intim" . a:name
+                \. " <SID>" . a:name
+    " Explicit its effect:
+    execute a:type . "noremap <SID>" . a:name . " " . a:effect
+    " Guard and set the default map we are offering:
+    execute "if !hasmapto('<Plug>Intim" . a:name . "')\n"
+        \ .a:type. "map <unique> " . a:default . " <Plug>Intim" . a:name . "\n"
+        \ . "endif"
+endfunction
+"}}}
 
-" Define them as call to this script's functions
-nnoremap <SID>LaunchSession :call <SID>LaunchSession()<cr>
-nnoremap <SID>EndSession    :call <SID>EndSession()<cr>
+" Launch the tmuxed session
+call s:declareMap('n', 'LaunchSession',
+            \ ":call <SID>LaunchSession()<cr>",
+            \ "<F10>")
 
-" And set the default maps (without interfering with user's preferences)
-if !hasmapto("<Plug>IntimLaunchSession")
-    nmap <unique> <F10> <Plug>IntimLaunchSession
-endif
-if !hasmapto("<Plug>IntimEndSession")
-    nmap <unique> <F2> <Plug>IntimEndSession
-endif
+" End the tmuxed session
+call s:declareMap('n', 'EndSession',
+            \ ":call <SID>EndSession()<cr>",
+            \ "<F2>")
+
+" Send keyboard interrupt to the session
+call s:declareMap('n', 'Interrupt',
+            \ ":call <SID>SendText('c-c')<cr>",
+            \ "<c-c>")
 
 "}}}
 
