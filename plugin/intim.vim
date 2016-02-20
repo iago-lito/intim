@@ -33,6 +33,8 @@ let g:loaded_intim = 1
 "   - if possible and implemented (R, Python), easy access to help pages within
 "     Vim
 "   - if possible and implemented (R, Python), easy entering loops for debugging
+"   - send all term signals supported by Tmux, in particular <c-c> and <c-d>
+"   - quit and restart vim without terminating the session
 " Difficulties:
 "   - everything is mixed up for now because I also use a lot of custom scripts
 "     to handle my windows, integrate my own vim tricks, etc. I'll try to sort
@@ -57,62 +59,177 @@ let g:loaded_intim = 1
 " Here we go.
 
 " Options:
+
+" Convenience macro for guarding global options
+function! s:declareOption(name, default) "{{{
+    execute "if !exists('" . a:name . "')\n"
+        \ . "    let " . a:name . " = " . a:default . "\n"
+        \ . "endif"
+endfunction
+"}}}
+
 " For now, everything is designed for only ONE tmux session at a time
 " Tmux session name
-let g:intim_sessionName = "IntimSession"
+call s:declareOption('g:intim_sessionName', "'IntimSession'")
 " Which terminal to use?
-let g:intim_terminal = "gnome-terminal"
-" Shell command to execute after having opened the new terminal. Intent: call a
-" custom script (I use it for placing, (un)decorating, marking the terminal).
-" Silent if empty
-let g:intim_postLaunchCommand = ""
+call s:declareOption('g:intim_terminal', "'gnome-terminal'")
+" Language of the interpreter (e.g. `python`)
+" This string will be the key for choosing which methods to use (adapted to each
+" supported language) and which options to read.
+" Examples : 'default', 'python', 'R', 'LaTeX', 'bash' + user-defined
+call s:declareOption('g:intim_language', "'default'")
 
-" Utilities: "{{{
+" From now on, Each option is stored as a dictionnary entry whose key is the
+" language.
+
+" Convenience macro for declaring the default dictionnary options without
+" overwriting user's choices:
+function! s:declareDicoOption(name, default) "{{{
+    execute "if !exists('" . a:name . "')\n"
+        \ . "    let " . a:name . " = {'default': " . a:default . "}\n"
+        \ . "else\n"
+        \ . "    if !has_key(" . a:name . ", 'default')\n"
+        \ . "        let " . a:name . "['default'] = " . a:default . "\n"
+        \ . "    endif\n"
+        \ . "endif\n"
+endfunction
+"}}}
+
+" Shell command to execute right after having opened the new terminal. Intent:
+" call a custom script (I use it for placing, (un)decorating, marking the
+" terminal). One string. Silent if empty.
+call s:declareDicoOption('g:intim_postLaunchCommand', '[]')
+
+" First shell commands to execute in the session before invoking the
+" interpreter. Intent: set the interpreter environment (I use it for cd-ing to
+" my place, checking files). User's custom aliases should be available here.
+" List of strings. One command per string. Silent if empty.
+call s:declareDicoOption('g:intim_preInvokeCommands', '["cd ~"]')
+
+" Interpreter to invoke (e.g. `bpython`)
+call s:declareDicoOption('g:intim_invokeCommand', '[]')
+
+" First shell commands to execute in the session before invoking the
+" interpreter. Intent: set the interpreter environment (I use it for cd-ing to
+" my place, checking files). User's custom aliases should be available here.
+" List of strings. One command per string. Silent if empty.
+call s:declareDicoOption('g:intim_postInvokeCommands', '[]')
+
+
+" Read a particular option from a dictionnary or return the default one
+function! s:readOption(dico) "{{{
+    if has_key(a:dico, g:intim_language)
+        return a:dico[g:intim_language]
+    else
+        return a:dico['default']
+    endif
+endfunction
+"}}}
+
 " send a command to the system unless it is empty:
-function! s:System(command)
+function! s:System(command) "{{{
     if !empty(a:command)
         call system(a:command)
     endif
 endfunction
 "}}}
 
-" Keep track of an existing opened session:
-let g:intim_sessionOpen = 0
+" Check whether the session is opened or not:
+function! s:isSessionOpen() "{{{
+    " build shell command to query tmux:
+    let query = "tmux ls 2> /dev/null | grep '^" . g:intim_sessionName . ":' -q;echo $?"
+    " ask the system
+    let answer = systemlist(query)
+    " interpret the answer
+    return !answer[0]
+endfunction
+"}}}
 
 " Launch a new tmuxed session
-function! s:LaunchSession()
+function! s:LaunchSession() "{{{
     " Don't try to open it twice
-    if g:intim_sessionOpen
+    if s:isSessionOpen()
         echom "Intim session seems already opened"
     else
         " build the launching command: term -e 'tmux new -s sname' &
         let launchCommand = g:intim_terminal
                     \ . " -e 'tmux new -s " . g:intim_sessionName . "' &"
         " send the command
-        call s:System(launchCommand)
+        call system(launchCommand)
         " + send additionnal command if user needs it
-        call s:System(g:intim_postLaunchCommand)
+        call s:System(s:readOption(g:intim_postLaunchCommand))
+        " dirty wait for the session to be ready:
+        let timeStep = 300 " miliseconds
+        let maxWait = 3000
+        let actualWait = 0
+        while !s:isSessionOpen()
+            execute "sleep " . timeStep . "m"
+            let actualWait += timeStep
+            if actualWait > maxWait
+                echom "Too long for an Intim launching wait. Aborting."
+                return
+            endif
+        endwhile
+        " prepare invocation
+        call s:Send(s:readOption(g:intim_preInvokeCommands))
+        " invoke the interpreter
+        call s:Send(s:readOption(g:intim_invokeCommand))
+        " initiate the interpreter
+        call s:Send(s:readOption(g:intim_postInvokeCommands))
         " did everything go well?
-        let g:intim_sessionOpen = 1
         echom "Intim session launched"
     endif
 endfunction
+"}}}
 
 " End the tmuxed session
-function! s:EndSession()
+function! s:EndSession() "{{{
     " Don't try to end it twice
-    if g:intim_sessionOpen
+    if s:isSessionOpen()
         " build the end command: tmux kill-session -t sname
         let launchCommand = "tmux kill-session -t " . g:intim_sessionName
         " send the command
         call s:System(launchCommand)
         " did everything go well?
-        let g:intim_sessionOpen = 0
         echom "Intim session ended"
     else
         echom "Intim session seems not launched"
     endif
 endfunction
+"}}}
+
+" send plain text to the Tmuxed session unless it is empty
+function! s:SendText(text) "{{{
+    if !empty(a:text)
+        " build the command: tmux send -t sname TEXT
+        let c = "tmux send -t " . g:intim_sessionName . " " . a:text
+        call system(c)
+    endif
+endfunction
+"}}}
+
+" send a neat command to the Tmuxed session. `command` is either:
+"   - a string, sent as a command, silent if empty
+"   - a list of strings, sent as successive commands, silent if empty
+function! s:Send(command) "{{{
+
+    " Recursive call for lists:
+    if type(a:command) == type([])
+        for c in a:command
+            call s:Send(c)
+        endfor
+        return
+    endif
+
+    " main code for strings:
+    " prepare the text for SendText: "command" ENTER
+    if !empty(a:command)
+        let text = '"' . a:command . '" ENTER'
+        call s:SendText(text)
+    endif
+
+endfunction
+"}}}
 
 " Now map these to something cool: "{{{
 " Set the <Plug> specific maps
@@ -129,6 +246,13 @@ if !hasmapto("<Plug>IntimEndSession")
     nmap <unique> <F2> <Plug>IntimEndSession
 endif
 "}}}
+
+" Provide wrappers to methods:
+if !exists('*IntimSend')
+    function IntimSend(commands)
+        call s:Send(a:commands)
+    endfunction
+endif
 
 " lines for handling line continuation, according to :help write-plugin<CR> "{{{
 let &cpo = s:save_cpo
