@@ -295,9 +295,10 @@ endfunction
 "}}}
 
 " Send the current selection as multiple lines
-function! s:SendSelection() "{{{
+function! s:SendSelection(raw) "{{{
+    " (this is the `raw` content of the selection)
     " get each line of the selection in a different list item
-    let selection = split(@*, '\n')
+    let selection = split(a:raw, '\n')
     " then send them all!
     for line in selection
         call s:Send(line)
@@ -313,7 +314,7 @@ endfunction
 "}}}
 
 " Send a chunk by sinking it to a temporary file
-function! s:SendChunk() "{{{
+function! s:SendChunk(raw) "{{{
 
     " guard: if language is not set, we cannot source a chunk
     if s:language() == 'default'
@@ -330,12 +331,11 @@ function! s:SendChunk() "{{{
     endif
 
     " retrieve current selected lines:
-    let raw = @*
     " python-specific: keep a minimal indent not to make the interpreter grumble
     if s:language() == 'python'
-        let selection = s:MinimalIndent(raw)
+        let selection = s:MinimalIndent(a:raw)
     else
-        let selection = split(raw, '\n')
+        let selection = split(a:raw, '\n')
     endif
     " write this to the file
     call writefile(selection, file)
@@ -390,6 +390,22 @@ endfun
 "}}}
 
 "}}}
+
+" Send the whole script as saved on the disk
+function! s:SendFile() "{{{
+    let file = resolve(expand('%:p'))
+    call s:Send(s:sourceCommand(file))
+endfunction
+"}}}
+
+" Send all lines (file might not be saved):
+function! s:SendAll() "{{{
+    let all = getline(0, line('$'))
+    let raw = join(all, "\n")
+    call s:SendChunk(raw)
+endfunction
+"}}}
+
 
 "}}}
 
@@ -460,27 +476,37 @@ call s:declareMap('n', 'SendWord',
 
 " Send selection as multiple lines, without loosing it
 call s:declareMap('v', 'StaticSendSelection',
-            \ "<esc>:call <SID>SendSelection()<cr>gv",
+            \ "<esc>:call <SID>SendSelection(@*)<cr>gv",
             \ "c<space>")
 " (for an obscure reason, the function is called twice from visual mode, hence
 " the <esc> and gv)
 
 " Send selection as multiple lines then jump to next
 call s:declareMap('v', 'SendSelection',
-            \ "<esc>:call <SID>SendSelection()<cr>"
+            \ "<esc>:call <SID>SendSelection(@*)<cr>"
             \ . ":call <SID>NextScriptLine()<cr>",
             \ "")
 
 " Send chunk and keep it
 call s:declareMap('v', 'StaticSendChunk',
-            \ "<esc>:call <SID>SendChunk()<cr>gv",
+            \ "<esc>:call <SID>SendChunk(@*)<cr>gv",
             \ ",<space>")
 
 " Send chunk and move on
 call s:declareMap('v', 'SendChunk',
-            \ "<esc>:call <SID>SendChunk()<cr>"
+            \ "<esc>:call <SID>SendChunk(@*)<cr>"
             \ . ":call <SID>NextScriptLine()<cr>",
             \ "<space>")
+
+" Send the whole script
+call s:declareMap('n', 'SendFile',
+            \ ":call <SID>SendFile()<cr>",
+            \ "")
+
+" Send all lines as a chunk
+call s:declareMap('n', 'SendAll',
+            \ ":call <SID>SendAll()<cr>",
+            \ "a<space><space>")
 
 "}}}
 
