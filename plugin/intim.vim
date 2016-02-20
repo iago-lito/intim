@@ -135,7 +135,6 @@ endfunction
 
 "}}}
 
-
 " TmuxSession:
 " Open and close the session "{{{
 
@@ -230,6 +229,12 @@ function! s:SendText(text) "{{{
 endfunction
 "}}}
 
+" Convenience for sending an empty line
+function! s:SendEmpty() "{{{
+    call s:SendText('ENTER')
+endfunction
+"}}}
+
 " send a neat command to the Tmuxed session. `command` is either:
 "   - a string, sent as a command, silent if empty
 "   - a list of strings, sent as successive commands, silent if empty
@@ -253,6 +258,59 @@ function! s:Send(command) "{{{
 endfunction
 "}}}
 
+" Send the current script line to the session
+function! s:SendLine() "{{{
+    let line = getline('.')
+    " if the line is empty, send an empty command
+    if empty(line)
+        call s:SendEmpty()
+    else
+        call s:Send(line)
+    endif
+endfunction
+"}}}
+
+" Send the current word to the session
+function! s:SendWord() "{{{
+    call s:Send(expand('<cword>'))
+endfunction
+"}}}
+
+" Send the current selection as multiple lines
+function! s:SendSelection() "{{{
+    " get each line of the selection in a different list item
+    let selection = split(@*, '\n')
+    " then send them all!
+    for line in selection
+        call s:Send(line)
+    endfor
+    " python-specific: if the last line was empty, better not to ignore it
+    " because the interpreter might still be waiting for it
+    if g:intim_language == 'python'
+        if match(selection[-1], '^\s*$') == 0
+            call s:SendEmpty()
+        endif
+    endif
+endfunction
+"}}}
+
+"}}}
+
+"}}}
+
+" Misc:
+" Not sorted yet "{{{
+" go to the next line of script (skip comments and empty lines)
+function! s:NextScriptLine() "{{{
+    " plain regex search
+    call search(s:readOption(s:regexNextLine), 'W')
+endfunction
+
+" The latter function depends on this data:
+let s:regexNextLine = {'default': "^.+$",
+                    \  'python': "^\\(\\s*#\\)\\@!.",
+                    \  'R':      "^\\(\\s*#\\)\\@!."}
+"}}}
 "}}}
 
 
@@ -287,6 +345,34 @@ call s:declareMap('n', 'EndSession',
 call s:declareMap('n', 'Interrupt',
             \ ":call <SID>SendText('c-c')<cr>",
             \ "<c-c>")
+
+" Send line and jump to the next
+call s:declareMap('n', 'SendLine',
+            \ ":call <SID>SendLine()<cr>:call <SID>NextScriptLine()<cr>",
+            \ "<space>")
+
+" Send line static
+call s:declareMap('n', 'StaticSendLine',
+            \ ":call <SID>SendLine()<cr>",
+            \ "c<space>")
+
+" Send word under cursor
+call s:declareMap('n', 'SendWord',
+            \ ":call <SID>SendWord()<cr>",
+            \ ",<space>")
+
+" Send selection as multiple lines, without loosing it
+call s:declareMap('v', 'StaticSendSelection',
+            \ "<esc>:call <SID>SendSelection()<cr>gv",
+            \ ",<space>")
+" (for an obscure reason, the function is called twice from visual mode, hence
+" the <esc> and gv)
+
+" Send selection as multiple lines then jump to next
+call s:declareMap('v', 'SendSelection',
+            \ "<esc>:call <SID>SendSelection()<cr>"
+            \ . ":call <SID>NextScriptLine()<cr>",
+            \ "<space>")
 
 "}}}
 
