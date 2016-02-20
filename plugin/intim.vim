@@ -58,8 +58,11 @@ let g:loaded_intim = 1
 
 " Here we go.
 
-" Options:
 
+" Options:
+" Define here user's options "{{{
+
+" Very global options: "{{{
 " Convenience macro for guarding global options
 function! s:declareOption(name, default) "{{{
     execute "if !exists('" . a:name . "')\n"
@@ -79,6 +82,9 @@ call s:declareOption('g:intim_terminal', "'gnome-terminal'")
 " Examples : 'default', 'python', 'R', 'LaTeX', 'bash' + user-defined
 call s:declareOption('g:intim_language', "'default'")
 
+"}}}
+
+" Options per language:  "{{{
 " From now on, Each option is stored as a dictionnary entry whose key is the
 " language.
 
@@ -115,7 +121,6 @@ call s:declareDicoOption('g:intim_invokeCommand', '[]')
 " List of strings. One command per string. Silent if empty.
 call s:declareDicoOption('g:intim_postInvokeCommands', '[]')
 
-
 " Read a particular option from a dictionnary or return the default one
 function! s:readOption(dico) "{{{
     if has_key(a:dico, g:intim_language)
@@ -125,6 +130,14 @@ function! s:readOption(dico) "{{{
     endif
 endfunction
 "}}}
+
+"}}}
+
+"}}}
+
+
+" TmuxSession:
+" Open and close the session "{{{
 
 " send a command to the system unless it is empty:
 function! s:System(command) "{{{
@@ -198,8 +211,17 @@ function! s:EndSession() "{{{
 endfunction
 "}}}
 
+"}}}
+
+" SendToSession:
+" Pass text and commands and signals to the session "{{{
+
 " send plain text to the Tmuxed session unless it is empty
 function! s:SendText(text) "{{{
+    if !s:isSessionOpen()
+        echom "No Intim session open."
+        return
+    endif
     if !empty(a:text)
         " build the command: tmux send -t sname TEXT
         let c = "tmux send -t " . g:intim_sessionName . " " . a:text
@@ -231,13 +253,20 @@ function! s:Send(command) "{{{
 endfunction
 "}}}
 
-" Now map these to something cool: "{{{
-" Set the <Plug> specific maps
+"}}}
+
+
+" Maps:
+" Provide user mapping opportunities "{{{
+
+" Declare the <Plug> specific maps "
 nnoremap <unique> <script> <Plug>IntimLaunchSession <SID>LaunchSession
 nnoremap <unique> <script> <Plug>IntimEndSession <SID>EndSession
-" Set the calls to the functions, local to this script
+
+" Define them as call to this script's functions
 nnoremap <SID>LaunchSession :call <SID>LaunchSession()<cr>
 nnoremap <SID>EndSession    :call <SID>EndSession()<cr>
+
 " And set the default maps (without interfering with user's preferences)
 if !hasmapto("<Plug>IntimLaunchSession")
     nmap <unique> <F10> <Plug>IntimLaunchSession
@@ -245,14 +274,21 @@ endif
 if !hasmapto("<Plug>IntimEndSession")
     nmap <unique> <F2> <Plug>IntimEndSession
 endif
+
 "}}}
 
-" Provide wrappers to methods:
+" Methods:
+" Provide user function call opportunities "{{{
+
+" wrappers to methods:
 if !exists('*IntimSend')
     function IntimSend(commands)
         call s:Send(a:commands)
     endfunction
 endif
+
+"}}}
+
 
 " lines for handling line continuation, according to :help write-plugin<CR> "{{{
 let &cpo = s:save_cpo
