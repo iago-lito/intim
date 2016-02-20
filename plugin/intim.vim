@@ -58,29 +58,43 @@ let g:loaded_intim = 1
 
 " Here we go.
 
+" For now, everything is designed for only ONE tmux session at a time
+
+" Absolute path to this plugin: http://stackoverflow.com/a/18734557/3719101
+let s:path = fnamemodify(resolve(expand('<sfile>:p')), ':h:h')
+let g:intim_path = s:path
+
 
 " Options:
 " Define here user's options "{{{
 
 " Very global options: "{{{
 " Convenience macro for guarding global options
-function! s:declareOption(name, default) "{{{
+function! s:declareOption(name, default, shorter) "{{{
     execute "if !exists('" . a:name . "')\n"
         \ . "    let " . a:name . " = " . a:default . "\n"
         \ . "endif"
+    " convenience shortcut for this script
+    execute "function! " . a:shorter . "()\n"
+        \ . "    return " . a:name . "\n"
+        \ . "endfunction"
 endfunction
 "}}}
 
-" For now, everything is designed for only ONE tmux session at a time
 " Tmux session name
-call s:declareOption('g:intim_sessionName', "'IntimSession'")
+call s:declareOption('g:intim_sessionName', "'IntimSession'", 's:sname')
+
 " Which terminal to use?
-call s:declareOption('g:intim_terminal', "'gnome-terminal'")
+call s:declareOption('g:intim_terminal', "'gnome-terminal'", 's:terminal')
+
 " Language of the interpreter (e.g. `python`)
 " This string will be the key for choosing which methods to use (adapted to each
 " supported language) and which options to read.
 " Examples : 'default', 'python', 'R', 'LaTeX', 'bash' + user-defined
-call s:declareOption('g:intim_language', "'default'")
+call s:declareOption('g:intim_language', "'default'", 's:language')
+
+" temporary file to write chunks to and source them from
+call s:declareOption('g:intim_tempchunks', "s:path . '/tmp/chunk'", 's:chunk')
 
 "}}}
 
@@ -90,7 +104,7 @@ call s:declareOption('g:intim_language', "'default'")
 
 " Convenience macro for declaring the default dictionnary options without
 " overwriting user's choices:
-function! s:declareDicoOption(name, default) "{{{
+function! s:declareDicoOption(name, default, shorter) "{{{
     execute "if !exists('" . a:name . "')\n"
         \ . "    let " . a:name . " = {'default': " . a:default . "}\n"
         \ . "else\n"
@@ -98,28 +112,32 @@ function! s:declareDicoOption(name, default) "{{{
         \ . "        let " . a:name . "['default'] = " . a:default . "\n"
         \ . "    endif\n"
         \ . "endif\n"
+    " convenience shortcut for this script:
+    execute "function! " . a:shorter . "()\n"
+        \ . "    return s:readOption(" . a:name . ")\n"
+        \ . "endfunction"
 endfunction
 "}}}
 
 " Shell command to execute right after having opened the new terminal. Intent:
 " call a custom script (I use it for placing, (un)decorating, marking the
 " terminal). One string. Silent if empty.
-call s:declareDicoOption('g:intim_postLaunchCommand', '[]')
+call s:declareDicoOption('g:intim_postLaunchCommand', '[]', 's:postLaunch')
 
 " First shell commands to execute in the session before invoking the
 " interpreter. Intent: set the interpreter environment (I use it for cd-ing to
 " my place, checking files). User's custom aliases should be available here.
 " List of strings. One command per string. Silent if empty.
-call s:declareDicoOption('g:intim_preInvokeCommands', '["cd ~"]')
+call s:declareDicoOption('g:intim_preInvokeCommands', '["cd ~"]', 's:preInvoke')
 
 " Interpreter to invoke (e.g. `bpython`)
-call s:declareDicoOption('g:intim_invokeCommand', '[]')
+call s:declareDicoOption('g:intim_invokeCommand', '[]', 's:invoke')
 
 " First shell commands to execute in the session before invoking the
 " interpreter. Intent: set the interpreter environment (I use it for cd-ing to
 " my place, checking files). User's custom aliases should be available here.
 " List of strings. One command per string. Silent if empty.
-call s:declareDicoOption('g:intim_postInvokeCommands', '[]')
+call s:declareDicoOption('g:intim_postInvokeCommands', '[]', 's:postInvoke')
 
 " Read a particular option from a dictionnary or return the default one
 function! s:readOption(dico) "{{{
@@ -149,7 +167,7 @@ endfunction
 " Check whether the session is opened or not:
 function! s:isSessionOpen() "{{{
     " build shell command to query tmux:
-    let query = "tmux ls 2> /dev/null | grep '^" . g:intim_sessionName . ":' -q;echo $?"
+    let query = "tmux ls 2> /dev/null | grep '^" . s:sname() . ":' -q;echo $?"
     " ask the system
     let answer = systemlist(query)
     " interpret the answer
@@ -164,12 +182,12 @@ function! s:LaunchSession() "{{{
         echom "Intim session seems already opened"
     else
         " build the launching command: term -e 'tmux new -s sname' &
-        let launchCommand = g:intim_terminal
-                    \ . " -e 'tmux new -s " . g:intim_sessionName . "' &"
+        let launchCommand = s:terminal()
+                    \ . " -e 'tmux new -s " . s:sname() . "' &"
         " send the command
         call system(launchCommand)
         " + send additionnal command if user needs it
-        call s:System(s:readOption(g:intim_postLaunchCommand))
+        call s:System(s:postLaunch())
         " dirty wait for the session to be ready:
         let timeStep = 300 " miliseconds
         let maxWait = 3000
@@ -183,11 +201,11 @@ function! s:LaunchSession() "{{{
             endif
         endwhile
         " prepare invocation
-        call s:Send(s:readOption(g:intim_preInvokeCommands))
+        call s:Send(s:preInvoke())
         " invoke the interpreter
-        call s:Send(s:readOption(g:intim_invokeCommand))
+        call s:Send(s:invoke())
         " initiate the interpreter
-        call s:Send(s:readOption(g:intim_postInvokeCommands))
+        call s:Send(s:postInvoke())
         " did everything go well?
         echom "Intim session launched"
     endif
@@ -199,7 +217,7 @@ function! s:EndSession() "{{{
     " Don't try to end it twice
     if s:isSessionOpen()
         " build the end command: tmux kill-session -t sname
-        let launchCommand = "tmux kill-session -t " . g:intim_sessionName
+        let launchCommand = "tmux kill-session -t " . s:sname()
         " send the command
         call s:System(launchCommand)
         " did everything go well?
@@ -223,7 +241,7 @@ function! s:SendText(text) "{{{
     endif
     if !empty(a:text)
         " build the command: tmux send -t sname TEXT
-        let c = "tmux send -t " . g:intim_sessionName . " " . a:text
+        let c = "tmux send -t " . s:sname() . " " . a:text
         call system(c)
     endif
 endfunction
@@ -286,12 +304,89 @@ function! s:SendSelection() "{{{
     endfor
     " python-specific: if the last line was empty, better not to ignore it
     " because the interpreter might still be waiting for it
-    if g:intim_language == 'python'
+    if s:language() == 'python'
         if match(selection[-1], '^\s*$') == 0
             call s:SendEmpty()
         endif
     endif
 endfunction
+"}}}
+
+" Send a chunk by sinking it to a temporary file
+function! s:SendChunk() "{{{
+
+    " guard: if language is not set, we cannot source a chunk
+    if s:language() == 'default'
+        echom "No sourcing chunk without a language. Fall back on line-by-line."
+        call s:SendSelection()
+        return
+    endif
+
+    " first check that temp file exists or create it
+    let file = s:chunk()
+    if !filewritable(file)
+        call system("mkdir -p $(dirname " . file . ")")
+        call system("touch " . file)
+    endif
+
+    " retrieve current selected lines:
+    let raw = @*
+    " python-specific: keep a minimal indent not to make the interpreter grumble
+    if s:language() == 'python'
+        let selection = s:MinimalIndent(raw)
+    else
+        let selection = split(raw, '\n')
+    endif
+    " write this to the file
+    call writefile(selection, file)
+    " source this file from the interpreter:
+    call s:Send(s:sourceCommand(file))
+
+endfunction
+
+" the latter function depends on this data:
+function! s:sourceCommand(file) "{{{
+    " depending on the language, return a command to source a file:
+    let lang = s:language()
+    if lang == 'python'
+        return "exec(open('". a:file ."').read())"
+    elseif lang == 'R'
+        return "base::source('" . a:file . "')"
+    endif
+    echoerr "Intim chunking does not support " . lang . " language yet."
+    return ""
+endfunction
+"}}}
+
+" Unindent text at most without loosing relative indentation
+" http://vi.stackexchange.com/questions/5549/
+function! s:MinimalIndent(expr) "{{{
+    " `expr` is a long multilined expression
+    " this returns expr split into a list (one line per item).. in such a way
+    " that the minimal indentation level is now 0, but the relative indentation
+    " of the lines hasn't changed.
+    let lines = split(a:expr, '\n')
+    " search for the smallest indentation level and record it
+    let smallestLevel = 1 / 0
+    let smallest = ''
+    for line in lines
+        if line != ''
+            let indent = matchstr(line, "^\\s*")
+            let indentLevel = len(indent)
+            if indentLevel < smallestLevel
+                let smallestLevel = indentLevel
+                let smallest = indent
+            endif
+        endif
+    endfor
+    if smallestLevel > 0
+        " Remove the smallest indent to each line
+        for i in range(len(lines))
+            let lines[i] = substitute(lines[i], smallest, '', '')
+        endfor
+    endif
+    return lines
+endfun
 "}}}
 
 "}}}
@@ -324,10 +419,12 @@ function! s:declareMap(type, name, effect, default)
                 \. " <SID>" . a:name
     " Explicit its effect:
     execute a:type . "noremap <SID>" . a:name . " " . a:effect
-    " Guard and set the default map we are offering:
-    execute "if !hasmapto('<Plug>Intim" . a:name . "')\n"
+    " Guard and set the default map we are offering (if we intend offering any)
+    if !empty(a:default)
+        execute "if !hasmapto('<Plug>Intim" . a:name . "')\n"
         \ .a:type. "map <unique> " . a:default . " <Plug>Intim" . a:name . "\n"
         \ . "endif"
+    endif
 endfunction
 "}}}
 
@@ -364,13 +461,24 @@ call s:declareMap('n', 'SendWord',
 " Send selection as multiple lines, without loosing it
 call s:declareMap('v', 'StaticSendSelection',
             \ "<esc>:call <SID>SendSelection()<cr>gv",
-            \ ",<space>")
+            \ "c<space>")
 " (for an obscure reason, the function is called twice from visual mode, hence
 " the <esc> and gv)
 
 " Send selection as multiple lines then jump to next
 call s:declareMap('v', 'SendSelection',
             \ "<esc>:call <SID>SendSelection()<cr>"
+            \ . ":call <SID>NextScriptLine()<cr>",
+            \ "")
+
+" Send chunk and keep it
+call s:declareMap('v', 'StaticSendChunk',
+            \ "<esc>:call <SID>SendChunk()<cr>gv",
+            \ ",<space>")
+
+" Send chunk and move on
+call s:declareMap('v', 'SendChunk',
+            \ "<esc>:call <SID>SendChunk()<cr>"
             \ . ":call <SID>NextScriptLine()<cr>",
             \ "<space>")
 
