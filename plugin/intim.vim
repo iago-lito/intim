@@ -161,6 +161,8 @@ call s:declareDicoOption('g:intim_postInvokeCommands', '[]', 's:postInvoke')
 call s:declareDicoOption('g:intim_hotkeys_nleader', "','", 's:nleader')
 call s:declareDicoOption('g:intim_hotkeys_vleader', "','", 's:vleader')
 call s:declareDicoOption('g:intim_hotkeys_edit_ileader', "','", 's:ieleader')
+call s:declareDicoOption('g:intim_hotkeys_edit_nleader', "'-;'", 's:neleader')
+call s:declareDicoOption('g:intim_hotkeys_edit_vleader', "'-;'", 's:veleader')
 
 " Read a particular option from a dictionnary or return the default one
 function! s:readOption(dico) "{{{
@@ -446,6 +448,22 @@ let s:regexNextLine = {'default': "^.+$",
                     \  'python': "^\\(\\s*#\\)\\@!.",
                     \  'R':      "^\\(\\s*#\\)\\@!."}
 "}}}
+
+" wrap a selection into an expression (not to depend on vim-surround)
+function! s:Wrap(head) "{{{
+    " get the last selected area
+    let [start, end] = [getpos("'<"), getpos("'>")]
+    " to the `end` first before it gets invalid
+    call setpos('.', end)
+    execute "normal! a)"
+    " then add the head
+    call setpos('.', start)
+    execute "normal! i" . a:head . "("
+    " get back to the end if vim can do it
+    execute "normal! %"
+endfunction
+"}}}
+
 "}}}
 
 
@@ -525,8 +543,9 @@ call s:declareMap('n', 'SendAll',
 
 " Hotkeys:
 " Convenient shortcut to wrap pieces of script inside expressions "{{{
-" Define one hotkey map set:
-function! s:DefineHotKey(shortcut, function) "{{{
+" Define one hotkey map set: simple expression: head(selection)
+" TODO: update these for supportig LaTeX, expressions are `\head{selection}`
+function! s:DefineHotKey(shortcut, head) "{{{
     " This function is called only if user wants it and if the current language
     " is relevant. Yet one should check for mappings availability.
     function! CheckAndDeclare(type, map, effect) "{{{
@@ -545,26 +564,33 @@ function! s:DefineHotKey(shortcut, function) "{{{
     endfunction
     "}}}
 
-    " TODO: update these for supportig LaTeX, expressions are `\head{arg}`
 
     " One normal map to send a wrapped word:
     let map = s:nleader() . a:shortcut
     let effect = ":call <SID>Send('"
-                \ . a:function . "(' . expand(\'<cword>\') . ')')<cr>"
+                \ . a:head . "(' . expand(\'<cword>\') . ')')<cr>"
     call CheckAndDeclare('n', map, effect)
 
     " One visual map to send a wrapped selection:
     let map = s:vleader() . a:shortcut
     let effect = "<esc>:call <SID>SendSelection('"
-                \ . a:function . "(' . @* . ')')<cr>gv"
+                \ . a:head . "(' . @* . ')')<cr>gv"
     call CheckAndDeclare('v', map, effect)
 
     " EditBonus: one insertion map working as a small snippet
     let map = s:ieleader() . a:shortcut
-    let effect = a:function . "()<left>"
+    let effect = a:head . "()<left>"
     call CheckAndDeclare('i', map, effect)
 
-    " TODO: same for normal and visual
+    " EditBonus: wrap a word in the script in normal mode
+    let map = s:neleader() . a:shortcut
+    let effect = "viwv:call <SID>Wrap('" . a:head . "')<cr>"
+    call CheckAndDeclare('n', map, effect)
+
+    " EditBonus: wrap a selection in the script in visual mode
+    let map = s:veleader() . a:shortcut
+    let effect = "<esc>:call <SID>Wrap('" . a:head . "')<cr>"
+    call CheckAndDeclare('v', map, effect)
 
 endfunction
 "}}}
@@ -597,7 +623,7 @@ let s:hotkeys = {}
 " Provide user function call opportunities "{{{
 
 " Macro declaring and guarding user wrappers to methods:
-function! s:declareFunctionWrapper(internalname, name) "{{{
+function! s:functionExport(internalname, name) "{{{
     if !exists('*' . a:name)
         " /!\ assumption: only one argument
         execute "function " . a:name . "(arg)\n"
@@ -610,8 +636,8 @@ endfunction
 "}}}
 
 " Prefix them all with Intim-
-call s:declareFunctionWrapper('Send'        , 'IntimSend')
-call s:declareFunctionWrapper('SetLanguage' , 'IntimLanguage')
+call s:functionExport('Send'        , 'IntimSend')
+call s:functionExport('SetLanguage' , 'IntimLanguage')
 
 "}}}
 
