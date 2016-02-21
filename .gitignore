@@ -5,4 +5,5 @@ tmp/*
 commitMessage
 
 # Test the plugin on small scripts:
-tests.py
+pytests.py
+rtests.R

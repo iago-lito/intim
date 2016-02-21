@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2016-02-20
+" Last Change:	2016-02-21
 " Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 " License:      This file is placed under the GNU PublicLicense 3.
 
@@ -91,6 +91,20 @@ call s:declareOption('g:intim_terminal', "'gnome-terminal'", 's:terminal')
 
 " temporary file to write chunks to and source them from
 call s:declareOption('g:intim_tempchunks', "s:path . '/tmp/chunk'", 's:chunk')
+" temporary file to read help in
+call s:declareOption('g:intim_temphelp', "s:path . '/tmp/help'", 's:help')
+" Check if tempfiles can be written to or create'em
+function! s:CheckFile(file) "{{{
+    if !filewritable(a:file)
+        call system("mkdir -p $(dirname " . a:file . ")")
+        call system("touch " . a:file)
+    endif
+    if !filewritable(a:file)
+        echoerr "Intim: can't access " . a:file
+    endif
+endfunction
+"}}}
+
 "}}}
 
 " Options per language:  "{{{
@@ -105,10 +119,11 @@ let s:language = 'default'
 
 " Here is a method for switching language: `should be called or no hotkeys
 function! s:SetLanguage(language) "{{{
+
     " update the information
     let s:language = a:language
-    " reset previous hotkeys
-    call s:UndefineHotkeys()
+
+    " HotKeys:
     " Declare all hotkeys relative to that language
     if exists('g:intim_hotkeys')
         if has_key(g:intim_hotkeys, s:language)
@@ -117,19 +132,27 @@ function! s:SetLanguage(language) "{{{
             endfor
         endif
     endif
+
 endfunction
 "}}}
 
 " Convenience macro for declaring the default dictionnary options without
 " overwriting user's choices:
 function! s:declareDicoOption(name, default, shorter) "{{{
-    execute "if !exists('" . a:name . "')\n"
-        \ . "    let " . a:name . " = {'default': " . a:default . "}\n"
-        \ . "else\n"
-        \ . "    if !has_key(" . a:name . ", 'default')\n"
-        \ . "        let " . a:name . "['default'] = " . a:default . "\n"
-        \ . "    endif\n"
-        \ . "endif\n"
+    if !exists(a:name)
+        " then user has not defined any such option: full default
+        execute "let " . a:name . " = " . string(a:default)
+    else
+        " then user has defined a dictionnary, do not to overwrite these options
+        execute "let users = " . a:name
+        for key in keys(a:default)
+            if !has_key(users, key)
+                let users[key] = a:default[key]
+            endif
+        endfor
+        " the resulting option dictionnary is a merged from both default & users
+        execute "let " . a:name . " = users"
+    endif
     " convenience shortcut for this script:
     execute "function! " . a:shorter . "()\n"
         \ . "    return s:readOption(" . a:name . ")\n"
@@ -140,29 +163,59 @@ endfunction
 " Shell command to execute right after having opened the new terminal. Intent:
 " call a custom script (I use it for placing, (un)decorating, marking the
 " terminal). One string. Silent if empty.
-call s:declareDicoOption('g:intim_postLaunchCommand', '[]', 's:postLaunch')
+call s:declareDicoOption('g:intim_postLaunchCommand', {
+            \ 'default': []
+            \ }, 's:postLaunch')
 
 " First shell commands to execute in the session before invoking the
 " interpreter. Intent: set the interpreter environment (I use it for cd-ing to
 " my place, checking files). User's custom aliases should be available here.
 " List of strings. One command per string. Silent if empty.
-call s:declareDicoOption('g:intim_preInvokeCommands', '["cd ~"]', 's:preInvoke')
+call s:declareDicoOption('g:intim_preInvokeCommands', {
+            \ 'default': "cd ~"
+            \ }, 's:preInvoke')
 
 " Interpreter to invoke (e.g. `bpython`)
-call s:declareDicoOption('g:intim_invokeCommand', '[]', 's:invoke')
+call s:declareDicoOption('g:intim_invokeCommand', {
+            \ 'default' : "",
+            \ 'python'  : "python",
+            \ 'R'       : "R",
+            \ 'bash'    : "bash",
+            \ 'LaTex'   : "",
+            \ }, 's:invoke')
 
 " First shell commands to execute in the session before invoking the
 " interpreter. Intent: set the interpreter environment (I use it for cd-ing to
 " my place, checking files). User's custom aliases should be available here.
 " List of strings. One command per string. Silent if empty.
-call s:declareDicoOption('g:intim_postInvokeCommands', '[]', 's:postInvoke')
+call s:declareDicoOption('g:intim_postInvokeCommands', {
+            \ 'default': ""
+            \ }, 's:postInvoke')
+
+" Help highlighting (default option for languages are set in s:SetLanguage)
+" TODO: make sure those syntax file are neat and available
+call s:declareDicoOption('g:intim_helpSyntax', {
+            \ 'default' : "",
+            \ 'python'  : "pydoc",
+            \ 'R'       : "rdoc",
+            \ }, 's:helpSyntax')
 
 " Leaders for hotkeys
-call s:declareDicoOption('g:intim_hotkeys_nleader', "','", 's:nleader')
-call s:declareDicoOption('g:intim_hotkeys_vleader', "','", 's:vleader')
-call s:declareDicoOption('g:intim_hotkeys_edit_ileader', "','", 's:ieleader')
-call s:declareDicoOption('g:intim_hotkeys_edit_nleader', "'-;'", 's:neleader')
-call s:declareDicoOption('g:intim_hotkeys_edit_vleader', "'-;'", 's:veleader')
+call s:declareDicoOption('g:intim_hotkeys_nleader', {
+            \ 'default': ','
+            \ }, 's:nleader')
+call s:declareDicoOption('g:intim_hotkeys_vleader', {
+            \ 'default': ','
+            \ }, 's:vleader')
+call s:declareDicoOption('g:intim_hotkeys_edit_ileader', {
+            \ 'default': ','
+            \ }, 's:ieleader')
+call s:declareDicoOption('g:intim_hotkeys_edit_nleader', {
+            \ 'default': '-;'
+            \ }, 's:neleader')
+call s:declareDicoOption('g:intim_hotkeys_edit_vleader', {
+            \ 'default': '-;'
+            \ }, 's:veleader')
 
 " Read a particular option from a dictionnary or return the default one
 function! s:readOption(dico) "{{{
@@ -258,6 +311,7 @@ endfunction
 " SendToSession:
 " Pass text and commands and signals to the session "{{{
 
+" BasicSending:
 " send plain text to the Tmuxed session unless it is empty
 function! s:SendText(text) "{{{
     if !s:isSessionOpen()
@@ -271,13 +325,11 @@ function! s:SendText(text) "{{{
     endif
 endfunction
 "}}}
-
 " Convenience for sending an empty line
 function! s:SendEmpty() "{{{
     call s:SendText('ENTER')
 endfunction
 "}}}
-
 " send a neat command to the Tmuxed session. `command` is either:
 "   - a string, sent as a command, silent if empty
 "   - a list of strings, sent as successive commands, silent if empty
@@ -301,6 +353,7 @@ function! s:Send(command) "{{{
 endfunction
 "}}}
 
+" Senders:
 " Send the current script line to the session
 function! s:SendLine() "{{{
     let line = getline('.')
@@ -312,13 +365,11 @@ function! s:SendLine() "{{{
     endif
 endfunction
 "}}}
-
 " Send the current word to the session
 function! s:SendWord() "{{{
     call s:Send(expand('<cword>'))
 endfunction
 "}}}
-
 " Send the current selection as multiple lines
 function! s:SendSelection(raw) "{{{
     " (this is the `raw` content of the selection)
@@ -337,7 +388,6 @@ function! s:SendSelection(raw) "{{{
     endif
 endfunction
 "}}}
-
 " Send a chunk by sinking it to a temporary file
 function! s:SendChunk(raw) "{{{
 
@@ -349,12 +399,9 @@ function! s:SendChunk(raw) "{{{
         return
     endif
 
-    " first check that temp file exists or create it
+    " security
     let file = s:chunk()
-    if !filewritable(file)
-        call system("mkdir -p $(dirname " . file . ")")
-        call system("touch " . file)
-    endif
+    call s:CheckFile(file)
 
     " retrieve current selected lines:
     " python-specific: keep a minimal indent not to make the interpreter grumble
@@ -416,14 +463,12 @@ endfun
 "}}}
 
 "}}}
-
 " Send the whole script as saved on the disk
 function! s:SendFile() "{{{
     let file = resolve(expand('%:p'))
     call s:Send(s:sourceCommand(file))
 endfunction
 "}}}
-
 " Send all lines (file might not be saved):
 function! s:SendAll() "{{{
     let all = getline(0, line('$'))
@@ -432,6 +477,94 @@ function! s:SendAll() "{{{
 endfunction
 "}}}
 
+
+"}}}
+
+" ReadHelp:
+" Access interpreter's man page from within Vim "{{{
+
+function! s:GetHelp(topic) "{{{
+
+    " guard: if language is not set, we cannot source get help
+    if s:language == 'default'
+        echom "Intim: No help without a language."
+        return
+    endif
+
+    " security
+    let file = s:help()
+    call s:CheckFile(file)
+
+    " sink interpreter help page to the help file.. somehow
+    call writefile([], file)
+    call s:SinkHelp(a:topic, file)
+    " dirty wait for this to be done:
+    let timeStep = 300 " miliseconds
+    let maxWait = 3000
+    let actualWait = 0
+    function! s:IsEmpty(file)
+        return systemlist("test -s " . a:file . "; echo $?")[0]
+    endfunction
+    while s:IsEmpty(file)
+        execute "sleep " . timeStep . "m"
+        let actualWait += timeStep
+        if actualWait > maxWait
+            echom "Intim: Too long to get help. Weird. Aborting."
+            return
+        endif
+    endwhile
+    " there are weird ^H, take'em off
+    " TODO: how'da do that in place without an intermediate file?
+    let interm = fnamemodify(file, ':h') . '/tp'
+    " (http://stackoverflow.com/a/1298970/3719101)
+    call system("perl -0pe 's{([^\\x08]+)(\\x08+)}{substr$1,0,-length$2}eg' "
+                \ . file . " > " . interm
+                \ . "; mv " . interm . " " . file . "; rm " . interm)
+
+    " open it in another tab
+    if bufexists(file)
+        execute "bdelete! " . file
+    endif
+    execute "tabnew " . file
+    " decorate it
+    set buftype=nofile
+    set readonly
+    execute "setlocal syntax=" . s:helpSyntax()
+    " there usually are snippets in man pages, which it would be a shame not to
+    " be able to use as yet another script:
+    call s:SetLanguage(s:language)
+
+endfunction
+"}}}
+
+" Write a man page to a file
+function! s:SinkHelp(topic, file) "{{{
+    let help = a:file
+    let chunk = s:chunk()
+    call s:CheckFile(chunk)
+    " build a small script to write help to a file
+    if s:language == 'python'
+        let script  = [
+          \ "import pydoc",
+          \ "with open('" . help . "', 'w') as file:",
+          \ "    print(pydoc.render_doc(" . a:topic . "), file=file)",
+          \ ""]
+    elseif s:language == 'R'
+        let script = [
+          \ "help_file <- as.character(help(" . a:topic . "))",
+          \ "sink('" . help . "')",
+          \ "tools:::Rd2txt(utils:::.getHelpFile(as.character(help_file)))",
+          \ "sink()",
+          \ ""]
+    else
+        echoerr "Intim does not support " . s:language . " help yet."
+    endif
+    " write it to the chunk file
+    call writefile(script, chunk)
+    " source it from the interpreter
+    call s:Send(s:sourceCommand(chunk))
+endfunction
+"}}}
 
 "}}}
 
@@ -470,23 +603,39 @@ endfunction
 " Maps:
 " Provide user mapping opportunities "{{{
 
+" BasicMaps:
+" plain shortcuts to script functions "{{{
+
 " Convenience macro for declaring and guarding default maps: "{{{
 function! s:declareMap(type, name, effect, default)
     " Declare the <Plug> specific map prefixed with Intim-
-    execute a:type . "noremap <unique> <script> <Plug>Intim" . a:name
-                \. " <SID>" . a:name
+    let plug = "<Plug>Intim" . a:name
+    let sid  = "<SID>" . a:name
+    execute a:type . "noremap <unique> <script> " . plug . " " . sid
     " Explicit its effect:
-    execute a:type . "noremap <SID>" . a:name . " " . a:effect
+    execute a:type . "noremap " . sid . " " . a:effect
     " Guard and set the default map we are offering (if we intend offering any)
     if !empty(a:default)
-        execute "if !hasmapto('<Plug>Intim" . a:name . "')\n"
-        \ .a:type. "map <unique> " . a:default . " <Plug>Intim" . a:name . "\n"
-        \ . "endif"
+        " Don't set the default if the user has already a map to this one
+        execute "let userHas = hasmapto('" . plug . " ')"
+        if !userHas
+            " Don't set the default if it somehow overwrites another map
+            execute "let overwrites = !empty(maparg('" . a:default
+                        \ . "', '" . a:type . "'))"
+            if !overwrites
+                execute a:type . "map <unique> " . a:default . " " . plug
+            else
+                " TODO: this is better silent. But what if user doesn't
+                " understand why a mapping is not there? There should be a
+                " special case for hotkeys.
+                " echom "Intim: won't " . a:type . "map " . a:default . " to "
+                        " \ . plug . " because it would overwrite another map."
+            endif
+        endif
     endif
 endfunction
 "}}}
 
-" Basic maps "{{{
 " Launch the tmuxed session
 call s:declareMap('n', 'LaunchSession',
             \ ":call <SID>LaunchSession()<cr>",
@@ -539,80 +688,73 @@ call s:declareMap('n', 'SendFile',
 call s:declareMap('n', 'SendAll',
             \ ":call <SID>SendAll()<cr>",
             \ "a<space><space>")
+
+" Get help about the  word under cursor
+call s:declareMap('n', 'GetHelpWord',
+            \ ":call <SID>GetHelp(expand('<cword>'))<cr>",
+            \ "<F1>")
+" Get help about the selection
+call s:declareMap('v', 'GetHelpSelection',
+            \ "<esc>:call <SID>GetHelp(@*)<cr>",
+            \ "<F1>")
+
 "}}}
 
 " Hotkeys:
 " Convenient shortcut to wrap pieces of script inside expressions "{{{
+
+" Convenience macro guard before mapping anything
+function! s:CheckAndDeclare(type, map, effect) "{{{
+    " Compare the effect to the map already in place. If it is ours or empty,
+    " okay, if not, do not overwrite it. In order to check whether it is ours,
+    " <SID> will have to be expanded into <SNR>X_
+    let already = maparg(a:map, a:type)
+    " adapted from :help SID<cr>
+    let snr = matchstr(expand('<sfile>'), '\zs<SNR>\d\+_\zeCheckAndDeclare$')
+    let actualEffect = substitute(a:effect, '<SID>', snr, 'g')
+    if empty(already)
+        execute a:type . "noremap <unique> <buffer> " . a:map . ' ' . a:effect
+    elseif already != actualEffect
+        echom "Intim: "
+            \ . a:map . " already has a " . a:type . "map, hotkey aborted."
+    endif
+endfunction
+"}}}
+
 " Define one hotkey map set: simple expression: head(selection)
 " TODO: update these for supportig LaTeX, expressions are `\head{selection}`
 function! s:DefineHotKey(shortcut, head) "{{{
     " This function is called only if user wants it and if the current language
     " is relevant. Yet one should check for mappings availability.
-    function! CheckAndDeclare(type, map, effect) "{{{
-        if empty(maparg(a:map, a:type))
-            execute a:type . "noremap <unique> <buffer> "
-                         \ . a:map . ' ' . a:effect
-        else
-            echom "Intim: "
-                \ . a:map . " already has a " . a:type . "map, hotkey aborted."
-        endif
-        " keep a record:
-        if !has_key(s:hotkeys, a:type)
-            let s:hotkeys[a:type] = []
-        endif
-        let s:hotkeys[a:type] += [a:map, a:effect]
-    endfunction
-    "}}}
-
 
     " One normal map to send a wrapped word:
     let map = s:nleader() . a:shortcut
     let effect = ":call <SID>Send('"
                 \ . a:head . "(' . expand(\'<cword>\') . ')')<cr>"
-    call CheckAndDeclare('n', map, effect)
+    call s:CheckAndDeclare('n', map, effect)
 
     " One visual map to send a wrapped selection:
     let map = s:vleader() . a:shortcut
     let effect = "<esc>:call <SID>SendSelection('"
                 \ . a:head . "(' . @* . ')')<cr>gv"
-    call CheckAndDeclare('v', map, effect)
+    call s:CheckAndDeclare('v', map, effect)
 
     " EditBonus: one insertion map working as a small snippet
     let map = s:ieleader() . a:shortcut
     let effect = a:head . "()<left>"
-    call CheckAndDeclare('i', map, effect)
+    call s:CheckAndDeclare('i', map, effect)
 
     " EditBonus: wrap a word in the script in normal mode
     let map = s:neleader() . a:shortcut
     let effect = "viwv:call <SID>Wrap('" . a:head . "')<cr>"
-    call CheckAndDeclare('n', map, effect)
+    call s:CheckAndDeclare('n', map, effect)
 
     " EditBonus: wrap a selection in the script in visual mode
     let map = s:veleader() . a:shortcut
     let effect = "<esc>:call <SID>Wrap('" . a:head . "')<cr>"
-    call CheckAndDeclare('v', map, effect)
+    call s:CheckAndDeclare('v', map, effect)
 
 endfunction
-"}}}
-
-" Undefine all hotkey maps:
-function! s:UndefineHotkeys() "{{{
-    for type in keys(s:hotkeys)
-        for hotkey in s:hotkeys[type]
-            " Check that the map hasn't changed since or do not unmap it
-            if maparg(hotkey[0], type) == hotkey[1]
-                execute type . "unmap! " . hotkey[0]
-            else
-                echom "Intim: " . type . "map " . hotkey[0] . " has changed "
-                     \ . "since I've set it. I'll let you unmap it yourself."
-            endif
-        endfor
-    endfor
-    let s:hotkeys = {}
-endfunction
-" The latter function relies on this data, provided by s:DefineHotKey
-" entries: {type: [[map, effect], [map, effect] ..]}
-let s:hotkeys = {}
 "}}}
 
 "}}}
