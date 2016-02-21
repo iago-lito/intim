@@ -27,6 +27,8 @@ let g:loaded_intim = 1
 "   - convenient wrapping of passed script into custom functions: delete a
 "     variable, get lenght of a structure, analyse and plot a vector, open and
 "     close graphical windows without leaving Vim
+"   - a few convenience edition trick consistent with the latter ones, refered
+"     to as `EditBonus` in this script
 "   - if possible and implemented (R, Python), use interpreter's introspection
 "     for dynamic syntax highlighting within Vim (change variable colors
 "     depending on whether they are declared or not, depending on their type..)
@@ -87,20 +89,36 @@ call s:declareOption('g:intim_sessionName', "'IntimSession'", 's:sname')
 " Which terminal to use?
 call s:declareOption('g:intim_terminal', "'gnome-terminal'", 's:terminal')
 
-" Language of the interpreter (e.g. `python`)
-" This string will be the key for choosing which methods to use (adapted to each
-" supported language) and which options to read.
-" Examples : 'default', 'python', 'R', 'LaTeX', 'bash' + user-defined
-call s:declareOption('g:intim_language', "'default'", 's:language')
-
 " temporary file to write chunks to and source them from
 call s:declareOption('g:intim_tempchunks', "s:path . '/tmp/chunk'", 's:chunk')
-
 "}}}
 
 " Options per language:  "{{{
 " From now on, Each option is stored as a dictionnary entry whose key is the
 " language.
+
+" Language of the interpreter (e.g. `python`)
+" This string will be the key for choosing which methods to use (adapted to each
+" supported language) and which options to read.
+" Examples : 'default', 'python', 'R', 'LaTeX', 'bash' + user-defined
+let s:language = 'default'
+
+" Here is a method for switching language: `should be called or no hotkeys
+function! s:SetLanguage(language) "{{{
+    " update the information
+    let s:language = a:language
+    " reset previous hotkeys
+    call s:UndefineHotkeys()
+    " Declare all hotkeys relative to that language
+    if exists('g:intim_hotkeys')
+        if has_key(g:intim_hotkeys, s:language)
+            for hotkey in g:intim_hotkeys[s:language]
+                call s:DefineHotKey(hotkey[0], hotkey[1])
+            endfor
+        endif
+    endif
+endfunction
+"}}}
 
 " Convenience macro for declaring the default dictionnary options without
 " overwriting user's choices:
@@ -139,10 +157,15 @@ call s:declareDicoOption('g:intim_invokeCommand', '[]', 's:invoke')
 " List of strings. One command per string. Silent if empty.
 call s:declareDicoOption('g:intim_postInvokeCommands', '[]', 's:postInvoke')
 
+" Leaders for hotkeys
+call s:declareDicoOption('g:intim_hotkeys_nleader', "','", 's:nleader')
+call s:declareDicoOption('g:intim_hotkeys_vleader', "','", 's:vleader')
+call s:declareDicoOption('g:intim_hotkeys_edit_ileader', "','", 's:ieleader')
+
 " Read a particular option from a dictionnary or return the default one
 function! s:readOption(dico) "{{{
-    if has_key(a:dico, g:intim_language)
-        return a:dico[g:intim_language]
+    if has_key(a:dico, s:language)
+        return a:dico[s:language]
     else
         return a:dico['default']
     endif
@@ -305,7 +328,7 @@ function! s:SendSelection(raw) "{{{
     endfor
     " python-specific: if the last line was empty, better not to ignore it
     " because the interpreter might still be waiting for it
-    if s:language() == 'python'
+    if s:language == 'python'
         if match(selection[-1], '^\s*$') == 0
             call s:SendEmpty()
         endif
@@ -317,9 +340,10 @@ endfunction
 function! s:SendChunk(raw) "{{{
 
     " guard: if language is not set, we cannot source a chunk
-    if s:language() == 'default'
-        echom "No sourcing chunk without a language. Fall back on line-by-line."
-        call s:SendSelection()
+    if s:language == 'default'
+        echom "Intim: No sourcing chunk without a language. "
+                    \ . "Fall back on line-by-line."
+        call s:SendSelection(raw)
         return
     endif
 
@@ -332,7 +356,7 @@ function! s:SendChunk(raw) "{{{
 
     " retrieve current selected lines:
     " python-specific: keep a minimal indent not to make the interpreter grumble
-    if s:language() == 'python'
+    if s:language == 'python'
         let selection = s:MinimalIndent(a:raw)
     else
         let selection = split(a:raw, '\n')
@@ -347,7 +371,7 @@ endfunction
 " the latter function depends on this data:
 function! s:sourceCommand(file) "{{{
     " depending on the language, return a command to source a file:
-    let lang = s:language()
+    let lang = s:language
     if lang == 'python'
         return "exec(open('". a:file ."').read())"
     elseif lang == 'R'
@@ -444,81 +468,150 @@ function! s:declareMap(type, name, effect, default)
 endfunction
 "}}}
 
+" Basic maps "{{{
 " Launch the tmuxed session
 call s:declareMap('n', 'LaunchSession',
             \ ":call <SID>LaunchSession()<cr>",
             \ "<F10>")
-
 " End the tmuxed session
 call s:declareMap('n', 'EndSession',
             \ ":call <SID>EndSession()<cr>",
             \ "<F2>")
-
 " Send keyboard interrupt to the session
 call s:declareMap('n', 'Interrupt',
             \ ":call <SID>SendText('c-c')<cr>",
             \ "<c-c>")
-
 " Send line and jump to the next
 call s:declareMap('n', 'SendLine',
             \ ":call <SID>SendLine()<cr>:call <SID>NextScriptLine()<cr>",
             \ "<space>")
-
 " Send line static
 call s:declareMap('n', 'StaticSendLine',
             \ ":call <SID>SendLine()<cr>",
             \ "c<space>")
-
 " Send word under cursor
 call s:declareMap('n', 'SendWord',
             \ ":call <SID>SendWord()<cr>",
             \ ",<space>")
-
 " Send selection as multiple lines, without loosing it
 call s:declareMap('v', 'StaticSendSelection',
             \ "<esc>:call <SID>SendSelection(@*)<cr>gv",
             \ "c<space>")
 " (for an obscure reason, the function is called twice from visual mode, hence
 " the <esc> and gv)
-
 " Send selection as multiple lines then jump to next
 call s:declareMap('v', 'SendSelection',
             \ "<esc>:call <SID>SendSelection(@*)<cr>"
             \ . ":call <SID>NextScriptLine()<cr>",
             \ "")
-
 " Send chunk and keep it
 call s:declareMap('v', 'StaticSendChunk',
             \ "<esc>:call <SID>SendChunk(@*)<cr>gv",
             \ ",<space>")
-
 " Send chunk and move on
 call s:declareMap('v', 'SendChunk',
             \ "<esc>:call <SID>SendChunk(@*)<cr>"
             \ . ":call <SID>NextScriptLine()<cr>",
             \ "<space>")
-
 " Send the whole script
 call s:declareMap('n', 'SendFile',
             \ ":call <SID>SendFile()<cr>",
             \ "")
-
 " Send all lines as a chunk
 call s:declareMap('n', 'SendAll',
             \ ":call <SID>SendAll()<cr>",
             \ "a<space><space>")
+"}}}
+
+" Hotkeys:
+" Convenient shortcut to wrap pieces of script inside expressions "{{{
+" Define one hotkey map set:
+function! s:DefineHotKey(shortcut, function) "{{{
+    " This function is called only if user wants it and if the current language
+    " is relevant. Yet one should check for mappings availability.
+    function! CheckAndDeclare(type, map, effect) "{{{
+        if empty(maparg(a:map, a:type))
+            execute a:type . "noremap <unique> <buffer> "
+                         \ . a:map . ' ' . a:effect
+        else
+            echom "Intim: "
+                \ . a:map . " already has a " . a:type . "map, hotkey aborted."
+        endif
+        " keep a record:
+        if !has_key(s:hotkeys, a:type)
+            let s:hotkeys[a:type] = []
+        endif
+        let s:hotkeys[a:type] += [a:map, a:effect]
+    endfunction
+    "}}}
+
+    " TODO: update these for supportig LaTeX, expressions are `\head{arg}`
+
+    " One normal map to send a wrapped word:
+    let map = s:nleader() . a:shortcut
+    let effect = ":call <SID>Send('"
+                \ . a:function . "(' . expand(\'<cword>\') . ')')<cr>"
+    call CheckAndDeclare('n', map, effect)
+
+    " One visual map to send a wrapped selection:
+    let map = s:vleader() . a:shortcut
+    let effect = "<esc>:call <SID>SendSelection('"
+                \ . a:function . "(' . @* . ')')<cr>gv"
+    call CheckAndDeclare('v', map, effect)
+
+    " EditBonus: one insertion map working as a small snippet
+    let map = s:ieleader() . a:shortcut
+    let effect = a:function . "()<left>"
+    call CheckAndDeclare('i', map, effect)
+
+    " TODO: same for normal and visual
+
+endfunction
+"}}}
+
+" Undefine all hotkey maps:
+function! s:UndefineHotkeys() "{{{
+    for type in keys(s:hotkeys)
+        for hotkey in s:hotkeys[type]
+            " Check that the map hasn't changed since or do not unmap it
+            if maparg(hotkey[0], type) == hotkey[1]
+                execute type . "unmap! " . hotkey[0]
+            else
+                echom "Intim: " . type . "map " . hotkey[0] . " has changed "
+                     \ . "since I've set it. I'll let you unmap it yourself."
+            endif
+        endfor
+    endfor
+    let s:hotkeys = {}
+endfunction
+" The latter function relies on this data, provided by s:DefineHotKey
+" entries: {type: [[map, effect], [map, effect] ..]}
+let s:hotkeys = {}
+"}}}
+
+"}}}
 
 "}}}
 
 " Methods:
 " Provide user function call opportunities "{{{
 
-" wrappers to methods:
-if !exists('*IntimSend')
-    function IntimSend(commands)
-        call s:Send(a:commands)
-    endfunction
-endif
+" Macro declaring and guarding user wrappers to methods:
+function! s:declareFunctionWrapper(internalname, name) "{{{
+    if !exists('*' . a:name)
+        " /!\ assumption: only one argument
+        execute "function " . a:name . "(arg)\n"
+            \ . "    call s:" . a:internalname . "(a:arg)\n"
+            \ . "endfunction"
+    else
+        echom a:name . "already declared, I won't overwrite it."
+    endif
+endfunction
+"}}}
+
+" Prefix them all with Intim-
+call s:declareFunctionWrapper('Send'        , 'IntimSend')
+call s:declareFunctionWrapper('SetLanguage' , 'IntimLanguage')
 
 "}}}
 
