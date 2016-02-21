@@ -66,7 +66,6 @@ let g:loaded_intim = 1
 let s:path = fnamemodify(resolve(expand('<sfile>:p')), ':h:h')
 let g:intim_path = s:path
 
-
 " Options:
 " Define here user's options "{{{
 
@@ -93,6 +92,8 @@ call s:declareOption('g:intim_terminal', "'gnome-terminal'", 's:terminal')
 call s:declareOption('g:intim_tempchunks', "s:path . '/tmp/chunk'", 's:chunk')
 " temporary file to read help in
 call s:declareOption('g:intim_temphelp', "s:path . '/tmp/help'", 's:help')
+" temporary syntax file update script coloration
+call s:declareOption('g:intim_tempsyntax', "s:path . '/tmp/syntax'", 's:vimsyntax')
 " Check if tempfiles can be written to or create'em
 function! s:CheckFile(file) "{{{
     if !filewritable(a:file)
@@ -192,7 +193,15 @@ call s:declareDicoOption('g:intim_postInvokeCommands', {
             \ 'default': ""
             \ }, 's:postInvoke')
 
-" Help highlighting (default option for languages are set in s:SetLanguage)
+" Default script highlighting
+" TODO: make sure those syntax file are neat and available
+call s:declareDicoOption('g:intim_syntax', {
+            \ 'default' : "",
+            \ 'python'  : "python",
+            \ 'R'       : "r",
+            \ }, 's:syntax')
+
+" Help highlighting
 " TODO: make sure those syntax file are neat and available
 call s:declareDicoOption('g:intim_helpSyntax', {
             \ 'default' : "",
@@ -216,6 +225,17 @@ call s:declareDicoOption('g:intim_hotkeys_edit_nleader', {
 call s:declareDicoOption('g:intim_hotkeys_edit_vleader', {
             \ 'default': '-;'
             \ }, 's:veleader')
+
+" Highlight groups for supported syntax groups, they depend on the language
+" TODO: user must set all supported groups or the defaults will not apply.. that
+" ain't no nice, eh?
+call s:declareDicoOption('g:intim_highlightgroups', {
+            \ 'default': {},
+            \ 'R': {
+                \   'IntimRIdentifier' : 'Identifier',
+                \   'IntimRFunction'   : 'Function',
+                \  }
+            \ }, 's:higroups')
 
 " Read a particular option from a dictionnary or return the default one
 function! s:readOption(dico) "{{{
@@ -267,17 +287,9 @@ function! s:LaunchSession() "{{{
         " + send additionnal command if user needs it
         call s:System(s:postLaunch())
         " dirty wait for the session to be ready:
-        let timeStep = 300 " miliseconds
-        let maxWait = 3000
-        let actualWait = 0
-        while !s:isSessionOpen()
-            execute "sleep " . timeStep . "m"
-            let actualWait += timeStep
-            if actualWait > maxWait
-                echom "Too long for an Intim launching wait. Aborting."
-                return
-            endif
-        endwhile
+        if s:Wait("!s:isSessionOpen()", 300, 3000)
+            echom "Too long for an Intim launching wait. Aborting."
+        endif
         " prepare invocation
         call s:Send(s:preInvoke())
         " invoke the interpreter
@@ -330,6 +342,20 @@ function! s:SendEmpty() "{{{
     call s:SendText('ENTER')
 endfunction
 "}}}
+" Or a keyboard interrupt
+function! s:SendInterrupt() "{{{
+    call s:SendText('c-c')
+endfunction
+"}}}
+" Sneaky little escape tricks
+function! s:HandleEscapes(text) "{{{
+    " escape the escape characters
+    let res = substitute(a:text, '\\', '\\\\', 'g')
+    " escape the quote
+    let res = substitute(res, "\"", '\\\"', 'g')
+    return res
+endfunction
+"}}}
 " send a neat command to the Tmuxed session. `command` is either:
 "   - a string, sent as a command, silent if empty
 "   - a list of strings, sent as successive commands, silent if empty
@@ -346,7 +372,7 @@ function! s:Send(command) "{{{
     " main code for strings:
     " prepare the text for SendText: "command" ENTER
     if !empty(a:command)
-        let text = '"' . a:command . '" ENTER'
+        let text = '"' . s:HandleEscapes(a:command) . '" ENTER'
         call s:SendText(text)
     endif
 
@@ -499,20 +525,12 @@ function! s:GetHelp(topic) "{{{
     call writefile([], file)
     call s:SinkHelp(a:topic, file)
     " dirty wait for this to be done:
-    let timeStep = 300 " miliseconds
-    let maxWait = 3000
-    let actualWait = 0
     function! s:IsEmpty(file)
         return systemlist("test -s " . a:file . "; echo $?")[0]
     endfunction
-    while s:IsEmpty(file)
-        execute "sleep " . timeStep . "m"
-        let actualWait += timeStep
-        if actualWait > maxWait
-            echom "Intim: Too long to get help. Weird. Aborting."
-            return
-        endif
-    endwhile
+    if s:Wait("s:IsEmpty(file)", 300, 3000)
+        echom "Intim: Too long to get help. Weird. Aborting."
+    endif
     " there are weird ^H, take'em off
     " TODO: how'da do that in place without an intermediate file?
     let interm = fnamemodify(file, ':h') . '/tp'
@@ -568,8 +586,77 @@ endfunction
 
 "}}}
 
+" Colors:
+" Use interpreter's introspection to produces dynamic syntax files "{{{
+function! s:UpdateColor() "{{{
+    " The introspection script is part of this plugin
+    if s:language == 'python'
+        let script = s:path . "/plugin/syntax.py"
+    elseif s:language == 'R'
+        let script = s:path . "/plugin/syntax.R"
+    elseif s:language == 'default'
+        echoerr "There is no default Intim color updating."
+        return
+    else
+        echoerr "Intim does not support " . s:language . " color updating yet."
+        return
+    endif
+    " copy the script to chunk file, fill the missing field
+    let chunk = s:chunk()
+    call s:CheckFile(chunk)
+    let path = substitute(s:vimsyntax(), '/', '\\/', 'g')
+    call system("sed 's/INTIMSYNTAXFILE/\"" . path . "\"/' " . script
+                \ . "> " . chunk)
+    " produce the syntaxfile
+    call s:Send(s:sourceCommand(chunk))
+    " dirty wait for it to finish
+    function! s:isSyntaxWriten(syntax) "{{{
+        let lastLine = systemlist("cat " . a:syntax . " | tail -n 1")[0]
+        return lastLine == "\" end"
+    endfunction
+    "}}}
+    if s:Wait("!s:isSyntaxWriten(s:vimsyntax())", 300, 3000)
+        echom "Intim: syntax is too long to be written. Aborting."
+        call s:SendInterrupt()
+        return
+    endif
+    " reset current syntax
+    syntax clear
+    syntax on
+    " set the syntax group meaning
+    let higroups = s:higroups()
+    for group in keys(higroups)
+        execute "highlight link " . group . " " . higroups[group]
+    endfor
+    " and add the 'metasyntax' produced
+    execute "source " . s:vimsyntax()
+endfunction
+"}}}
+
+"}}}
+
 " Misc:
 " Not sorted yet "{{{
+
+" Wait for something to finish
+function! s:Wait(criterion, timeStep, maxWait) "{{{
+    " `criterion` is a string expression to evaluate
+    " return 0 when done, 1 if aborted
+    function! s:eval(text)
+        execute "return " . a:text
+    endfunction
+    let actualWait = 0
+    while s:eval(a:criterion)
+        execute "sleep " . a:timeStep . "m"
+        let actualWait += a:timeStep
+        if actualWait > a:maxWait
+            return 1
+        endif
+    endwhile
+    return 0
+endfunction
+"}}}
+
 " go to the next line of script (skip comments and empty lines)
 function! s:NextScriptLine() "{{{
     " plain regex search
@@ -646,7 +733,7 @@ call s:declareMap('n', 'EndSession',
             \ "<F2>")
 " Send keyboard interrupt to the session
 call s:declareMap('n', 'Interrupt',
-            \ ":call <SID>SendText('c-c')<cr>",
+            \ ":call <SID>SendInterrupt()<cr>",
             \ "<c-c>")
 " Send line and jump to the next
 call s:declareMap('n', 'SendLine',
@@ -698,6 +785,11 @@ call s:declareMap('v', 'GetHelpSelection',
             \ "<esc>:call <SID>GetHelp(@*)<cr>",
             \ "<F1>")
 
+" Update coloring
+call s:declareMap('n', 'UpdateColor',
+            \ ":call <SID>UpdateColor()<cr>",
+            \ ",uc")
+
 "}}}
 
 " Hotkeys:
@@ -715,8 +807,9 @@ function! s:CheckAndDeclare(type, map, effect) "{{{
     if empty(already)
         execute a:type . "noremap <unique> <buffer> " . a:map . ' ' . a:effect
     elseif already != actualEffect
-        echom "Intim: "
-            \ . a:map . " already has a " . a:type . "map, hotkey aborted."
+        " TODO: think better about cases where such a message is wanted.
+        " echom "Intim: "
+            " \ . a:map . " already has a " . a:type . "map, hotkey aborted."
     endif
 endfunction
 "}}}
@@ -758,6 +851,8 @@ endfunction
 "}}}
 
 "}}}
+
+" TODO: add other kinds of hotkeys, not simple wrapped headed stuff
 
 "}}}
 
