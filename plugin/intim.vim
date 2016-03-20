@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2016-02-21
+" Last Change:	2016-02-23
 " Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 " License:      This file is placed under the GNU PublicLicense 3.
 
@@ -56,7 +56,14 @@ let g:loaded_intim = 1
 " InstallationCorner: Stack here dependencies, maybe provide a way to check for
 " them or get them automatically?
 "   - tmux
+"   - perl
+"   - cat, sed, well, ok
 "   - gnome-terminal (default)
+
+" TODO:
+" > safety: replace ALL `system` by `systemlist`, check their outputs and warn
+"   if anything went wrong.
+" > bug for regular `python` interpreter: doesn't like indents even single line
 
 " Here we go.
 
@@ -162,7 +169,7 @@ endfunction
 "}}}
 
 " Shell command to execute right after having opened the new terminal. Intent:
-" call a custom script (I use it for placing, (un)decorating, marking the
+" call a custom script (I use it for tiling, (un)decorating, marking the
 " terminal). One string. Silent if empty.
 call s:declareDicoOption('g:intim_postLaunchCommand', {
             \ 'default': []
@@ -369,10 +376,19 @@ function! s:Send(command) "{{{
         return
     endif
 
+    let text = a:command
+    if s:language == 'R'
+        " remove roxygen2 comment sign before doctests:
+        let commentSign = "^\\s*#\'"
+        if match(a:command, commentSign) > -1
+            let text = substitute(a:command, commentSign, '', '')
+        endif
+    endif
+
     " main code for strings:
     " prepare the text for SendText: "command" ENTER
-    if !empty(a:command)
-        let text = '"' . s:HandleEscapes(a:command) . '" ENTER'
+    if !empty(text)
+        let text = '"' . s:HandleEscapes(text) . '" ENTER'
         call s:SendText(text)
     endif
 
@@ -528,7 +544,7 @@ function! s:GetHelp(topic) "{{{
     function! s:IsEmpty(file)
         return systemlist("test -s " . a:file . "; echo $?")[0]
     endfunction
-    if s:Wait("s:IsEmpty(file)", 300, 3000)
+    if s:Wait("s:IsEmpty('" . file . "')", 300, 3000)
         echom "Intim: Too long to get help. Weird. Aborting."
     endif
     " there are weird ^H, take'em off
@@ -750,14 +766,14 @@ call s:declareMap('n', 'SendWord',
 " Send selection as multiple lines, without loosing it
 call s:declareMap('v', 'StaticSendSelection',
             \ "<esc>:call <SID>SendSelection(@*)<cr>gv",
-            \ "c<space>")
+            \ ",<space>")
 " (for an obscure reason, the function is called twice from visual mode, hence
 " the <esc> and gv)
 " Send selection as multiple lines then jump to next
 call s:declareMap('v', 'SendSelection',
             \ "<esc>:call <SID>SendSelection(@*)<cr>"
             \ . ":call <SID>NextScriptLine()<cr>",
-            \ "")
+            \ "c<space>")
 " Send chunk and keep it
 call s:declareMap('v', 'StaticSendChunk',
             \ "<esc>:call <SID>SendChunk(@*)<cr>gv",

@@ -7,16 +7,17 @@
 # and produce a vim syntax file gathering each declared word and an associated
 # group depending on its type.
 
-# this shall be filled before sourcing
-syntaxFile <- INTIMSYNTAXFILE
-
-# For now, only two R groups, functions and other declared variables
-groups <- c(
-  'id'  = 'IntimRIdentifier',
-  'fun' = 'IntimRFunction'
-  )
-
 IntimIntrospection <- function(){
+
+    # this shall be filled before sourcing
+    syntaxFile <- INTIMSYNTAXFILE
+
+    # For now, only two R groups, functions and other declared variables
+    groups <- c(
+      'id'  = 'IntimRIdentifier',
+      'fun' = 'IntimRFunction'
+      )
+
   # clean syntax file
   write("", syntaxFile)
   # Don't take basic names which are already handled by r.vim
