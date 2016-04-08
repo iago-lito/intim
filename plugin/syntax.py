@@ -49,7 +49,7 @@ def intim_introspection():
     max_module = 2
     verbose = True
     # .. like this one:
-    filename = INTIMSYNTAXFILENAME
+    filename = INTIMSYNTAXFILE # sed by vimscript
 
     class Item(object):
         """Wrap a node of the exploration tree.
@@ -61,6 +61,7 @@ def intim_introspection():
             sub: set of children items, so that `item.sub*` means something to
                  the interpreter.
         """
+
         def __init__(self, name, type, ref, parent):
             """
                 name: identifier string of the object
@@ -77,7 +78,7 @@ def intim_introspection():
             self.ref = None if type in noref_types else ref
             # determine the syntax group
             if type not in groups:
-                type = UnsupportedType
+                type = RootDefault if parent is None else UnsupportedType
             self.type = type
 
             # Shall we expand this item?
@@ -125,6 +126,7 @@ def intim_introspection():
     StringType   = type('a')
     BoolType     = type(True)
     UnsupportedType = 0
+    RootDefault     = 1 # unsupported root type
     groups = {BuiltInType     : 'IntimPyBuiltin'
             , ClassType       : 'IntimPyClass'
             , EnumType        : 'IntimPyEnumType'
@@ -137,6 +139,7 @@ def intim_introspection():
             , FloatType       : 'IntimPyFloat'
             , StringType      : 'IntimPyString'
             , BoolType        : 'IntimPyBool'
+            , RootDefault     : 'IntimPyRootDefault'
             , UnsupportedType : 'IntimPyUnsupported'
             }
 
@@ -210,9 +213,6 @@ def intim_introspection():
     if verbose:
         print("writing syntax file..")
     file = open(filename, 'w')
-    # clear first
-    for group in groups.values():
-        print("syntax clear " + group, file=file)
     # then color. Recursive visiting of `forest` and generating dirty VimScript
     # syntax commands:
     def recursive(item, prefix, depth):
@@ -224,21 +224,21 @@ def intim_introspection():
         if len(item.sub) > 0:
             subgroups = {groups[sub.type] for sub in item.sub}
             suffix += " contains=" + ','.join(subgroups)
-        else:
+        elif depth > 0:
             suffix += " contains=NONE"
         # flesh the prefix: insert as many white space as you wish provived
-        # there is a clean dot to subname:
-        prefix += r"[\s\n]*\.[\s\n]*" + item.name
         # here is the full command:
         command = "syntax match " + groups[item.type] + prefix + suffix
         # recursive call:
         for i, subitem in enumerate(item.sub):
             print("{}: {}".format(depth, i), end='\r')
-            recursive(subitem, prefix, depth + 1)
+            # there is a clean dot to subname:
+            recursive(subitem, prefix +
+                    r"[ \s\t\n]*\.[ \t\s\n]*" + subitem.name, depth + 1)
         # write to the file
         print(command, file=file)
     # the root name starts without being a subname of something else:
-    root_prefix = r" '\(\.[ \n]*\)\@<!\<"
+    root_prefix = r" '\(\.[\s\n]*\)\@<!\<"
     for item in forest:
         recursive(item, root_prefix + item.name, 0)
     # signal to Intim: the syntax file may be read now!

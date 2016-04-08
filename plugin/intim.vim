@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2016-02-23
+" Last Change:	2016-03-20
 " Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 " License:      This file is placed under the GNU PublicLicense 3.
 
@@ -241,7 +241,23 @@ call s:declareDicoOption('g:intim_highlightgroups', {
             \ 'R': {
                 \   'IntimRIdentifier' : 'Identifier',
                 \   'IntimRFunction'   : 'Function',
-                \  }
+                \  },
+            \ 'python': {
+                \   'IntimPyBuiltin'     : 'Identifier',
+                \   'IntimPyClass'       : 'Type',
+                \   'IntimPyEnumType'    : 'Type',
+                \   'IntimPyFunction'    : 'Underlined',
+                \   'IntimPyMethod'      : 'Underlined',
+                \   'IntimPyUFunc'       : 'Underlined',
+                \   'IntimPyModule'      : 'helpNote',
+                \   'IntimPyNone'        : 'Ignore',
+                \   'IntimPyInt'         : 'Identifier',
+                \   'IntimPyFloat'       : 'Identifier',
+                \   'IntimPyString'      : 'Identifier',
+                \   'IntimPyBool'        : 'Identifier',
+                \   'IntimPyRootDefault' : 'Identifier',
+                \   'IntimPyUnsupported' : 'Ignore',
+                \ },
             \ }, 's:higroups')
 
 " Read a particular option from a dictionnary or return the default one
@@ -899,3 +915,4 @@ call s:functionExport('SetLanguage' , 'IntimLanguage')
 let &cpo = s:save_cpo
 unlet s:save_cpo
 "}}}
+
