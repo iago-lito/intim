@@ -374,8 +374,13 @@ endfunction
 function! s:HandleEscapes(text) "{{{
     " escape the escape characters
     let res = substitute(a:text, '\\', '\\\\', 'g')
-    " escape the quote
-    let res = substitute(res, "\"", '\\\"', 'g')
+    " escape the quotes
+    let res = substitute(res, '\"', '\\\"', 'g')
+    let res = substitute(res, "\'", "\\\'", 'g')
+    " escape ending semicolons
+    let res = substitute(res, ';$', '\\\;', 'g')
+    " escape dollar sign
+    let res = substitute(res, '\$', '\\\$', 'g')
     return res
 endfunction
 "}}}
