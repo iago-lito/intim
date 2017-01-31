@@ -3,41 +3,25 @@
 # Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 # License:      This file is placed under the GNU PublicLicense 3.
 
-# This python script is supposed to perform introspection into a particular
-# python session and produce a vim syntax file gathering each declared word and
-# an associated group depending on its type.
+"""
+This python script is supposed to perform introspection into a
+particular python session and produce a vim syntax file gathering each
+declared word and an associated group depending on its type.
 
-# It seems non-trivial (http://queueoverflow.com/questions/35563092/). Before
-# anyone helps me find a neat way to do it, we shall just satisfy ourselves with
-# this crummy recursive procedure. Try at least not to make it loop endlessly.
+Building a huge tree of every declared identifiers and various
+(potentially circular) ways to access them is difficult, non-trivial and
+slow. Let's try another approach and only consider the accessors that
+are.. actually used in the file to color ;)
 
-# Basic principle: build a tree of python access identifiers or "names" called
-#   `Item`s. The tree corresponds to *one* way of refering to the items by
-#   sending, for instance, `name.subname` to the interpreter.
-#   It is built by exploring `globals` then recursively calling `dir` on it.
-#
-#   In order for the circular references not to be a problem, each item will be
-#   stored as a reference in `already_expanded` so that they will only be
-#   expanded once.
-#       Consequence: if `name` can be accessed both by `first.second.name` and
-#                    by `third.fourth.name`, then only one of them will be
-#                    highlighted. Shame, uh?
-#
-#   In order not to fill up the RAM, basic types which cannot be referenced
-#   without being copied (int, float, strings) are not expanded. They are
-#   listed in `noref_types`.
-#       Consequence: `format` in `str.format()` will not be highlighted. Too
-#       bad.
-#
-#   In order for the exploration not to be too long, we shall not explore python
-#   reserved names.
-#       Consequence: `__these__` and `__names__` won't be highlighted. Also
-#       tricky names like `exit` and `quit`. Too bad.
-#
-#   In order for the exploration not to be too long, we shall only restrict
-#   ourselves to `max_module` expansion steps down modules.
-#       Consequence: `third` in `numpy.first.second.third` will not be
-#       highlighted or user would have to wait a very long time. Shame, uh?
+Idea: `intim_introspection` will be called with a reference to a python
+script file. This file will be parsed to gather every `access.paths` to
+color. Once done, they will be analysed for type etc. so that a color
+will be defined for each. The resulting vim syntax file will then be
+completely ad-hoc, dedicated to the parsed script.
+
+Let's go, try it :)
+
+"""
 
 def intim_introspection():
 
@@ -49,7 +33,8 @@ def intim_introspection():
     max_module = 2
     verbose = True
     # .. like this one:
-    filename = INTIMSYNTAXFILE # sed by vimscript
+    syntax_file = INTIMSYNTAXFILE # sed by vimscript
+    script_file = "plugin/syntax.py"
 
     class Item(object):
         """Wrap a node of the exploration tree.
@@ -204,7 +189,7 @@ def intim_introspection():
         # print(new[1:], file=file)
         # for subitem in item.sub:
             # plot_item(subitem, new)
-    # file = open(filename, 'w')
+    # file = open(syntax_file, 'w')
     # for item in forest:
         # plot_item(item, '')
     # file.close()
@@ -212,7 +197,7 @@ def intim_introspection():
     # Now use the forest to build the syntax file:
     if verbose:
         print("writing syntax file..")
-    file = open(filename, 'w')
+    file = open(syntax_file, 'w')
     # then color. Recursive visiting of `forest` and generating dirty VimScript
     # syntax commands:
     def recursive(item, prefix, depth):
