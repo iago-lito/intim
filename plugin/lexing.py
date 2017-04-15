@@ -8,8 +8,11 @@ script!
 
 from pygments.token import Token, is_token_subtype
 from pygments.lexers import python as pylex
-from enum import Enum # for analysing enum types
-import os # for module type
+from enum import Enum                    # for analysing enum types
+import os                                # for module type
+from sys import stdout                   # for default 'file'
+from types import ModuleType, MethodType # to define particular types
+from numpy import ufunc as UFuncType     # yet other particular types
 
 # Use this very file as a test :P
 
@@ -23,10 +26,9 @@ class Type(object):
 
     _instances = set()
 
-    def __init__(self, id, color, python_type):
-        self.id = id
+    def __init__(self, id, python_type):
+        self.id = 'IntimPy' + id
         self._instances.add(self)
-        self.color = color
         self.type = python_type
 
     @classmethod
@@ -35,17 +37,19 @@ class Type(object):
         """
         return iter(cls._instances)
 
-Instance   = Type("instance"   , 'blue'   , None)
-Unexistent = Type("unexistent" , 'grey'   , None)
-Class      = Type("class"      , 'gold'   , type(object))
-Function   = Type("function"   , 'purple' , type(lambda a: a))
-BuiltIn    = Type("builtin"    , 'orange' , type(dir))
-Module     = Type("module"     , 'pink'   , type(os))
-Int        = Type("int"        , 'green'  , type(1))
-Float      = Type("float"      , 'green'  , type(1.))
-String     = Type("string"     , 'green'  , type('a'))
-Bool       = Type("bool"       , 'green'  , type(True))
-NoneType   = Type("nonetype"   , 'grey'   , type(None))
+Bool       = Type("Bool"       , type(True))
+BuiltIn    = Type("Builtin"    , type(dir))
+Class      = Type("Class"      , type(object))
+EnumType   = Type("EnumType"   , type(Enum))
+Float      = Type("Float"      , type(1.))
+Function   = Type("Function"   , type(lambda a: a))
+Function   = Type("Method"     , type(lambda a: a))
+Instance   = Type("Instance"   , None)
+Int        = Type("Int"        , type(1))
+Module     = Type("Module"     , type(os))
+NoneType   = Type("NoneType"   , type(None))
+String     = Type("String"     , type('a'))
+Unexistent = Type("Unexistent" , None)
 
 # Store them so that they can easily be found from actual python types
 types_map = {}
@@ -75,6 +79,12 @@ class Node(object):
         """True if has no kids
         """
         return not bool(self._kids)
+
+    @property
+    def root(self):
+        """True if parent is None or a Forest
+        """
+        return self.parent is None or isinstance(self.parent, Forest)
 
     def add_node(self, node):
         """basic procedure to add a node as a kid
@@ -176,6 +186,34 @@ class Node(object):
         for kid in self.kids:
             kid.type_nodes(path + '.')
 
+    def write(self, prefix, depth, file=stdout):
+        """Build a vim syntax command to color this node, given
+        information recursively given from above:
+        prefix: string prefix to the command, build from above
+        depth: int our depth within the forest, also build from above
+        res: collect here the resulting commands: once on each node
+        """
+        # match expressions from the root, but only color the leaf:
+        suffix = r"\>'hs=e-" + str(len(self.id) - 1)
+        # allow any amount of whitespace around the '.' operator
+        whitespace = r"[ \s\t\n]*\.[ \t\s\n]*"
+        # for speed, provide Vim information about the items inclusions:
+        if not self.root:
+            suffix += " contained"
+        if self.leaf:
+            suffix += " contains=NONE"
+        if not self.leaf:
+            # watch out: here is an additional iteration on kids! **
+            subgroups = {sub.type.id for sub in self.kids}
+            suffix += " contains=" + ','.join(subgroups)
+        # here is the full command:
+        command = "syntax match " + self.type.id + prefix + suffix
+        # throw it up
+        print(command, file=file)
+        # ask the kids to do so :)
+        for kid in self.kids: # ** second iteration, could be the only one
+            kid.write(prefix + whitespace + kid.id, depth + 1, file)
+
 
 class Forest(Node):
     """A Forest is a special Node with no parent, no id, and containing
@@ -216,6 +254,16 @@ class Forest(Node):
         for kid in self.kids:
             kid.type_nodes()
 
+    def write(self, file=stdout):
+        """Visit the forest to build an ad-hoc vim syntax file and color
+        the nodes in the source file.
+        """
+        # the root name starts without being a subname of something else:
+        root_prefix = r" '\(\.[\s\n]*\)\@<!\<"
+        for kid in self.kids:
+            kid.write(root_prefix + kid.id, 0, file=file)
+        # signal to Intim: the syntax file may be read now!
+        print('" end', file=file)
 
 # informal tests:
 a = Node('abc')
@@ -275,4 +323,6 @@ for t, i in g:
             last_was_a_name = False
 
 forest.type_nodes()
+
+forest.write()
 
