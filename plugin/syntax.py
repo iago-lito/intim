@@ -343,10 +343,3 @@ def intim_introspection():
 intim_introspection()
 del intim_introspection
 
-arao = 5
-arao = 'test'
-class Test():
-
-    def __init__(self, member):
-        self.member = member
-

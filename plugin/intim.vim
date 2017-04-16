@@ -254,6 +254,7 @@ call s:declareDicoOption('g:intim_highlightgroups', {
                 \   'IntimPyModule'     : 'helpNote',
                 \   'IntimPyNoneType'   : 'Constant',
                 \   'IntimPyString'     : 'Constant',
+                \   'IntimPyStandard'   : 'Identifier',
                 \   'IntimPyUnexistent' : 'Ignore',
                 \ },
             \ }, 's:higroups')
@@ -667,6 +668,20 @@ function! s:UpdateColor() "{{{
     endfor
     " and add the 'metasyntax' produced
     execute "source " . s:vimsyntax()
+    " + hardcoded special cases:
+    " standard `self` and `cls` identifiers:
+    syntax keyword IntimPyStandard self cls
+    " Hackish part: conflict between native python syntax coloring and Intim:
+    " classes names are considered as `pythonFunction` in declarations, why?
+    " regex taken from /usr/share/vim/vim80/syntax/python.vim by Zvezdan
+    " Petkovic <zpetkovic@acm.org>:
+    syntax match IntimPyClass
+      \ "\%(\%(^\s*\)\%(\%(>>>\|\.\.\.\)\s\+\)\=\%(class\)\s\+\)\@<=\h\w*"
+    " duplicated, sorry:
+    syntax match IntimPyMethod
+      \ "\%(\%(^\s*\)\%(\%(>>>\|\.\.\.\)\s\+\)\=\%(def\)\s\+\)\@<=\h\w*"
+    " .. but the original one is masking:
+    syntax clear pythonFunction
 endfunction
 "}}}
 
