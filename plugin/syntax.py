@@ -224,7 +224,7 @@ def intim_introspection():
             # match expressions from the root, but only color the leaf:
             suffix = r"\>'hs=e-" + str(len(self.id) - 1)
             # allow any amount of whitespace around the '.' operator
-            whitespace = r"[ \s\t\n]*\.[ \t\s\n]*"
+            whitespace = r"[ \s\t\n]*\.[ \s\t\n]*"
             # for speed, provide Vim information about the items inclusions:
             if not self.root:
                 suffix += " contained"
@@ -287,7 +287,7 @@ def intim_introspection():
             the nodes in the source file.
             """
             # the root name starts without being a subname of something else:
-            root_prefix = r" '\(\.[\s\n]*\)\@<!\<"
+            root_prefix = r" '\([a-zA-Z][a-zA-Z0-9]*[ \s\t\n]*\.[ \s\t\n]*\)\@<!\<"
             for kid in self.kids:
                 kid.write(root_prefix + kid.id, 0, file=file)
             # signal to Intim: the syntax file may be read now!
