@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2016-03-20
+" Last Change:	2017-04-16
 " Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 " License:      This file is placed under the GNU PublicLicense 3.
 
@@ -63,7 +63,6 @@ let g:loaded_intim = 1
 " TODO:
 " > safety: replace ALL `system` by `systemlist`, check their outputs and warn
 "   if anything went wrong.
-" > bug for regular `python` interpreter: doesn't like indents even single line
 
 " Here we go.
 
@@ -243,20 +242,19 @@ call s:declareDicoOption('g:intim_highlightgroups', {
                 \   'IntimRFunction'   : 'Function',
                 \  },
             \ 'python': {
-                \   'IntimPyBuiltin'     : 'Identifier',
-                \   'IntimPyClass'       : 'Type',
-                \   'IntimPyEnumType'    : 'Type',
-                \   'IntimPyFunction'    : 'Underlined',
-                \   'IntimPyMethod'      : 'Underlined',
-                \   'IntimPyUFunc'       : 'Underlined',
-                \   'IntimPyModule'      : 'helpNote',
-                \   'IntimPyNone'        : 'Ignore',
-                \   'IntimPyInt'         : 'Identifier',
-                \   'IntimPyFloat'       : 'Identifier',
-                \   'IntimPyString'      : 'Identifier',
-                \   'IntimPyBool'        : 'Identifier',
-                \   'IntimPyRootDefault' : 'Identifier',
-                \   'IntimPyUnsupported' : 'Ignore',
+                \   'IntimPyBool'       : 'Constant',
+                \   'IntimPyBuiltin'    : 'Identifier',
+                \   'IntimPyClass'      : 'Type',
+                \   'IntimPyEnumType'   : 'Type',
+                \   'IntimPyFloat'      : 'Identifier',
+                \   'IntimPyFunction'   : 'Underlined',
+                \   'IntimPyInstance'   : 'Identifier',
+                \   'IntimPyInt'        : 'Constant',
+                \   'IntimPyMethod'     : 'Underlined',
+                \   'IntimPyModule'     : 'helpNote',
+                \   'IntimPyNoneType'   : 'Constant',
+                \   'IntimPyString'     : 'Constant',
+                \   'IntimPyUnexistent' : 'Ignore',
                 \ },
             \ }, 's:higroups')
 
@@ -638,12 +636,14 @@ function! s:UpdateColor() "{{{
         echoerr "Intim does not support " . s:language . " color updating yet."
         return
     endif
-    " copy the script to chunk file, fill the missing field
+    " copy the script to chunk file, fill the missing fields
     let chunk = s:chunk()
     call s:CheckFile(chunk)
     let path = substitute(s:vimsyntax(), '/', '\\/', 'g')
     call system("sed 's/INTIMSYNTAXFILE/\"" . path . "\"/' " . script
                 \ . "> " . chunk)
+    let user_script = substitute(expand('%:p'), '/', '\\/', 'g')
+    call system("sed -i 's/USERSCRIPTFILE/\"" . user_script . "\"/' " . chunk)
     " produce the syntaxfile
     call s:Send(s:sourceCommand(chunk))
     " dirty wait for it to finish

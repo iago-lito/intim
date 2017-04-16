@@ -1,17 +1,22 @@
 # Vim global plugin for interactive interface with interpreters: intim
-# Last Change:	2016-03-20
+# Last Change:	2017-04-16
 # Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 # License:      This file is placed under the GNU PublicLicense 3.
 
-"""
-This python script is supposed to perform introspection into a
+"""This python script is supposed to perform introspection into a
 particular python session and produce a vim syntax file gathering each
-declared word and an associated group depending on its type.
+declared word and an associated syntax group depending on its python
+type.
 
 Building a huge tree of every declared identifiers and various
 (potentially circular) ways to access them is difficult, non-trivial and
 slow. Let's try another approach and only consider the accessors that
 are.. actually used in the file to color ;)
+
+Idea: lex the file with `pygments` module in order to collect tokens,
+then evaluate their types in order to choose which color to associate
+them with. Big advantage: the lexing process may not be broken by a
+misformed script.
 
 Idea: `intim_introspection` will be called with a reference to a python
 script file. This file will be parsed to gather every `access.paths` to
@@ -19,219 +24,329 @@ color. Once done, they will be analysed for type etc. so that a color
 will be defined for each. The resulting vim syntax file will then be
 completely ad-hoc, dedicated to the parsed script.
 
-Let's go, try it :)
-
+Okay, let's try this..
 """
 
+# Protect the context and delete this function after it has been used
 def intim_introspection():
-
-    # Starting point of the exploration:
-    root = globals().copy()
-
-    # options
-    # TODO: mak'em user-definable..
-    max_module = 2
-    verbose = True
-    # .. like this one:
-    syntax_file = INTIMSYNTAXFILE # sed by vimscript
-    script_file = "plugin/syntax.py"
-
-    class Item(object):
-        """Wrap a node of the exploration tree.
-
-            One item ~ one python object declared in the current session.
-
-            parent: reference to a parent item, so that `parent.item` means
-                    something to the interpreter.
-            sub: set of children items, so that `item.sub*` means something to
-                 the interpreter.
-        """
-
-        def __init__(self, name, type, ref, parent):
-            """
-                name: identifier string of the object
-                type: type of the object
-                ref: reference to the actual object wrapped by `Item`
-                parent: none for objects in `globals()` or ref to a parent item
-            """
-
-            # Basic properties
-            self.name = name
-            self.parent = parent
-            self.sub = {}
-            # do not store heavy "references" which are actual copies
-            self.ref = None if type in noref_types else ref
-            # determine the syntax group
-            if type not in groups:
-                type = RootDefault if parent is None else UnsupportedType
-            self.type = type
-
-            # Shall we expand this item?
-            self.expand = True
-            # Unhashable references cannot be put in `already_expanded`
-            if not isinstance(ref, Hashable):
-                self.expand = False # .. do not expand them
-                return
-            # Do not expand if the item has already been expanded
-            if any([self.ref is item.ref for item in already_expanded]):
-                self.expand = False
-                return
-            # Do not expand more if we are getting too far down a module
-            grandparent = self
-            root_reached = False
-            # Is the `max_module`-grandparent a module?
-            for i in range(max_module):
-                if grandparent.parent is None:
-                    # If we are stil close from the root, don't worry and expand
-                    root_reached = True
-                    break
-                grandparent = grandparent.parent
-            if __builtins__.type(grandparent.ref) is ModuleType:
-                self.expand = root_reached
-                return
-
-        def __repr__(self):
-            return "Item: '{}' {} {} {}".format(
-                    self.name, self.type, self.ref, self.expand)
-
-    # We'll need a few more modules to study objects types:
+    from pygments.token import Token, is_token_subtype
+    from pygments.lexers import python as pylex
+    from enum import Enum                    # for analysing enum types
+    import os                                # for module type
+    from sys import stdout                   # for default 'file'
     from types import ModuleType, MethodType # to define particular types
     from numpy import ufunc as UFuncType     # yet other particular types
-    from enum import Enum                    # yet others
-    from collections import Hashable         # do not expand unhashable types
 
-    # Supported syntax groups
-    ClassType    = type(object)
-    BuiltInType  = type(dir)
-    FunctionType = type(lambda a: a)
-    EnumType     = type(Enum)
-    NoneType     = type(None)
-    IntType      = type(1)
-    FloatType    = type(1.)
-    StringType   = type('a')
-    BoolType     = type(True)
-    UnsupportedType = 0
-    RootDefault     = 1 # unsupported root type
-    groups = {BuiltInType     : 'IntimPyBuiltin'
-            , ClassType       : 'IntimPyClass'
-            , EnumType        : 'IntimPyEnumType'
-            , FunctionType    : 'IntimPyFunction'
-            , MethodType      : 'IntimPyMethod'
-            , UFuncType       : 'IntimPyUFunc'
-            , ModuleType      : 'IntimPyModule'
-            , NoneType        : 'IntimPyNone'
-            , IntType         : 'IntimPyInt'
-            , FloatType       : 'IntimPyFloat'
-            , StringType      : 'IntimPyString'
-            , BoolType        : 'IntimPyBool'
-            , RootDefault     : 'IntimPyRootDefault'
-            , UnsupportedType : 'IntimPyUnsupported'
-            }
+    filename = USERSCRIPTFILE # sed by vimscript
+    with open(filename, 'r') as file:
+        source = file.read()
 
-    # Don't ref these ones or they will be copied instead:
-    noref_types = set([
-        NoneType,
-        IntType,
-        FloatType,
-        StringType,
-        BoolType,
-        ])
 
-    # name filter: do not even itemize those identifiers:
-    def is_item_name(name):
-        # python internals
-        # do not expand python reserved names:
-        if name[:2] == '__' and name[-2:] == '__':
-            return False
-        if name in ['exit', 'quit', 'intim_introspection']:
-            return False
-        return True
+    class Type(object):
+        """Type class for typing nodes of the token forest
+        Can iterate over its instances for convenience
+        """
 
-    # Start the actual exploration
-    if verbose:
-        print("exploring session..")
-    # No item has been expanded yet
-    already_expanded = set()
-    # here is the bunch of currently explored objects
-    bunch = [Item(key,
-                type(value),
-                value,
-                None) for key, value in root.items() if is_item_name(key)]
-    # here is the result of our exploration: several rooted trees
-    forest   = [item for item in bunch]
-    # here are items that still need to be expanded
-    queue = [item for item in bunch if item.expand]
-    while len(queue) > 0:
-        if verbose:
-            print(len(queue), end="\r")
-        # pick an item from the queue:
-        current = queue.pop(0) # explore the highests first or the `max_module`
-                               # trick may not work due to circular dependencies
-        # explore it
-        ref = current.ref
-        subnames = dir(ref)
-        # new bunch of items:
-        bunch = [Item(name,
-                     type(getattr(ref, name)),
-                     getattr(ref, name),
-                     current) for name in subnames if is_item_name(name)]
-        # they are this item's subitems
-        current.sub = bunch
-        # some still need to be expanded
-        queue += [item for item in bunch if item.expand]
-        # mark this reference as already explored
-        current.expand = False
-        already_expanded.add(current)
+        _instances = set()
 
-    # # visualize the forest in a file (debugging):
-    # def plot_item(item, level):
-        # new = level + '.' + item.name
-        # print(new[1:], file=file)
-        # for subitem in item.sub:
-            # plot_item(subitem, new)
-    # file = open(syntax_file, 'w')
-    # for item in forest:
-        # plot_item(item, '')
-    # file.close()
+        def __init__(self, id, python_type):
+            self.id = 'IntimPy' + id
+            self._instances.add(self)
+            self.type = python_type
 
-    # Now use the forest to build the syntax file:
-    if verbose:
-        print("writing syntax file..")
-    file = open(syntax_file, 'w')
-    # then color. Recursive visiting of `forest` and generating dirty VimScript
-    # syntax commands:
-    def recursive(item, prefix, depth):
-        # match expressions from the root, but only color the leaf:
-        suffix = r"\>'hs=e-" + str(len(item.name) - 1)
-        # for speed, provide Vim information about the items inclusions:
-        if item.parent is not None:
-            suffix += " contained"
-        if len(item.sub) > 0:
-            subgroups = {groups[sub.type] for sub in item.sub}
-            suffix += " contains=" + ','.join(subgroups)
-        elif depth > 0:
-            suffix += " contains=NONE"
-        # flesh the prefix: insert as many white space as you wish provived
-        # here is the full command:
-        command = "syntax match " + groups[item.type] + prefix + suffix
-        # recursive call:
-        for i, subitem in enumerate(item.sub):
-            print("{}: {}".format(depth, i), end='\r')
-            # there is a clean dot to subname:
-            recursive(subitem, prefix +
-                    r"[ \s\t\n]*\.[ \t\s\n]*" + subitem.name, depth + 1)
-        # write to the file
-        print(command, file=file)
-    # the root name starts without being a subname of something else:
-    root_prefix = r" '\(\.[\s\n]*\)\@<!\<"
-    for item in forest:
-        recursive(item, root_prefix + item.name, 0)
-    # signal to Intim: the syntax file may be read now!
-    print('" end', file=file)
-    file.close()
-    if verbose:
-        print("done.")
+        @classmethod
+        def instances(cls):
+            """Iterate over all instances
+            """
+            return iter(cls._instances)
+
+    # Supported types
+    Bool       = Type("Bool"       , type(True))
+    BuiltIn    = Type("Builtin"    , type(dir))
+    Class      = Type("Class"      , type(object))
+    EnumType   = Type("EnumType"   , type(Enum))
+    Float      = Type("Float"      , type(1.))
+    Function   = Type("Function"   , type(lambda a: a))
+    Function   = Type("Method"     , type(lambda a: a))
+    Instance   = Type("Instance"   , None) # instance of user's custom class
+    Int        = Type("Int"        , type(1))
+    Module     = Type("Module"     , type(os))
+    NoneType   = Type("NoneType"   , type(None))
+    String     = Type("String"     , type('a'))
+    Unexistent = Type("Unexistent" , None) # node yet undefined in the session
+
+    # Store them so that they can easily be found from actual python types
+    types_map = {}
+    for cls in Type.instances():  # Instance and Unexistent override each other
+        types_map[cls.type] = cls # .. never mind.
+
+
+    class Node(object):
+        """Identifier and references to its parents and kids. It may have no
+        parent, it is a root then.
+        """
+
+        def __init__(self, id, parent=None, type=Unexistent):
+            """
+            id: string the node's identifier: i.e. how it is written in
+            the script.
+            parent: Node its parent node in the graph, root node if None
+            type: Type associated type with coloration etc
+            """
+            self.id = id
+            self.parent = parent
+            self._kids = {} # {id: Node}
+            self.type = type
+
+        @property
+        def leaf(self):
+            """True if has no kids
+            """
+            return not bool(self._kids)
+
+        @property
+        def root(self):
+            """True if parent is None or a Forest
+            """
+            return self.parent is None or isinstance(self.parent, Forest)
+
+        def add_node(self, node):
+            """basic procedure to add a node as a kid
+            """
+            node.parent = self
+            self._kids[node.id] = node
+
+        def add_id(self, id):
+            """Create a new kid from a string id
+            if it already exists, do not erase the existing one
+            return the newly created node
+            """
+            node = self._kids.get(id)
+            if node:
+                return node
+            node = Node(id=id, parent=self)
+            self._kids[id] = node
+            return node
+
+        @property
+        def parents(self):
+            """iterate backwards until a root parent is found
+            """
+            yield self
+            if self.parent:
+                yield from self.parent.parents
+            else:
+                raise StopIteration()
+
+        @property
+        def path(self):
+            """Use backward iteration to build the full path to this node
+            """
+            res = [parent.id for parent in self.parents]
+            return '.'.join(reversed(res))
+
+        @property
+        def kids(self):
+            """iterate over kids
+            """
+            return iter(self._kids.values())
+
+        @property
+        def leaves(self):
+            """Iterate over all leaf kids
+            """
+            if self.leaf:
+                yield self
+            else:
+                for kid in self.kids:
+                    yield from kid.leaves
+
+        def __iter__(self):
+            """Iterate over all nodes, top-down
+            """
+            yield self
+            for kid in self.kids:
+                yield from kid
+
+        def _repr(self, prefix):
+            """Iterate over all nodes and print full paths
+            """
+            res = "{}{}: {}\n".format(prefix, self.id, self.type.id)
+            for kid in self.kids:
+                res += kid._repr(prefix + self.id + '.')
+            return res
+
+        def __repr__(self):
+            return self._repr('')
+
+        def __len__(self):
+            """Number of nodes: ourselves as a node + the weight of our kids
+            """
+            return 1 + sum(len(kid) for kid in self.kids)
+
+        def type_nodes(self, prefix=''):
+            """Ultimate use of this forest: evaluate our id in the
+            current context to retrieve information on the current state
+            of this access path
+            prefix: string previous path (context) of this node
+            called by the parents
+            """
+            path = prefix + self.id
+            # analyse type of this node:
+            try:
+                t = eval("type({})".format(path), globals())
+            except (AttributeError, NameError) as e:
+                # then all subsequent nodes are unexistent
+                for node in self:
+                    node.type = Unexistent
+                return
+            # is the type available, special?
+            node_type = types_map.get(t)
+            if node_type:
+                self.type = node_type
+            else:
+                # then it is just a plain valid, known node, probably
+                # instance of a custom class or a function, method
+                if eval("callable({})".format(path), globals()):
+                    self.type = Function
+                else:
+                    self.type = Instance
+            for kid in self.kids:
+                kid.type_nodes(path + '.')
+
+        def write(self, prefix, depth, file=stdout):
+            """Build a vim syntax command to color this node, given
+            information recursively given from above:
+            prefix: string prefix to the command, build from above
+            depth: int our depth within the forest, build from above
+            file: send there the resulting commands: once on each node
+            """
+            # match expressions from the root, but only color the leaf:
+            suffix = r"\>'hs=e-" + str(len(self.id) - 1)
+            # allow any amount of whitespace around the '.' operator
+            whitespace = r"[ \s\t\n]*\.[ \t\s\n]*"
+            # for speed, provide Vim information about the items inclusions:
+            if not self.root:
+                suffix += " contained"
+            if self.leaf:
+                suffix += " contains=NONE"
+            if not self.leaf:
+                # watch out: here is an additional iteration on kids! **
+                subgroups = {sub.type.id for sub in self.kids}
+                suffix += " contains=" + ','.join(subgroups)
+            # here is the full command:
+            command = "syntax match " + self.type.id + prefix + suffix
+            # throw it up
+            print(command, file=file)
+            # ask the kids to do so :)
+            for kid in self.kids: # ** second iteration, could be the only one
+                kid.write(prefix + whitespace + kid.id, depth + 1, file)
+
+
+    class Forest(Node):
+        """A Forest is a special Node with no parent, no id, and containing
+        only root nodes.
+        """
+
+        def __init__(self):
+            self._kids = {}
+
+        @property
+        def parents(self):
+            """A forest has no parents
+            """
+            raise StopIteration()
+
+        def __repr__(self):
+            if self.leaf:
+                return "empty Forest."
+            res = ""
+            for kid in self.kids:
+                res += repr(kid)
+            return res
+
+        def __len__(self):
+            """Total number of nodes in the forest:
+            """
+            return sum(len(kid) for kid in self.kids)
+
+        def __iter__(self):
+            """Iterate over all trees, not ourselves
+            """
+            for kid in self.kids:
+                yield from kid
+
+        def type_nodes(self):
+            """Ask each tree to type itself
+            """
+            for kid in self.kids:
+                kid.type_nodes()
+
+        def write(self, file=stdout):
+            """Visit the forest to build an ad-hoc vim syntax file and color
+            the nodes in the source file.
+            """
+            # the root name starts without being a subname of something else:
+            root_prefix = r" '\(\.[\s\n]*\)\@<!\<"
+            for kid in self.kids:
+                kid.write(root_prefix + kid.id, 0, file=file)
+            # signal to Intim: the syntax file may be read now!
+            print('" end', file=file)
+
+
+    # Start lexing!
+    lx = pylex.Python3Lexer()
+    g = lx.get_tokens(source)
+    # gather names to color as a forest of '.' operators:
+    forest = Forest()
+    current = forest
+    # flag to keep track of whether to add in depth or go back to the root
+    last_was_a_name = True
+    # Also gather misc immediate tokens.. just for fun and extensibility
+    misc = {}
+    for i in [Token.Name.Decorator,
+              Token.Name.Namespace,
+              Token.Name.Operator,
+              Token.Name.Keyword,
+              Token.Name.Literal,
+              Token.Comment,
+              ]:
+        misc[i] = set()
+    # iterate over type_of_token, string
+    for t, i in g:
+        in_misc = False
+        for subtype, harvest in misc.items():
+            if is_token_subtype(t, subtype):
+                in_misc = True
+                harvest.add(i)
+                break
+        if in_misc:
+            # no need to go further: this token does not belong to the forest
+            continue
+        if is_token_subtype(t, Token.Name):
+            node = forest if last_was_a_name else current
+            current = node.add_id(i)
+            last_was_a_name = True
+        elif is_token_subtype(t, Token.Operator):
+            if i == '.':
+                last_was_a_name = False
+
+    # gather information on node types
+    forest.type_nodes()
+
+    # Write the vimscript commands to the syntax file:
+    filename = INTIMSYNTAXFILE # sed by vimscript
+    with open(filename, 'w') as file:
+        forest.write(file)
 
 # run and forget about all this.
 intim_introspection()
 del intim_introspection
+
+arao = 5
+arao = 'test'
+class Test():
+
+    def __init__(self, member):
+        self.member = member
+
