@@ -132,13 +132,36 @@ function! s:SetLanguage(language) "{{{
 
     " HotKeys:
     " Declare all hotkeys relative to that language
-    if exists('g:intim_hotkeys')
-        if has_key(g:intim_hotkeys, s:language)
-            for hotkey in g:intim_hotkeys[s:language]
-                call s:DefineHotKey(hotkey[0], hotkey[1])
-            endfor
+    " There are both the generic ones and the predefined special ones
+    " for instance: user may define g:intim_hotkeys or g:intim_prefix_hotkeys
+    " Define here the mapping between hotkeys dictionnary names and the
+    " corresponding mapper functions:
+    let tp = {'': 'DefineHotKey',
+            \ 'headed': 'DefineHeadedExpression',
+            \ }
+            " \ 'latex': 'notdefinedyet',
+            " \ 'prefix': 'notdefinedyet',
+    for i in items(tp)
+        let hotset = i[0]
+        let mapper = i[1]
+        " build the hotkey_dictionnary expected name
+        if !empty(hotset)
+            let hotset = hotset . '_'
         endif
-    endif
+        let hotkeys_dict = "g:intim_" . hotset . "hotkeys"
+        " if it exists, read it and define the mappings by calling the
+        " appropriate mapper function
+        if exists(hotkeys_dict)
+            echom 'yupe'
+            let hotkeys_dict = eval(hotkeys_dict)
+            if has_key(hotkeys_dict, s:language)
+                for hotkey in hotkeys_dict[s:language]
+                    echom "call s:" . mapper . "(hotkey[0], hotkey[1])"
+                    exec "call s:" . mapper . "(hotkey[0], hotkey[1])"
+                endfor
+            endif
+        endif
+    endfor
 
 endfunction
 "}}}
@@ -871,7 +894,11 @@ endfunction
 " the variable part.
 " TODO: handle actual `*` characters escaping
 function! s:DefineHotKey(shortcut, expression)
+    " called while reading user's hotkeys
+
+    " final mapping for user
     let map = s:nleader() . a:shortcut
+
     " the actual content varies depending on whether it is normal or visual
     " mode: word under cursor or visually selected area.
     let contents = {'n': "<c-r>=expand('<cword>')<cr>",
@@ -879,30 +906,23 @@ function! s:DefineHotKey(shortcut, expression)
     for i in items(contents)
         let mode = i[0]
         let content = i[1]
+        " send the command to IntimSession
         let effect = ":call <SID>Send(\'"
                     \ .  substitute(a:expression, '*', content, 'g') . "\')<cr>"
         call s:CheckAndDeclare(mode, map, effect)
     endfor
+
 endfunction
 
-" Here is a special-case expression: headed expressions of the form `head(*)`
-" TODO: update these for supporting LaTeX, expressions are `\head{selection}`
-" TODO: generalize these for supporting prefix like `self = *`
+" Here is a special, predefined case expression: headed expressions of the form
+" `head(*)`. The interest is that comes with edition bonuses: these mappings do
+" not send commands to the Intim session, but they allow editing script.
+" TODO: make EditBonuses optional
 function! s:DefineHeadedExpression(shortcut, head) "{{{
-    " This function is called only if user wants it and if the current language
-    " is relevant. Yet one should check for mappings availability.
+    " called while reading users headed-hotkeys
 
-    " One normal map to send a wrapped word:
-    let map = s:nleader() . a:shortcut
-    let effect = ":call <SID>Send('"
-                \ . a:head . "(' . expand(\'<cword>\') . ')')<cr>"
-    call s:CheckAndDeclare('n', map, effect)
-
-    " One visual map to send a wrapped selection:
-    let map = s:vleader() . a:shortcut
-    let effect = "<esc>:call <SID>SendSelection('"
-                \ . a:head . "(' . @* . ')')<cr>gv"
-    call s:CheckAndDeclare('v', map, effect)
+    " define actual sender mappings
+    call s:DefineHotKey(a:shortcut, a:head . '(*)')
 
     " EditBonus: one insertion map working as a small snippet
     let map = s:ieleader() . a:shortcut
@@ -921,6 +941,9 @@ function! s:DefineHeadedExpression(shortcut, head) "{{{
 
 endfunction
 "}}}
+
+" TODO: add predefined LaTeX `\head{*}` expressions
+" TODO: add predefined `prefix *` expressions
 
 "}}}
 
