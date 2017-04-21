@@ -850,8 +850,8 @@ call s:declareMap('n', 'UpdateColor',
 " Convenience macro guard before mapping anything
 function! s:CheckAndDeclare(type, map, effect) "{{{
     " Compare the effect to the map already in place. If it is ours or empty,
-    " okay, if not, do not overwrite it. In order to check whether it is ours,
-    " <SID> will have to be expanded into <SNR>X_
+    " okay, if not, do *not* overwrite it or we may break user's ones. In order
+    " to check whether it is ours, <SID> will have to be expanded into <SNR>X_
     let already = maparg(a:map, a:type)
     " adapted from :help SID<cr>
     let snr = matchstr(expand('<sfile>'), '\zs<SNR>\d\+_\zeCheckAndDeclare$')
@@ -866,9 +866,29 @@ function! s:CheckAndDeclare(type, map, effect) "{{{
 endfunction
 "}}}
 
-" Define one hotkey map set: simple expression: head(selection)
-" TODO: update these for supportig LaTeX, expressions are `\head{selection}`
-function! s:DefineHotKey(shortcut, head) "{{{
+" Define one hotkey map: send an expression containing either visually selected
+" area or the word under cursor. The expression is written with `*` representing
+" the variable part.
+" TODO: handle actual `*` characters escaping
+function! s:DefineHotKey(shortcut, expression)
+    let map = s:nleader() . a:shortcut
+    " the actual content varies depending on whether it is normal or visual
+    " mode: word under cursor or visually selected area.
+    let contents = {'n': "<c-r>=expand('<cword>')<cr>",
+                  \ 'v': "<c-r>=@*<cr>"}
+    for i in items(contents)
+        let mode = i[0]
+        let content = i[1]
+        let effect = ":call <SID>Send(\'"
+                    \ .  substitute(a:expression, '*', content, 'g') . "\')<cr>"
+        call s:CheckAndDeclare(mode, map, effect)
+    endfor
+endfunction
+
+" Here is a special-case expression: headed expressions of the form `head(*)`
+" TODO: update these for supporting LaTeX, expressions are `\head{selection}`
+" TODO: generalize these for supporting prefix like `self = *`
+function! s:DefineHeadedExpression(shortcut, head) "{{{
     " This function is called only if user wants it and if the current language
     " is relevant. Yet one should check for mappings availability.
 
@@ -903,8 +923,6 @@ endfunction
 "}}}
 
 "}}}
-
-" TODO: add other kinds of hotkeys, not simple wrapped headed stuff
 
 "}}}
 

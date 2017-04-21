@@ -1,6 +1,12 @@
 
+> Here, `np` seems not lexed:
+    """docstring
+    """
+    import numpy as np # for scientific calculation
+    EOF
+
 Known weird bug with successive object members:  
-- investigate:
+> investigate:
 
     class Test():
         def __init__(self, member):
