@@ -152,11 +152,9 @@ function! s:SetLanguage(language) "{{{
         " if it exists, read it and define the mappings by calling the
         " appropriate mapper function
         if exists(hotkeys_dict)
-            echom 'yupe'
             let hotkeys_dict = eval(hotkeys_dict)
             if has_key(hotkeys_dict, s:language)
                 for hotkey in hotkeys_dict[s:language]
-                    echom "call s:" . mapper . "(hotkey[0], hotkey[1])"
                     exec "call s:" . mapper . "(hotkey[0], hotkey[1])"
                 endfor
             endif
@@ -446,6 +444,11 @@ function! s:SendLine() "{{{
     if empty(line)
         call s:SendEmpty()
     else
+        if s:language == 'python'
+            " remove indentation
+            " TODO: make it optional
+            let line = substitute(line, '^\s*','', '')
+        endif
         call s:Send(line)
     endif
 endfunction
