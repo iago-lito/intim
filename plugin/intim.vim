@@ -448,6 +448,9 @@ function! s:SendLine() "{{{
             " remove indentation
             " TODO: make it optional
             let line = substitute(line, '^\s*','', '')
+            " remove doctest prompt
+            let line = substitute(line, '^>>>\s*','', '')
+            let line = substitute(line, '^\.\.\.\s*','', '')
         endif
         call s:Send(line)
     endif
