@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2017-04-16
+" Last Change:	2017-06-02
 " Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 " License:      This file is placed under the GNU PublicLicense 3.
 
@@ -47,9 +47,9 @@ let g:loaded_intim = 1
 "   - I only know one environment well (mine), so it might be difficult to adapt
 "     to others in a first time.
 "     Make it explicit: this plugin will be first elaborated within:
-"       - Debian 8, Jessie
-"       - Gnome 3.14
-"       - Vim 7.4 in a gnome-terminal
+"       - Debian 9, Stretch
+"       - Gnome 3.22.1
+"       - Vim 8.0 in a gnome-terminal
 "     Should it need liftings in order to adapt to other environments, I'll need
 "     help from users in those environments and invoke social coding. Feel free
 "     to contribute :)
@@ -59,6 +59,8 @@ let g:loaded_intim = 1
 "   - perl
 "   - cat, sed, well, ok
 "   - gnome-terminal (default)
+"   for python coloring: modules
+"       pygments, enum, os, sys, types, numpy
 
 " TODO:
 " > safety: replace ALL `system` by `systemlist`, check their outputs and warn

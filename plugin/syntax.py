@@ -29,6 +29,8 @@ Okay, let's try this..
 
 # Protect the context and delete this function after it has been used
 def intim_introspection():
+    # TODO: some of these are not ABSOLUTELY needed. Make user free not
+    # to install them.
     from pygments.token import Token, is_token_subtype
     from pygments.lexers import python as pylex
     from enum import Enum                    # for analysing enum types

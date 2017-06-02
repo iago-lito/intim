@@ -1,14 +1,15 @@
 
-BUGS:
+Bugs:
+--
 
-    > Here, `np` seems not lexed:
+- Here, `np` seems not lexed:
+
         """docstring
         """
         import numpy as np # for scientific calculation
         EOF
 
-    Known weird bug with successive object members:  
-    > investigate:
+- Known weird bug with successive object members.. investigate:
 
         class Test():
             def __init__(self, member):
@@ -22,10 +23,10 @@ BUGS:
         test.member.member.member.member.member
         test.member.member.member.member.member.member # undefined, okay.
 
-FEATURE REQUESTS:
+Feature requests:
+--
 
-    > add explicit utilities for `bash` interpreter, does anyone know bash well?
-
+- add explicit utilities for `bash` interpreter, does anyone know bash well?
 
 .. feel bored? grep 'TODO' anywhere in the project ;)
 
