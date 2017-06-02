@@ -201,7 +201,8 @@ call s:declareDicoOption('g:intim_postLaunchCommand', {
 " my place, checking files). User's custom aliases should be available here.
 " List of strings. One command per string. Silent if empty.
 call s:declareDicoOption('g:intim_preInvokeCommands', {
-            \ 'default': "cd ~"
+            \ 'default': "cd ~",
+            \ 'LaTeX': "",
             \ }, 's:preInvoke')
 
 " Interpreter to invoke (e.g. `bpython`)
@@ -238,20 +239,29 @@ call s:declareDicoOption('g:intim_helpSyntax', {
             \ }, 's:helpSyntax')
 
 " Leaders for hotkeys
+" Simple `,` for sending commands to interpreter, complicated `-;` to actually
+" edit the script
+" in the LaTeX case, reverse:
+" simple `,` for edition since interaction with interpreter is quite weak and
+" complicated `-;` for sending commands
 call s:declareDicoOption('g:intim_hotkeys_nleader', {
-            \ 'default': ','
+            \ 'default': ',',
+            \ 'LaTeX': '-;',
             \ }, 's:nleader')
 call s:declareDicoOption('g:intim_hotkeys_vleader', {
-            \ 'default': ','
+            \ 'default': ',',
+            \ 'LaTeX': '-;',
             \ }, 's:vleader')
 call s:declareDicoOption('g:intim_hotkeys_edit_ileader', {
-            \ 'default': ','
+            \ 'default': ',',
             \ }, 's:ieleader')
 call s:declareDicoOption('g:intim_hotkeys_edit_nleader', {
-            \ 'default': '-;'
+            \ 'default': '-;',
+            \ 'LaTeX': ',',
             \ }, 's:neleader')
 call s:declareDicoOption('g:intim_hotkeys_edit_vleader', {
-            \ 'default': '-;'
+            \ 'default': '-;',
+            \ 'LaTeX': ',',
             \ }, 's:veleader')
 
 " Highlight groups for supported syntax groups, they depend on the language
@@ -967,12 +977,12 @@ function! s:DefineLaTeXExpression(shortcut, head) "{{{
 
     " EditBonus: wrap a word in the script in normal mode
     let map = s:neleader() . a:shortcut
-    let effect = "viwv:call <SID>Wrap('" . a:head . "', '{}')<cr>"
+    let effect = "viwv:call <SID>Wrap('\\" . a:head . "', '{}')<cr>"
     call s:CheckAndDeclare('n', map, effect)
 
     " EditBonus: wrap a selection in the script in visual mode
     let map = s:veleader() . a:shortcut
-    let effect = "<esc>:call <SID>Wrap('" . a:head . "', '{}')<cr>"
+    let effect = "<esc>:call <SID>Wrap('\\" . a:head . "', '{}')<cr>"
     call s:CheckAndDeclare('v', map, effect)
 
 endfunction

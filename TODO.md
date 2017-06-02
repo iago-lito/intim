@@ -20,5 +20,6 @@ Known weird bug with successive object members:
     test.member.member.member.member.member
     test.member.member.member.member.member.member # undefined, okay.
 
-
+> compilation utilities for LaTeX.. predefined constant expressions depending on
+  current filename?
 
