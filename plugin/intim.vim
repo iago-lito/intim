@@ -579,7 +579,28 @@ function! s:SendAll() "{{{
 endfunction
 "}}}
 
-
+" SpecialSenders:
+" Send compilation command to latex
+function! s:CompileTex(option) "{{{
+    " option:
+    "   'full' compile everything twice with bibliography
+    "   'fast' compile just once to refresh doc a little
+    " retrieve filename and send full compilation command
+    " TODO: make the compilation command more customizable, or use a third tool
+    " that guesses the right command. I've heard this exists, right?
+    let filename = expand('%:r')
+    if a:option == 'full'
+        let cmd = "pdflatex " . filename . ".tex"
+              \ . " && biber " . filename
+              \ . " && pdflatex " . filename . ".tex"
+    elseif a:option == 'fast'
+        let cmd = "pdflatex " . filename . ".tex"
+    else
+        echoe "Intim: CompileTex does not know option '" . a:option . "'!"
+    endif
+    call s:Send(cmd)
+endfunction
+"}}}
 "}}}
 
 " ReadHelp:
@@ -893,6 +914,15 @@ call s:declareMap('n', 'UpdateColor',
             \ ":call <SID>UpdateColor()<cr>",
             \ ",uc")
 
+" Special LaTeX case: send a compilation command
+augroup intimLaTeX
+    autocmd FileType tex call s:declareMap('n', 'CompileTexFast',
+                \ ":call <SID>CompileTex('fast')<cr>",
+                \ ",lc")
+    autocmd FileType tex call s:declareMap('n', 'CompileTexFull',
+                \ ":call <SID>CompileTex('full')<cr>",
+                \ ",Lc")
+augroup end
 "}}}
 
 " Hotkeys:
