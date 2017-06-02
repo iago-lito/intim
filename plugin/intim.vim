@@ -138,9 +138,10 @@ function! s:SetLanguage(language) "{{{
     " corresponding mapper functions:
     let tp = {'': 'DefineHotKey',
             \ 'headed': 'DefineHeadedExpression',
+            \ 'latex': 'DefineLaTeXExpression',
+            \ 'prefix': 'DefinePrefixedExpression',
+            \ 'constant': 'DefineConstantExpression',
             \ }
-            " \ 'latex': 'notdefinedyet',
-            " \ 'prefix': 'notdefinedyet',
     for i in items(tp)
         let hotset = i[0]
         let mapper = i[1]
@@ -209,7 +210,7 @@ call s:declareDicoOption('g:intim_invokeCommand', {
             \ 'python'  : "python",
             \ 'R'       : "R",
             \ 'bash'    : "bash",
-            \ 'LaTex'   : "",
+            \ 'LaTeX'   : "",
             \ }, 's:invoke')
 
 " First shell commands to execute in the session before invoking the
@@ -750,16 +751,19 @@ let s:regexNextLine = {'default': "^.+$",
                     \  'R':      "^\\(\\s*#\\)\\@!."}
 "}}}
 
-" wrap a selection into an expression (not to depend on vim-surround)
-function! s:Wrap(head) "{{{
+" wrap a selection into an expression (not to depend on vim-surround
+" https://github.com/tpope/vim-surround)
+function! s:Wrap(head, delimiters) "{{{
+    let starter = a:delimiters[0]
+    let ender   = a:delimiters[1]
     " get the last selected area
     let [start, end] = [getpos("'<"), getpos("'>")]
     " to the `end` first before it gets invalid
     call setpos('.', end)
-    execute "normal! a)"
+    execute "normal! a" . ender
     " then add the head
     call setpos('.', start)
-    execute "normal! i" . a:head . "("
+    execute "normal! i" . a:head . starter
     " get back to the end if vim can do it
     execute "normal! %"
 endfunction
@@ -899,7 +903,7 @@ endfunction
 " area or the word under cursor. The expression is written with `*` representing
 " the variable part.
 " TODO: handle actual `*` characters escaping
-function! s:DefineHotKey(shortcut, expression)
+function! s:DefineHotKey(shortcut, expression) "{{{
     " called while reading user's hotkeys
 
     " final mapping for user
@@ -919,6 +923,7 @@ function! s:DefineHotKey(shortcut, expression)
     endfor
 
 endfunction
+"}}}
 
 " Here is a special, predefined case expression: headed expressions of the form
 " `head(*)`. The interest is that comes with edition bonuses: these mappings do
@@ -937,19 +942,94 @@ function! s:DefineHeadedExpression(shortcut, head) "{{{
 
     " EditBonus: wrap a word in the script in normal mode
     let map = s:neleader() . a:shortcut
-    let effect = "viwv:call <SID>Wrap('" . a:head . "')<cr>"
+    let effect = "viwv:call <SID>Wrap('" . a:head . "', '()')<cr>"
     call s:CheckAndDeclare('n', map, effect)
 
     " EditBonus: wrap a selection in the script in visual mode
     let map = s:veleader() . a:shortcut
-    let effect = "<esc>:call <SID>Wrap('" . a:head . "')<cr>"
+    let effect = "<esc>:call <SID>Wrap('" . a:head . "', '()')<cr>"
     call s:CheckAndDeclare('v', map, effect)
 
 endfunction
 "}}}
 
-" TODO: add predefined LaTeX `\head{*}` expressions
-" TODO: add predefined `prefix *` expressions
+" Here is another special case for LaTeX-style headed expressions `\head{*}`
+function! s:DefineLaTeXExpression(shortcut, head) "{{{
+    " called while reading users headed-hotkeys
+
+    " define actual sender mappings
+    call s:DefineHotKey(a:shortcut, '\\' . a:head . '{*}')
+
+    " EditBonus: one insertion map working as a small snippet
+    let map = s:ieleader() . a:shortcut
+    let effect = '\\' . a:head . "{}<left>"
+    call s:CheckAndDeclare('i', map, effect)
+
+    " EditBonus: wrap a word in the script in normal mode
+    let map = s:neleader() . a:shortcut
+    let effect = "viwv:call <SID>Wrap('" . a:head . "', '{}')<cr>"
+    call s:CheckAndDeclare('n', map, effect)
+
+    " EditBonus: wrap a selection in the script in visual mode
+    let map = s:veleader() . a:shortcut
+    let effect = "<esc>:call <SID>Wrap('" . a:head . "', '{}')<cr>"
+    call s:CheckAndDeclare('v', map, effect)
+
+endfunction
+"}}}
+
+" Here is another special case for simple prefixed expressions: `prefix*`
+function! s:DefinePrefixedExpression(shortcut, prefix) "{{{
+    " called while reading users headed-hotkeys
+
+    " define actual sender mappings
+    call s:DefineHotKey(a:shortcut, a:prefix . '*')
+
+    " EditBonus: one insertion map working as a small snippet
+    let map = s:ieleader() . a:shortcut
+    let effect = a:prefix
+    call s:CheckAndDeclare('i', map, effect)
+
+    " EditBonus: prefix a word in the script in normal mode
+    let map = s:neleader() . a:shortcut
+    let effect = "viwovi" . a:prefix . '<esc>'
+    call s:CheckAndDeclare('n', map, effect)
+
+    " EditBonus: prefix a selection in the script in visual mode
+    let map = s:veleader() . a:shortcut
+    let effect = "<esc>:call setpos('.', getpos(\"'<\"))<cr>i"
+                \ . a:prefix . '<esc>'
+    call s:CheckAndDeclare('v', map, effect)
+
+endfunction
+"}}}
+
+" Here is another special case for constant expression `constant`
+function! s:DefineConstantExpression(shortcut, constant) "{{{
+    " called while reading users headed-hotkeys
+
+    " define actual sender mappings
+    " TODO: this should escape '*'
+    call s:DefineHotKey(a:shortcut, a:constant)
+
+    " EditBonus: one insertion map working as a small snippet
+    let map = s:ieleader() . a:shortcut
+    let effect = a:constant
+    call s:CheckAndDeclare('i', map, effect)
+
+    " EditBonus: insert constant before a word in the script in normal mode
+    let map = s:neleader() . a:shortcut
+    let effect = "viwovi" . a:constant . '<esc>'
+    call s:CheckAndDeclare('n', map, effect)
+
+    " EditBonus: insert constant before a selection in the script in visual mode
+    let map = s:veleader() . a:shortcut
+    let effect = "<esc>:call setpos('.', getpos(\"'<\"))<cr>i"
+                \ . a:constant . '<esc>'
+    call s:CheckAndDeclare('v', map, effect)
+
+endfunction
+"}}}
 
 "}}}
 
