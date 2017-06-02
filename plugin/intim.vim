@@ -687,10 +687,18 @@ function! s:UpdateColor() "{{{
     call system("sed -i 's/USERSCRIPTFILE/\"" . user_script . "\"/' " . chunk)
     " produce the syntaxfile
     call s:Send(s:sourceCommand(chunk))
-    " dirty wait for it to finish
+    " dirty wait for it to finish: the syntax program should end it by a special
+    " line: a "finish" sign
     function! s:isSyntaxWriten(syntax) "{{{
         let lastLine = systemlist("cat " . a:syntax . " | tail -n 1")[0]
-        return lastLine == "\" end"
+        let finished = lastLine == "\" end"
+        if finished
+            " if it is finished, erase the sign for next time or it will be
+            " considered "finished" even if nothing has been updated.
+            let cmd = 'echo "\" considered as finished by intim." >> '.a:syntax
+            let out = system(cmd)
+        endif
+        return finished
     endfunction
     "}}}
     if s:Wait("!s:isSyntaxWriten(s:vimsyntax())", 300, 3000)
