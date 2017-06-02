@@ -1,8 +1,6 @@
 
 BUGS:
 
-    > do not try opening a new session if one is already opened
-
     > Here, `np` seems not lexed:
         """docstring
         """
@@ -24,10 +22,10 @@ BUGS:
         test.member.member.member.member.member
         test.member.member.member.member.member.member # undefined, okay.
 
-    > compilation utilities for LaTeX.. predefined constant expressions
-      depending on current filename?
-
 FEATURE REQUESTS:
 
     > add explicit utilities for `bash` interpreter, does anyone know bash well?
+
+
+.. feel bored? grep 'TODO' anywhere in the project ;)
 
