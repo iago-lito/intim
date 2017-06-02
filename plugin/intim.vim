@@ -100,6 +100,8 @@ call s:declareOption('g:intim_tempchunks', "s:path . '/tmp/chunk'", 's:chunk')
 call s:declareOption('g:intim_temphelp', "s:path . '/tmp/help'", 's:help')
 " temporary syntax file update script coloration
 call s:declareOption('g:intim_tempsyntax', "s:path . '/tmp/syntax'", 's:vimsyntax')
+call s:declareOption('g:intim_openPdf_command', "'evince * &> /dev/null &'",
+                   \ 's:openPdfCommand')
 " Check if tempfiles can be written to or create'em
 function! s:CheckFile(file) "{{{
     if !filewritable(a:file)
@@ -585,6 +587,7 @@ function! s:CompileTex(option) "{{{
     " option:
     "   'full' compile everything twice with bibliography
     "   'fast' compile just once to refresh doc a little
+    "   'clean' remove all temporary tex files except produced pdf
     " retrieve filename and send full compilation command
     " TODO: make the compilation command more customizable, or use a third tool
     " that guesses the right command. I've heard this exists, right?
@@ -595,9 +598,39 @@ function! s:CompileTex(option) "{{{
               \ . " && pdflatex " . filename . ".tex"
     elseif a:option == 'fast'
         let cmd = "pdflatex " . filename . ".tex"
+    elseif a:option == 'clean'
+        " every common latex garbage we may wish to get rid of
+        let cmd = "rm -f " . filename . ".out && "
+              \ . "rm -f " . filename . ".aux && "
+              \ . "rm -f " . filename . ".blg && "
+              \ . "rm -f " . filename . ".log && "
+              \ . "rm -f " . filename . "-blx.bib && "
+              \ . "rm -f " . filename . ".toc && "
+              \ . "rm -f " . filename . ".xml && "
+              \ . "rm -f " . filename . ".bcf && "
+              \ . "rm -f " . filename . ".bbl && "
+              \ . "rm -f " . filename . ".nav && "
+              \ . "rm -f " . filename . ".snm && "
+              \ . "rm -f " . filename . ".run.xml && "
+              \ . "rm -rf figure"
     else
         echoe "Intim: CompileTex does not know option '" . a:option . "'!"
     endif
+    " after the operation, list files to see what happened
+    let cmd = cmd . " && ls -lah"
+    call s:Send(cmd)
+endfunction
+"}}}
+" Open the file produced with latex
+function! s:OpenPdf(command) "{{{
+    " the 'command' is a system command with user's favorite pdf viewer etc. It
+    " also is a hook for her to trigger any command she likes after having
+    " opened a .pdf file
+    " The command will probably contain a star `*` which will be replaced by the
+    " actual filename.
+    " TODO: handle star escaping '\*' if needed
+    let filename = expand('%:r')
+    let cmd = substitute(a:command, '*', filename . '.pdf', 'g')
     call s:Send(cmd)
 endfunction
 "}}}
@@ -916,12 +949,26 @@ call s:declareMap('n', 'UpdateColor',
 
 " Special LaTeX case: send a compilation command
 augroup intimLaTeX
-    autocmd FileType tex call s:declareMap('n', 'CompileTexFast',
+    " "Latex Compile"
+    autocmd FileType tex call s:declareMap('n', 'TexCompileFast',
                 \ ":call <SID>CompileTex('fast')<cr>",
                 \ ",lc")
-    autocmd FileType tex call s:declareMap('n', 'CompileTexFull',
+    " big "Latex Compile"
+    autocmd FileType tex call s:declareMap('n', 'TexCompileFull',
                 \ ":call <SID>CompileTex('full')<cr>",
                 \ ",Lc")
+    " "Make clean"
+    autocmd FileType tex call s:declareMap('n', 'TexClean',
+                \ ":call <SID>CompileTex('clean')<cr>",
+                \ ",mc")
+    " "x" stop latex compilation when there is an error
+    autocmd FileType tex call s:declareMap('n', 'TexInterrupt',
+                \ ":call <SID>Send('x')<cr>",
+                \ "<c-x>")
+    " "TeX Open" Open produced files
+    autocmd FileType tex call s:declareMap('n', 'OpenPdf',
+                \ ":call <SID>OpenPdf(g:intim_openPdf_command)<cr>",
+                \ ",to")
 augroup end
 "}}}
 
