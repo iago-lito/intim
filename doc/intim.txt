@@ -1,0 +1,80 @@
+*intim.txt*                       Version 0.1            Last change: 2017-06-02
+
+                                    *Intim*
+
+                 Interactively Interface Vim with Interpreters
+
+==============================================================================
+CONTENTS                                                        *intim-contents*
+
+    1. Introduction .......................... |intim-introduction|
+    2. License ............................... |intim-license|
+    3. Bugs .................................. |intim-bugs|
+    4. Contributing .......................... |intim-contribute|
+    5. Credits ............................... |intim-credits|
+
+==============================================================================
+1. Introduction                                             *intim-introduction*
+
+    This plugin allows you opening an interactive interpreter in another
+terminal from Vim, like a shell, `python` or `R`. And to get control it with
+it via predefined or custom Vim mappings: sending commands, interrupting,
+restarting, analyzing variables etc.
+
+    It is mostly inspired from vim-R plugin, a great plugin to do this with R.
+        https://github.com/jcfaria/Vim-R-plugin
+    It just intends to extend to any interpreter and to be more customizable.
+
+    Just like vim-R, Intim uses `tmux` to open a multiplexed interactive shell
+session, then uses it to launch and communicate with the interpreter.
+
+    Among common features like command passing and hotkeys, Intim also offers:
+
+    - dynamical syntax coloring to get your script variables colored as they get
+      declared in the interpreter.
+    - utility edition mappings dedicated to each supported scripting language
+    - hooks allowing user to trigger various personal commands when opening,
+      closing the interpreter etc.
+    - many configurable options
+    - extension points to encourage nice developers to support more scripting
+      languages.
+
+    Of course, this is an open project licenced under GNU3. Feel free to get
+into the code, share, provide feedback, fork or contribute ;)
+
+    Enjoy!
+
+==============================================================================
+2. License                                                       *intim-license*
+
+    VisualMarks is released under the GPL3.
+    See https://www.gnu.org/licenses/gpl-3.0.html
+
+==============================================================================
+3. Bugs                                                             *intim-bugs*
+
+    If you experience any bugs or have feature requests, please open an issue
+on GitHub:
+
+    https://github.com/iago-lito/intim/issues
+
+==============================================================================
+4. Contributing                                               *intim-contribute*
+
+    Fork the source repository on GitHub and send a pull request if you have
+any code improvements. I'll be happy to work with you :)
+
+Source repository: https://github.com/iago-lito/intim
+
+==============================================================================
+5. Credits                                                       *intim-credits*
+
+Authors: ~
+
+        Iago-lito   http://github.com/iago-lito
+
+Special thanks to: ~
+
+        José Cláudio Faria for his inspiring plugin:
+            https://github.com/jcfaria/Vim-R-plugin
+

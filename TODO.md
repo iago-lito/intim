@@ -1,3 +1,4 @@
+Find work here
 
 Bugs:
 --
@@ -25,6 +26,13 @@ Bugs:
 
 Feature requests:
 --
+
+### Easy ones
+
+- add an explicit predefined `restart` mapping?
+- provide utilities to get into loops: python (easy) and R (trickier)
+
+### Bigger ones
 
 - add explicit utilities for `bash` interpreter, does anyone know bash well?
 
