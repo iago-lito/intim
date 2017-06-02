@@ -337,7 +337,7 @@ function! s:LaunchSession() "{{{
     else
         " build the launching command: term -e 'tmux new -s sname' &
         let launchCommand = s:terminal()
-                    \ . " -e 'tmux new -s " . s:sname() . "' &"
+                    \ . " -e 'tmux new -s " . s:sname() . "' &;"
         " send the command
         call system(launchCommand)
         " + send additionnal command if user needs it
@@ -352,6 +352,9 @@ function! s:LaunchSession() "{{{
         call s:Send(s:invoke())
         " initiate the interpreter
         call s:Send(s:postInvoke())
+        " remove bottom bar
+        " TODO: make this optional
+        call system("tmux set -g status off;")
         " did everything go well?
         echom "Intim session launched"
     endif
@@ -1053,11 +1056,11 @@ function! s:DefineLaTeXExpression(shortcut, head) "{{{
     " called while reading users headed-hotkeys
 
     " define actual sender mappings
-    call s:DefineHotKey(a:shortcut, '\\' . a:head . '{*}')
+    call s:DefineHotKey(a:shortcut, '\' . a:head . '{*}')
 
     " EditBonus: one insertion map working as a small snippet
     let map = s:ieleader() . a:shortcut
-    let effect = '\\' . a:head . "{}<left>"
+    let effect = '\' . a:head . "{}<left>"
     call s:CheckAndDeclare('i', map, effect)
 
     " EditBonus: wrap a word in the script in normal mode
