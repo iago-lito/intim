@@ -341,7 +341,7 @@ function! s:LaunchSession() "{{{
         let launchCommand = s:terminal()
                     \ . " -e 'tmux new -s " . s:sname() . "' &;"
         " send the command
-        call system(launchCommand)
+        call s:System(launchCommand)
         " + send additionnal command if user needs it
         call s:System(s:postLaunch())
         " dirty wait for the session to be ready:
@@ -356,7 +356,7 @@ function! s:LaunchSession() "{{{
         call s:Send(s:postInvoke())
         " remove bottom bar
         " TODO: make this optional
-        call system("tmux set -g status off;")
+        call s:System("tmux set -g status off;")
         " did everything go well?
         echom "Intim session launched"
     endif

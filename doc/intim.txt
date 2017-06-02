@@ -8,10 +8,11 @@
 CONTENTS                                                        *intim-contents*
 
     1. Introduction .......................... |intim-introduction|
-    2. License ............................... |intim-license|
-    3. Bugs .................................. |intim-bugs|
-    4. Contributing .......................... |intim-contribute|
-    5. Credits ............................... |intim-credits|
+    2. Starting Intim ........................ |intim-starting|
+    3. License ............................... |intim-license|
+    4. Bugs .................................. |intim-bugs|
+    5. Contributing .......................... |intim-contribute|
+    6. Credits ............................... |intim-credits|
 
 ==============================================================================
 1. Introduction                                             *intim-introduction*
@@ -39,19 +40,89 @@ session, then uses it to launch and communicate with the interpreter.
     - extension points to encourage nice developers to support more scripting
       languages.
 
+    All mappings and options described in this documentation are only default
+mappings and options or example mappings and options. They should not be set by
+Intim if you already had them mapped to something else. Do not hesitate to
+change them so it is the most confortable for you.
+
+    Some options are defined as dictionnaries, whose entries are Intim supported
+scripting languages (`python`, `R`, `LaTeX`, `bash`, etc). For now, if you wish
+not to use the default ones, you need to explicitly define all language entries
+that will be useful to you.
+
     Of course, this is an open project licenced under GNU3. Feel free to get
 into the code, share, provide feedback, fork or contribute ;)
 
     Enjoy!
 
 ==============================================================================
-2. License                                                       *intim-license*
+2. Starting Intim                                               *intim-starting*
+
+Once your script file is opened in Vim, use >
+
+    nmap <F10> <Plug>IntimLaunchSession
+
+to launch a new `tmux` session and invoke your interpreter inside. For those
+familiar with `tmux`, the session is called "IntimSession".
+
+To terminate the session, use >
+
+    nmap <F2> <Plug>IntimEndSession
+
+If you close Vim without terminating the session, it will just stay open and you
+may communicate with it again the next time you open Vim.
+
+Choose the terminal you would like to see your interpreter running within with >
+
+    let g:intim_terminal = "gnome-terminal"
+
+Here is a hook for you: these commands will be executed right after `tmux`
+session has been launched, and before invoking your interpreter. Use it, for
+example, to navigate to your favorite scripting directory, to temporarily edit
+your `$PATH`, or to tile the newly opened terminal so you get it comfy on your
+screen. >
+
+    let g:intim_postLaunchCommand = {
+        \ 'default': ['my custom command'],
+        \ }
+
+Choose the interpreter you would like to invoke once `tmux` session has been
+launched: >
+
+    let g:intim_invokeCommand = {
+        \ 'default' : "",
+        \ 'python'  : "python3",
+        \ 'R'       : "R --no-save --no-restore",
+        \ 'bash'    : "bash",
+        \ 'LaTeX'   : "",
+        \ }
+
+Here is a hook for you: this command will be executed just before your
+interpreter invocation. In other words, it is pretty much the same as
+*g:intim_postLaunchCommand* but you may only set one command: >
+
+    let g:intim_preInvokeCommands = {
+        \ 'default': "cd ~",
+        \ }
+
+Here is another hook: this command will we executed right after the interpreter
+has been invoked. In other words, it will be the first command to be
+interpreted. Use it to load your favorite package, or to print a hello test: >
+
+    let g:intim_postInvokeCommands = {
+        \ 'default': "",
+        \ 'python': "import numpy as np"
+        \ 'R': "setwd('~/MyFavoriteRMessFolder/');print('Hello!')"
+        \ }
+
+==============================================================================
+3. License                                                       *intim-license*
 
     VisualMarks is released under the GPL3.
     See https://www.gnu.org/licenses/gpl-3.0.html
 
 ==============================================================================
-3. Bugs                                                             *intim-bugs*
+4. Bugs                                                             *intim-bugs*
 
     If you experience any bugs or have feature requests, please open an issue
 on GitHub:
@@ -59,7 +130,7 @@ on GitHub:
     https://github.com/iago-lito/intim/issues
 
 ==============================================================================
-4. Contributing                                               *intim-contribute*
+5. Contributing                                               *intim-contribute*
 
     Fork the source repository on GitHub and send a pull request if you have
 any code improvements. I'll be happy to work with you :)
@@ -67,7 +138,7 @@ any code improvements. I'll be happy to work with you :)
 Source repository: https://github.com/iago-lito/intim
 
 ==============================================================================
-5. Credits                                                       *intim-credits*
+6. Credits                                                       *intim-credits*
 
 Authors: ~
 
