@@ -956,11 +956,11 @@ call s:declareMap('n', 'UpdateColor',
 augroup intimLaTeX
     " "Latex Compile"
     autocmd FileType tex call s:declareMap('n', 'TexCompileFast',
-                \ ":call <SID>CompileTex('fast')<cr>",
+                \ ":w<cr>:call <SID>CompileTex('fast')<cr>",
                 \ ",lc")
     " big "Latex Compile"
     autocmd FileType tex call s:declareMap('n', 'TexCompileFull',
-                \ ":call <SID>CompileTex('full')<cr>",
+                \ ":w<cr>:call <SID>CompileTex('full')<cr>",
                 \ ",Lc")
     " "Make clean"
     autocmd FileType tex call s:declareMap('n', 'TexClean',
