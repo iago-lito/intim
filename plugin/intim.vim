@@ -634,8 +634,12 @@ function! s:OpenPdf(command) "{{{
     " The command will probably contain a star `*` which will be replaced by the
     " actual filename.
     " TODO: handle star escaping '\*' if needed
-    let filename = expand('%:r')
-    let cmd = substitute(a:command, '*', filename . '.pdf', 'g')
+    let filename = expand('%:r') . '.pdf'
+    if empty(glob(filename))
+        echoe "no " . filename . " file found"
+        return
+    endif
+    let cmd = substitute(a:command, '*', filename, 'g')
     call s:Send(cmd)
 endfunction
 "}}}
