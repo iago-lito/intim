@@ -1,11 +1,11 @@
-*intim.txt*                       Version 0.1            Last change: 2017-06-02
+*intim.txt*                       Version 0.1            Last change: 2017-10-02
 
                                     *Intim*
 
                  Interactively Interface Vim with Interpreters
 
 ==============================================================================
-CONTENTS                                                        *intim-contents*
+CONTENT                                                          *intim-content*
 
     1. Introduction .......................... |intim-introduction|
     2. Starting Intim ........................ |intim-starting|
@@ -17,22 +17,23 @@ CONTENTS                                                        *intim-contents*
 ==============================================================================
 1. Introduction                                             *intim-introduction*
 
-    This plugin allows you opening an interactive interpreter in another
-terminal from Vim, like a shell, `python` or `R`. And to get control it with
-it via predefined or custom Vim mappings: sending commands, interrupting,
+    This plugin makes you open an interactive interpreter in another terminal
+from Vim, like a shell, `python` or `R`. You will feed input to this terminal
+via predefined or custom Vim mappings: sending commands, interrupting,
 restarting, analyzing variables etc.
 
     It is mostly inspired from vim-R plugin, a great plugin to do this with R.
         https://github.com/jcfaria/Vim-R-plugin
-    It just intends to extend to any interpreter and to be more customizable.
+    Its plain intent is just to extend to any interpreter and to be more
+    customizable.
 
     Just like vim-R, Intim uses `tmux` to open a multiplexed interactive shell
 session, then uses it to launch and communicate with the interpreter.
 
     Among common features like command passing and hotkeys, Intim also offers:
 
-    - dynamical syntax coloring to get your script variables colored as they get
-      declared in the interpreter.
+    - updatable syntax coloring to get your script variables colored as they
+      get declared in the interpreter.
     - utility edition mappings dedicated to each supported scripting language
     - hooks allowing user to trigger various personal commands when opening,
       closing the interpreter etc.
@@ -41,14 +42,14 @@ session, then uses it to launch and communicate with the interpreter.
       languages.
 
     All mappings and options described in this documentation are only default
-mappings and options or example mappings and options. They should not be set by
+mappings and options or example mappings and options. They will not be set by
 Intim if you already had them mapped to something else. Do not hesitate to
-change them so it is the most confortable for you.
+change them so it is the most comfortable for you.
 
-    Some options are defined as dictionnaries, whose entries are Intim supported
-scripting languages (`python`, `R`, `LaTeX`, `bash`, etc). For now, if you wish
-not to use the default ones, you need to explicitly define all language entries
-that will be useful to you.
+    Some options are defined as dictionnaries, whose entries are Intim's
+supported scripting languages (`python`, `R`, `LaTeX`, `bash`, etc). For now,
+if you wish not to use the default ones, you need to explicitly define all
+language entries that will be useful to you.
 
     Of course, this is an open project licenced under GNU3. Feel free to get
 into the code, share, provide feedback, fork or contribute ;)
@@ -63,14 +64,15 @@ Once your script file is opened in Vim, use >
     nmap <F10> <Plug>IntimLaunchSession
 
 to launch a new `tmux` session and invoke your interpreter inside. For those
-familiar with `tmux`, the session is called "IntimSession".
+familiar with `tmux`, the session is called "IntimSession", unless you set
+*g:intim_sessionName* to anything else.
 
 To terminate the session, use >
 
     nmap <F2> <Plug>IntimEndSession
 
-If you close Vim without terminating the session, it will just stay open and you
-may communicate with it again the next time you open Vim.
+If you close Vim without terminating the session, it will just stay open and
+you may communicate with it again the next time you open Vim.
 
 Choose the terminal you would like to see your interpreter running within with >
 
@@ -97,29 +99,140 @@ launched: >
         \ 'LaTeX'   : "",
         \ }
 
-Here is a hook for you: this command will be executed just before your
-interpreter invocation. In other words, it is pretty much the same as
-*g:intim_postLaunchCommand* but you may only set one command: >
+If it seems unclear to Intim which language you intend to use, use the dedicated
+function >
+
+    call IntimSetLanguage('myLanguage')
+
+in your autocmd procedures, so that it'll be aware from now on.
+
+Here is a hook for you: this command will be sent to the tmuxed terminal just
+before your interpreter invocation. In other words, it is pretty much the same
+as *g:intim_postLaunchCommand* but you may only set one command: >
 
     let g:intim_preInvokeCommands = {
         \ 'default': "cd ~",
         \ }
 
-Here is another hook: this command will we executed right after the interpreter
-has been invoked. In other words, it will be the first command to be
-interpreted. Use it to load your favorite package, or to print a hello test: >
+Here is another hook: this command will we executed right after the
+interpreter has been invoked. In other words, it will be the first command to
+be interpreted. Use it to load your favorite package, or to print a hello
+test: >
 
     let g:intim_postInvokeCommands = {
         \ 'default': "",
         \ 'python': "import numpy as np"
-        \ 'R': "setwd('~/MyFavoriteRMessFolder/');print('Hello!')"
+        \ 'R': "setwd('~/MyFavoriteRMessFolder/'); print('Hello!')"
         \ }
+
+==============================================================================
+4. Passing commands                                              *intim-passing*
+
+The main feature of Intim is command passing to the tmuxed terminal session.
+Use the default mappings: >
+
+    nmap <space>  <Plug>IntimSendLine
+    nmap ,<space> <Plug>IntimSendWord
+    vmap c<space> <Plug>IntimSendSelection
+    vmap <space>  <Plug>IntimSendChunk
+
+to send the current script line, word or visually selected area to your
+interpreter.
+
+When a "chunk" is sent (basically, several lines at once), Intim copies it to
+a temporary file then sources this file from the interpreter. Location of this
+file is set by option *g:intim_tempChunks* which defaults to Intim package
+folder.
+
+Once anything sent, Intim tries navigating to the next line of script in your
+file. You may find it comfy or annoying.. or it may depends on the situation. To
+send commands without navigating next, use >
+
+    nmap c<space> <Plug>IntimStaticSendLine
+    vmap ,<space> <Plug>IntimStaticSendChunk
+    vmap ,<space> <Plug>IntimStaticSendSelection
+
+Sometimes you feel like sending every line you have written to the interpreter,
+well you may >
+
+    nmap a<space><space> <Plug>IntimSendAll
+
+Or you can send your whole file as a chunk, as currently written on the disk (be
+aware that no unsaved change will be sent this way) >
+
+    nmap a<space><space> <Plug>IntimSendFile
+
+Sometimes, commands evaluate too long for you to wait. You may then interrupt
+your interpreter using >
+
+    nmap <c-c> <Plug>IntimSendInterrupt
+
+Should you like to create your own sending mappings. Intims provides a vim
+function for that, feel free to use >
+
+    call IntimSend('my command')
+
+in any of your custom recipes.
+
+==============================================================================
+5. Getting help                                                     *intim-help*
+
+Intim can try to fetch help files from your interpreter, and open them in a
+unnammed buffer. Put your Vim cursor on the symbol you need help about, or
+visually select the area you need help about, then use >
+
+  nmap <F1> <Plug>GetHelpWord
+  vmap <F1> <Plug>GetHelpSelection
+
+to get help. For now, this is only supported for `R` and `python` languages.
+Feel free to send presents to random developers so they get down to Intim repo
+and provide support for your favorite interpreter.
+
+Help information is temporarily buffered into an intim file: >
+
+    let g:intim_tempHelp = '~/.vim/intim/tmp/help'
+
+==============================================================================
+6. Getting help                                                     *intim-help*
+
+Intim can try to analyse your current interpreter session to dig out all
+declared currently declared symbols and their types. It will then use this
+information to paint your script in various colors depending on which you like
+most. Use >
+
+    nmap ,uc <Plug>IntimUpdateColor
+
+to update your file coloring. This is only supported for `R` and `python`
+languages yet. Feel free to send presents to random developers so they get down
+to Intim repo and provide support for your favorite interpreter.
+
+Note: In order not to make vim coloring procedure sluggish, Intim parses your
+script so that only the symbols used in your file need to be colored. Syntactic
+information about it can be found in Intim's temp files *g:intim_tempSyntax*
+found in the plugin folder by default.
+
+==============================================================================
+
+- hotkeys
+  g:intim_openPdf_command
 
 ==============================================================================
 3. License                                                       *intim-license*
 
-    VisualMarks is released under the GPL3.
+    Intim is released under the GPL3.
     See https://www.gnu.org/licenses/gpl-3.0.html
+
+==============================================================================
+5. Options                                                        *intim-option*
+
+Here is a list of Intim options and the most relevant doc to read about them:
+
+    g:intim_invokeCommand ........... |intim-starting|
+    g:intim_postInvokeCommands ...... |intim-starting|
+    g:intim_postLaunchCommand ....... |g:intim_postLaunchCommand|
+    g:intim_preInvokeCommands ....... |intim-starting|
+    g:intim_tempChunks .............. |g:intim_tempChunks|
+    g:intim_terminal ................ |intim-starting|
 
 ==============================================================================
 4. Bugs                                                             *intim-bugs*

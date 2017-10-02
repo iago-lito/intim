@@ -97,11 +97,11 @@ call s:declareOption('g:intim_sessionName', "'IntimSession'", 's:sname')
 call s:declareOption('g:intim_terminal', "'gnome-terminal'", 's:terminal')
 
 " temporary file to write chunks to and source them from
-call s:declareOption('g:intim_tempchunks', "s:path . '/tmp/chunk'", 's:chunk')
+call s:declareOption('g:intim_tempChunks', "s:path . '/tmp/chunk'", 's:chunk')
 " temporary file to read help in
-call s:declareOption('g:intim_temphelp', "s:path . '/tmp/help'", 's:help')
+call s:declareOption('g:intim_tempHelp', "s:path . '/tmp/help'", 's:help')
 " temporary syntax file update script coloration
-call s:declareOption('g:intim_tempsyntax', "s:path . '/tmp/syntax'", 's:vimsyntax')
+call s:declareOption('g:intim_tempSyntax', "s:path . '/tmp/syntax'", 's:vimsyntax')
 call s:declareOption('g:intim_openPdf_command', "'evince * &> /dev/null &'",
                    \ 's:openPdfCommand')
 " Check if tempfiles can be written to or create'em
@@ -597,12 +597,13 @@ function! s:CompileTex(option) "{{{
     " TODO: make the compilation command more customizable, or use a third tool
     " that guesses the right command. I've heard this exists, right?
     let filename = expand('%:r')
+    let pdflatexcmd = "pdflatex -synctex=1 --shell-escape "
     if a:option == 'full'
-        let cmd = "pdflatex " . filename . ".tex"
+        let cmd = pdflatexcmd . filename . ".tex"
               \ . " && biber " . filename
-              \ . " && pdflatex " . filename . ".tex"
+              \ . " && " . pdflatexcmd . filename . ".tex"
     elseif a:option == 'fast'
-        let cmd = "pdflatex " . filename . ".tex"
+        let cmd = pdflatexcmd . filename . ".tex"
     elseif a:option == 'clean'
         " every common latex garbage we may wish to get rid of
         let cmd = "rm -f " . filename . ".out && "
