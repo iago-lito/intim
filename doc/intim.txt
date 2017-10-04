@@ -212,8 +212,87 @@ information about it can be found in Intim's temp files *g:intim_tempSyntax*
 found in the plugin folder by default.
 
 ==============================================================================
+7. Hotkeys                                                       *intim-hotkeys*
+
+While you are developping your script, you often want to ask small things to
+your interpreter, such as the `len()` of one variable in `python` or the
+`summary()` of a `data.frame` in `R`. However, you don't really need to add
+those to your file, and it may be tedious to write them again and again.
+Instead, you may use Intim hotkeys to send dynamic quick, repetitive requests
+about your symbols. By default in `python`, for instance, with your cursor
+positionned here ----|
+
+    my_list = [1, 5, 8, 9]
+    my_list.append(12)
+    print(my_list)
+|---------^
+
+typing >
+
+    ,ln
+
+will send
+
+    >>> len(my_list)
+    5
+
+to the `python` interpreter, so you don't even need to leave Vim. As another
+example from your `R` script, with your cursor here ----|
+
+    set.seed(12)
+    n <- 15
+    data <- data.frame(type=sample(letters[1:5], n, replace=TRUE),
+                       size=runif(n, 0., 15.))
+    write.table(data, 'randomData.csv')
+|-----------------^
+
+typing >
+
+    ,sm
+
+will send
+
+    > head(data)
+      type     size
+    1    a 6.590015
+    2    e 6.864107
+    3    e 8.110613
+    4    b 9.985197
+    5    a 1.690484
+    6    a 3.275508
+
+, typing >
+
+    ,sm
+
+will send
+
+    > summary(data)
+     type       size
+     a:6   Min.   : 1.468
+     b:5   1st Qu.: 3.271
+     d:1   Median : 6.591
+     e:3   Mean   : 6.318
+           3rd Qu.: 9.048
+           Max.   :11.818
+
+and typing >
+
+    ,pl
+
+will send
+
+    > plot(data)
+
+to the `R` interpreter, and produce a nice graph. There are a bunch of hotkeys
+provided by default with Intim, and you can define your own, of course. Hotkeys
+fall into various categories.
+
+HERE: provide default g:hotkeys
+
 
 - hotkeys
+  texcompile
   g:intim_openPdf_command
 
 ==============================================================================
