@@ -115,12 +115,15 @@ function! s:CheckFile(file) "{{{
     endif
 endfunction
 "}}}
-
 "}}}
 
 " Options per language:  "{{{
-" From now on, Each option is stored as a dictionnary entry whose key is the
-" language.
+" Following options are stored as a dictionnary entries whose keys are the
+" language being used.
+" In order for user not to have to deal with messy dictionary options, let's
+" store them in s:variables and provide an interface to define them: functions
+" callable from .vimrc or later, that should create and/or override default
+" options.
 
 " Language of the interpreter (e.g. `python`)
 " This string will be the key for choosing which methods to use (adapted to each
@@ -169,9 +172,74 @@ function! s:SetLanguage(language) "{{{
 endfunction
 "}}}
 
+" Read a particular option from a dictionnary or return the default one
+function! s:readOption(dico) "{{{
+    if has_key(a:dico, s:language)
+        return a:dico[s:language]
+    else
+        return a:dico['default']
+    endif
+endfunction
+"}}}
+
+" define the s:dictionnaryOption if not defined yet
+function! s:defineDictOption(name) "{{{
+    if !exists(a:name)
+        execute "let s:" . a:name . " = {}"
+    endif
+endfunction
+"}}}
+
+" utility macro for defining a new option dictionnary in this script
+function! s:createOption(name) "{{{
+    call s:defineDictOption(a:name)
+    " function to define default option from this script, without overriding
+    " user input
+    execute ""
+     \ . "function! s:setDefaultOption_" . a:name . "(language, option)\n"
+     \ . "    if !has_key(s:" . a:name . ", a:language)\n"
+     \ . "        let s:" . a:name . "[a:language] = a:option\n"
+     \ . "    endif\n"
+     \ . "endfunction"
+    " read the option
+    execute ""
+     \ . "function! s:get_" . a:name . "()\n"
+     \ . "    return s:readOption(s:" . a:name . ")\n"
+     \ . "endfunction"
+    " function to be exported to user: define your own option.. this may require
+    " the variable to be defined then, because .vimrc is sourced before this
+    " script.
+    execute ""
+     \ . "function! s:set_" . a:name . "(language, option)\n"
+     \ . "   call s:defineDictOption('" . a:name . "')\n"
+     \ . "   let s:" . a:name . "[a:language] = a:option\n"
+     \ . "endfunction\n"
+    " export one version to user
+    let fname = "Intim_" . a:name
+    if exists(fname)
+        echom a:name . "already declared, I won't overwrite it."
+        return
+    endif
+    execute ""
+     \ . "function! " . fname . "(language, option)\n"
+     \ . "   call s:set_" . a:name . "(a:language, a:option)\n"
+     \ . "   echo s:" . a:name . "\n"
+     \ . "endfunction\n"
+endfunction
+"}}}
+
+" Shell command to execute right after having opened the new terminal. Intent:
+" call a custom script (I use it for tiling, (un)decorating, marking the
+" terminal). One string. Silent if empty.
+call s:createOption('postLaunchCommand')
+call s:setDefaultOption_postLaunchCommand('default', '')
+
 " Convenience macro for declaring the default dictionnary options without
 " overwriting user's choices:
 function! s:declareDicoOption(name, default, shorter) "{{{
+    " name of the option
+    " default value
+    " shorter access name for convenience in this script
     if !exists(a:name)
         " then user has not defined any such option: full default
         execute "let " . a:name . " = " . string(a:default)
@@ -192,13 +260,6 @@ function! s:declareDicoOption(name, default, shorter) "{{{
         \ . "endfunction"
 endfunction
 "}}}
-
-" Shell command to execute right after having opened the new terminal. Intent:
-" call a custom script (I use it for tiling, (un)decorating, marking the
-" terminal). One string. Silent if empty.
-call s:declareDicoOption('g:intim_postLaunchCommand', {
-            \ 'default': []
-            \ }, 's:postLaunch')
 
 " First shell commands to execute in the session before invoking the
 " interpreter. Intent: set the interpreter environment (I use it for cd-ing to
@@ -295,16 +356,6 @@ call s:declareDicoOption('g:intim_highlightgroups', {
                 \ },
             \ }, 's:higroups')
 
-" Read a particular option from a dictionnary or return the default one
-function! s:readOption(dico) "{{{
-    if has_key(a:dico, s:language)
-        return a:dico[s:language]
-    else
-        return a:dico['default']
-    endif
-endfunction
-"}}}
-
 "}}}
 
 "}}}
@@ -343,7 +394,7 @@ function! s:LaunchSession() "{{{
         " send the command
         call s:System(launchCommand)
         " + send additionnal command if user needs it
-        call s:System(s:postLaunch())
+        call s:System(s:get_postLaunchCommand())
         " dirty wait for the session to be ready:
         if s:Wait("!s:isSessionOpen()", 300, 3000)
             echom "Too long for an Intim launching wait. Aborting."
@@ -852,7 +903,6 @@ endfunction
 "}}}
 
 "}}}
-
 
 " Maps:
 " Provide user mapping opportunities "{{{
