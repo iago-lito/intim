@@ -31,11 +31,13 @@ Feature requests:
 
 - add an explicit predefined `restart` mapping?
 - provide utilities to get into loops: python (easy) and R (trickier)
-- define hotkeys another way: maybe export `s:DefineHeadedExpression`, etc?
+> define hotkeys another way: maybe export `s:DefineHeadedExpression`, etc?
 
 ### Bigger ones
 
 - add explicit utilities for `bash` interpreter, does anyone know bash well?
+- disable simple sending for compiled language (LaTeX, Rust, ..), which make no
+  sense.
 
 .. feel bored? grep 'TODO' anywhere in the project ;)
 

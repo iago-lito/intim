@@ -184,8 +184,9 @@ endfunction
 
 " define the s:dictionnaryOption if not defined yet
 function! s:defineDictOption(name) "{{{
-    if !exists(a:name)
-        execute "let s:" . a:name . " = {}"
+    let name = 's:' . a:name
+    if !exists(name)
+        execute "let " . name . " = {}"
     endif
 endfunction
 "}}}
@@ -223,16 +224,67 @@ function! s:createOption(name) "{{{
     execute ""
      \ . "function! " . fname . "(language, option)\n"
      \ . "   call s:set_" . a:name . "(a:language, a:option)\n"
-     \ . "   echo s:" . a:name . "\n"
      \ . "endfunction\n"
 endfunction
 "}}}
 
 " Shell command to execute right after having opened the new terminal. Intent:
 " call a custom script (I use it for tiling, (un)decorating, marking the
-" terminal). One string. Silent if empty.
-call s:createOption('postLaunchCommand')
-call s:setDefaultOption_postLaunchCommand('default', '')
+" terminal). One command per item in the list. Silent if empty.
+call s:createOption('postLaunchCommands')
+call s:setDefaultOption_postLaunchCommands('default', [''])
+
+" First shell commands to execute in the session before invoking the
+" interpreter. Intent: set the interpreter environment (I use it for cd-ing to
+" my place, checking files). User's custom aliases should be available here.
+" List of strings. One command per item in the list. Silent if empty.
+call s:createOption('preInvokeCommands')
+call s:setDefaultOption_preInvokeCommands('default', [''])
+
+" Interpreter to invoke (e.g. `bpython`) One command (string) only.
+call s:createOption('invokeCommand')
+call s:setDefaultOption_invokeCommand('default', '')
+call s:setDefaultOption_invokeCommand('python', 'python')
+call s:setDefaultOption_invokeCommand('R', 'R')
+call s:setDefaultOption_invokeCommand('bash', 'bash')
+call s:setDefaultOption_invokeCommand('LaTeX', '')
+
+" First interpreter commands to execute after invoking the interpreter (I use it
+" to load packages etc.). One command per item in the list. Silent if empty.
+call s:createOption('postInvokeCommands')
+call s:setDefaultOption_postInvokeCommands('default', [''])
+
+" Help highlighting
+" TODO: make sure those syntax file are neat and available
+call s:createOption('helpSyntax')
+call s:setDefaultOption_helpSyntax('default', "")
+call s:setDefaultOption_helpSyntax('python', "pydoc")
+call s:setDefaultOption_helpSyntax('R', "rdoc")
+
+" Leaders for hotkeys
+" Simple `,` for sending commands to interpreter, complicated `-;` to actually
+" edit the script
+" in the LaTeX case, reverse: simple `,` for edition since interaction with
+" interpreter is quite weak and complicated `-;` for sending commands
+" for sending in normal mode
+call s:createOption('hotkeys_nleader')
+call s:setDefaultOption_hotkeys_nleader('default', ',')
+call s:setDefaultOption_hotkeys_nleader('LaTeX', '-;')
+" for sending in visual mode
+call s:createOption('hotkeys_vleader')
+call s:setDefaultOption_hotkeys_vleader('default', ',')
+call s:setDefaultOption_hotkeys_vleader('LaTeX', '-;')
+" for editing in insert mode
+call s:createOption('hotkeys_edit_ileader')
+call s:setDefaultOption_hotkeys_edit_ileader('default', ',')
+" for editing in normal mode
+call s:createOption('hotkeys_edit_nleader')
+call s:setDefaultOption_hotkeys_edit_nleader('default', '-;')
+call s:setDefaultOption_hotkeys_edit_nleader('LaTeX', ',')
+" for editin in visual mode
+call s:createOption('hotkeys_edit_vleader')
+call s:setDefaultOption_hotkeys_edit_vleader('default', '-;')
+call s:setDefaultOption_hotkeys_edit_vleader('LaTeX', ',')
 
 " Convenience macro for declaring the default dictionnary options without
 " overwriting user's choices:
@@ -260,74 +312,6 @@ function! s:declareDicoOption(name, default, shorter) "{{{
         \ . "endfunction"
 endfunction
 "}}}
-
-" First shell commands to execute in the session before invoking the
-" interpreter. Intent: set the interpreter environment (I use it for cd-ing to
-" my place, checking files). User's custom aliases should be available here.
-" List of strings. One command per string. Silent if empty.
-call s:declareDicoOption('g:intim_preInvokeCommands', {
-            \ 'default': "cd ~",
-            \ 'LaTeX': "",
-            \ }, 's:preInvoke')
-
-" Interpreter to invoke (e.g. `bpython`)
-call s:declareDicoOption('g:intim_invokeCommand', {
-            \ 'default' : "",
-            \ 'python'  : "python",
-            \ 'R'       : "R",
-            \ 'bash'    : "bash",
-            \ 'LaTeX'   : "",
-            \ }, 's:invoke')
-
-" First shell commands to execute in the session before invoking the
-" interpreter. Intent: set the interpreter environment (I use it for cd-ing to
-" my place, checking files). User's custom aliases should be available here.
-" List of strings. One command per string. Silent if empty.
-call s:declareDicoOption('g:intim_postInvokeCommands', {
-            \ 'default': ""
-            \ }, 's:postInvoke')
-
-" Default script highlighting
-" TODO: make sure those syntax file are neat and available
-call s:declareDicoOption('g:intim_syntax', {
-            \ 'default' : "",
-            \ 'python'  : "python",
-            \ 'R'       : "r",
-            \ }, 's:syntax')
-
-" Help highlighting
-" TODO: make sure those syntax file are neat and available
-call s:declareDicoOption('g:intim_helpSyntax', {
-            \ 'default' : "",
-            \ 'python'  : "pydoc",
-            \ 'R'       : "rdoc",
-            \ }, 's:helpSyntax')
-
-" Leaders for hotkeys
-" Simple `,` for sending commands to interpreter, complicated `-;` to actually
-" edit the script
-" in the LaTeX case, reverse:
-" simple `,` for edition since interaction with interpreter is quite weak and
-" complicated `-;` for sending commands
-call s:declareDicoOption('g:intim_hotkeys_nleader', {
-            \ 'default': ',',
-            \ 'LaTeX': '-;',
-            \ }, 's:nleader')
-call s:declareDicoOption('g:intim_hotkeys_vleader', {
-            \ 'default': ',',
-            \ 'LaTeX': '-;',
-            \ }, 's:vleader')
-call s:declareDicoOption('g:intim_hotkeys_edit_ileader', {
-            \ 'default': ',',
-            \ }, 's:ieleader')
-call s:declareDicoOption('g:intim_hotkeys_edit_nleader', {
-            \ 'default': '-;',
-            \ 'LaTeX': ',',
-            \ }, 's:neleader')
-call s:declareDicoOption('g:intim_hotkeys_edit_vleader', {
-            \ 'default': '-;',
-            \ 'LaTeX': ',',
-            \ }, 's:veleader')
 
 " Highlight groups for supported syntax groups, they depend on the language
 " TODO: user must set all supported groups or the defaults will not apply.. that
@@ -394,17 +378,23 @@ function! s:LaunchSession() "{{{
         " send the command
         call s:System(launchCommand)
         " + send additionnal command if user needs it
-        call s:System(s:get_postLaunchCommand())
+        for i in s:get_postLaunchCommands()
+            call s:System(i)
+        endfor
         " dirty wait for the session to be ready:
         if s:Wait("!s:isSessionOpen()", 300, 3000)
             echom "Too long for an Intim launching wait. Aborting."
         endif
         " prepare invocation
-        call s:Send(s:preInvoke())
+        for i in s:get_preInvokeCommands()
+            call s:Send(i)
+        endfor
         " invoke the interpreter
-        call s:Send(s:invoke())
+        call s:Send(s:get_invokeCommand())
         " initiate the interpreter
-        call s:Send(s:postInvoke())
+        for i in s:get_postInvokeCommands()
+            call s:Send(i)
+        endfor
         " remove bottom bar
         " TODO: make this optional
         call s:System("tmux set -g status off;")
@@ -738,7 +728,7 @@ function! s:GetHelp(topic) "{{{
     " decorate it
     set buftype=nofile
     set readonly
-    execute "setlocal syntax=" . s:helpSyntax()
+    execute "setlocal syntax=" . s:get_helpSyntax()
     " there usually are snippets in man pages, which it would be a shame not to
     " be able to use as yet another script:
     call s:SetLanguage(s:language)
@@ -1062,7 +1052,7 @@ function! s:DefineHotKey(shortcut, expression) "{{{
     " called while reading user's hotkeys
 
     " final mapping for user
-    let map = s:nleader() . a:shortcut
+    let map = s:get_hotkeys_nleader() . a:shortcut
 
     " the actual content varies depending on whether it is normal or visual
     " mode: word under cursor or visually selected area.
@@ -1091,17 +1081,17 @@ function! s:DefineHeadedExpression(shortcut, head) "{{{
     call s:DefineHotKey(a:shortcut, a:head . '(*)')
 
     " EditBonus: one insertion map working as a small snippet
-    let map = s:ieleader() . a:shortcut
+    let map = s:get_hotkeys_edit_ileader() . a:shortcut
     let effect = a:head . "()<left>"
     call s:CheckAndDeclare('i', map, effect)
 
     " EditBonus: wrap a word in the script in normal mode
-    let map = s:neleader() . a:shortcut
+    let map = s:get_hotkeys_edit_nleader() . a:shortcut
     let effect = "viwv:call <SID>Wrap('" . a:head . "', '()')<cr>"
     call s:CheckAndDeclare('n', map, effect)
 
     " EditBonus: wrap a selection in the script in visual mode
-    let map = s:veleader() . a:shortcut
+    let map = s:get_hotkeys_edit_vleader() . a:shortcut
     let effect = "<esc>:call <SID>Wrap('" . a:head . "', '()')<cr>"
     call s:CheckAndDeclare('v', map, effect)
 
@@ -1116,17 +1106,17 @@ function! s:DefineLaTeXExpression(shortcut, head) "{{{
     call s:DefineHotKey(a:shortcut, '\' . a:head . '{*}')
 
     " EditBonus: one insertion map working as a small snippet
-    let map = s:ieleader() . a:shortcut
+    let map = s:get_hotkeys_edit_ileader() . a:shortcut
     let effect = '\' . a:head . "{}<left>"
     call s:CheckAndDeclare('i', map, effect)
 
     " EditBonus: wrap a word in the script in normal mode
-    let map = s:neleader() . a:shortcut
+    let map = s:get_hotkeys_edit_nleader() . a:shortcut
     let effect = "viwv:call <SID>Wrap('\\" . a:head . "', '{}')<cr>"
     call s:CheckAndDeclare('n', map, effect)
 
     " EditBonus: wrap a selection in the script in visual mode
-    let map = s:veleader() . a:shortcut
+    let map = s:get_hotkeys_edit_vleader() . a:shortcut
     let effect = "<esc>:call <SID>Wrap('\\" . a:head . "', '{}')<cr>"
     call s:CheckAndDeclare('v', map, effect)
 
@@ -1141,17 +1131,17 @@ function! s:DefinePrefixedExpression(shortcut, prefix) "{{{
     call s:DefineHotKey(a:shortcut, a:prefix . '*')
 
     " EditBonus: one insertion map working as a small snippet
-    let map = s:ieleader() . a:shortcut
+    let map = s:get_hotkeys_edit_ileader() . a:shortcut
     let effect = a:prefix
     call s:CheckAndDeclare('i', map, effect)
 
     " EditBonus: prefix a word in the script in normal mode
-    let map = s:neleader() . a:shortcut
+    let map = s:get_hotkeys_edit_nleader() . a:shortcut
     let effect = "viwovi" . a:prefix . '<esc>'
     call s:CheckAndDeclare('n', map, effect)
 
     " EditBonus: prefix a selection in the script in visual mode
-    let map = s:veleader() . a:shortcut
+    let map = s:get_hotkeys_edit_vleader() . a:shortcut
     let effect = "<esc>:call setpos('.', getpos(\"'<\"))<cr>i"
                 \ . a:prefix . '<esc>'
     call s:CheckAndDeclare('v', map, effect)
@@ -1168,17 +1158,17 @@ function! s:DefineConstantExpression(shortcut, constant) "{{{
     call s:DefineHotKey(a:shortcut, a:constant)
 
     " EditBonus: one insertion map working as a small snippet
-    let map = s:ieleader() . a:shortcut
+    let map = s:get_hotkeys_edit_ileader() . a:shortcut
     let effect = a:constant
     call s:CheckAndDeclare('i', map, effect)
 
     " EditBonus: insert constant before a word in the script in normal mode
-    let map = s:neleader() . a:shortcut
+    let map = s:get_hotkeys_edit_nleader() . a:shortcut
     let effect = "viwovi" . a:constant . '<esc>'
     call s:CheckAndDeclare('n', map, effect)
 
     " EditBonus: insert constant before a selection in the script in visual mode
-    let map = s:veleader() . a:shortcut
+    let map = s:get_hotkeys_edit_vleader() . a:shortcut
     let effect = "<esc>:call setpos('.', getpos(\"'<\"))<cr>i"
                 \ . a:constant . '<esc>'
     call s:CheckAndDeclare('v', map, effect)
