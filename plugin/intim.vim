@@ -182,8 +182,8 @@ function! s:readOption(dico) "{{{
 endfunction
 "}}}
 
-" define the s:dictionnaryOption if not defined yet
-function! s:defineDictOption(name) "{{{
+" define the s:dictionnaryOption_variable if not defined yet
+function! s:defineLanguageOption(name) "{{{
     let name = 's:' . a:name
     if !exists(name)
         execute "let " . name . " = {}"
@@ -192,8 +192,8 @@ endfunction
 "}}}
 
 " utility macro for defining a new option dictionnary in this script
-function! s:createOption(name) "{{{
-    call s:defineDictOption(a:name)
+function! s:createLanguageOption(name) "{{{
+    call s:defineLanguageOption(a:name)
     " function to define default option from this script, without overriding
     " user input
     execute ""
@@ -212,7 +212,7 @@ function! s:createOption(name) "{{{
     " script.
     execute ""
      \ . "function! s:set_" . a:name . "(language, option)\n"
-     \ . "   call s:defineDictOption('" . a:name . "')\n"
+     \ . "   call s:defineLanguageOption('" . a:name . "')\n"
      \ . "   let s:" . a:name . "[a:language] = a:option\n"
      \ . "endfunction\n"
     " export one version to user
@@ -231,18 +231,18 @@ endfunction
 " Shell command to execute right after having opened the new terminal. Intent:
 " call a custom script (I use it for tiling, (un)decorating, marking the
 " terminal). One command per item in the list. Silent if empty.
-call s:createOption('postLaunchCommands')
+call s:createLanguageOption('postLaunchCommands')
 call s:setDefaultOption_postLaunchCommands('default', [''])
 
 " First shell commands to execute in the session before invoking the
 " interpreter. Intent: set the interpreter environment (I use it for cd-ing to
 " my place, checking files). User's custom aliases should be available here.
 " List of strings. One command per item in the list. Silent if empty.
-call s:createOption('preInvokeCommands')
+call s:createLanguageOption('preInvokeCommands')
 call s:setDefaultOption_preInvokeCommands('default', [''])
 
 " Interpreter to invoke (e.g. `bpython`) One command (string) only.
-call s:createOption('invokeCommand')
+call s:createLanguageOption('invokeCommand')
 call s:setDefaultOption_invokeCommand('default', '')
 call s:setDefaultOption_invokeCommand('python', 'python')
 call s:setDefaultOption_invokeCommand('R', 'R')
@@ -251,12 +251,12 @@ call s:setDefaultOption_invokeCommand('LaTeX', '')
 
 " First interpreter commands to execute after invoking the interpreter (I use it
 " to load packages etc.). One command per item in the list. Silent if empty.
-call s:createOption('postInvokeCommands')
+call s:createLanguageOption('postInvokeCommands')
 call s:setDefaultOption_postInvokeCommands('default', [''])
 
 " Help highlighting
 " TODO: make sure those syntax file are neat and available
-call s:createOption('helpSyntax')
+call s:createLanguageOption('helpSyntax')
 call s:setDefaultOption_helpSyntax('default', "")
 call s:setDefaultOption_helpSyntax('python', "pydoc")
 call s:setDefaultOption_helpSyntax('R', "rdoc")
@@ -267,78 +267,112 @@ call s:setDefaultOption_helpSyntax('R', "rdoc")
 " in the LaTeX case, reverse: simple `,` for edition since interaction with
 " interpreter is quite weak and complicated `-;` for sending commands
 " for sending in normal mode
-call s:createOption('hotkeys_nleader')
+call s:createLanguageOption('hotkeys_nleader')
 call s:setDefaultOption_hotkeys_nleader('default', ',')
 call s:setDefaultOption_hotkeys_nleader('LaTeX', '-;')
 " for sending in visual mode
-call s:createOption('hotkeys_vleader')
+call s:createLanguageOption('hotkeys_vleader')
 call s:setDefaultOption_hotkeys_vleader('default', ',')
 call s:setDefaultOption_hotkeys_vleader('LaTeX', '-;')
 " for editing in insert mode
-call s:createOption('hotkeys_edit_ileader')
+call s:createLanguageOption('hotkeys_edit_ileader')
 call s:setDefaultOption_hotkeys_edit_ileader('default', ',')
 " for editing in normal mode
-call s:createOption('hotkeys_edit_nleader')
+call s:createLanguageOption('hotkeys_edit_nleader')
 call s:setDefaultOption_hotkeys_edit_nleader('default', '-;')
 call s:setDefaultOption_hotkeys_edit_nleader('LaTeX', ',')
 " for editin in visual mode
-call s:createOption('hotkeys_edit_vleader')
+call s:createLanguageOption('hotkeys_edit_vleader')
 call s:setDefaultOption_hotkeys_edit_vleader('default', '-;')
 call s:setDefaultOption_hotkeys_edit_vleader('LaTeX', ',')
 
-" Convenience macro for declaring the default dictionnary options without
-" overwriting user's choices:
-function! s:declareDicoOption(name, default, shorter) "{{{
-    " name of the option
-    " default value
-    " shorter access name for convenience in this script
-    if !exists(a:name)
-        " then user has not defined any such option: full default
-        execute "let " . a:name . " = " . string(a:default)
-    else
-        " then user has defined a dictionnary, do not to overwrite these options
-        execute "let users = " . a:name
-        for key in keys(a:default)
-            if !has_key(users, key)
-                let users[key] = a:default[key]
-            endif
-        endfor
-        " the resulting option dictionnary is a merged from both default & users
-        execute "let " . a:name . " = users"
+"}}}
+
+" Options lists per language: "{{{
+" From now on, each language option will be an actual dictionnary as well, and
+" user should be able to edit it without having to redefine it entirely each
+" time.
+
+" define the s:dictionnaryOptionVariable['language'] if not defined yet
+function! s:defineLanguageOptionKey(dico, key) "{{{
+    " so 'key' is a *language* (level 1 in the dict)
+    if !has_key(a:dico, a:key)
+        let a:dico[a:key] = {}
     endif
-    " convenience shortcut for this script:
-    execute "function! " . a:shorter . "()\n"
-        \ . "    return s:readOption(" . a:name . ")\n"
-        \ . "endfunction"
+    return a:dico
+endfunction
+"}}}
+
+" Utility macro for defining a new option dictionnary.. dictionnary in
+" this script
+function! s:createLanguageDictionnaryOption(name) "{{{
+    call s:defineLanguageOption(a:name)
+    " add an empty default key
+    exec "let s:".a:name." = s:defineLanguageOptionKey(s:".a:name.", 'default')"
+    " function to define default option from this script, without overriding
+    " user input
+    execute ""
+     \ . "function! s:setDefaultOption_" . a:name . "(language, key, option)\n"
+     \ . "    let s:" . a:name
+     \ . "          = s:defineLanguageOptionKey(s:" . a:name . ", a:language)\n"
+     \ . "    if !has_key(s:" . a:name . "[a:language], a:key)\n"
+     \ . "        let s:" . a:name . "[a:language][a:key] = a:option\n"
+     \ . "    endif\n"
+     \ . "endfunction"
+    " read the option
+    execute ""
+     \ . "function! s:get_" . a:name . "()\n"
+     \ . "    return s:readOption(s:" . a:name . ")\n"
+     \ . "endfunction"
+    " function to be exported to user: define your own option at level 2 in the
+    " dict.. this may require the variable *and* the key to be defined then,
+    " because .vimrc is sourced before this script.
+    execute ""
+     \ . "function! s:set_" . a:name . "(language, key, option)\n"
+     \ . "   call s:defineLanguageOption('" . a:name . "')\n"
+     \ . "   call s:defineLanguageOptionKey(s:" . a:name . ", a:key)\n"
+     \ . "   let s:" . a:name . "[a:language][a:key] = a:option\n"
+     \ . "endfunction\n"
+    " export one version to user
+    let fname = "Intim_" . a:name
+    if exists(fname)
+        echom a:name . "already declared, I won't overwrite it."
+        return
+    endif
+    execute ""
+     \ . "function! " . fname . "(language, key, option)\n"
+     \ . "   call s:set_" . a:name . "(a:language, a:key, a:option)\n"
+     \ . "endfunction\n"
 endfunction
 "}}}
 
 " Highlight groups for supported syntax groups, they depend on the language
-" TODO: user must set all supported groups or the defaults will not apply.. that
-" ain't no nice, eh?
-call s:declareDicoOption('g:intim_highlightgroups', {
-            \ 'default': {},
-            \ 'R': {
-                \   'IntimRIdentifier' : 'Identifier',
-                \   'IntimRFunction'   : 'Function',
-                \  },
-            \ 'python': {
-                \   'IntimPyBool'       : 'Constant',
-                \   'IntimPyBuiltin'    : 'Identifier',
-                \   'IntimPyClass'      : 'Type',
-                \   'IntimPyEnumType'   : 'Type',
-                \   'IntimPyFloat'      : 'Identifier',
-                \   'IntimPyFunction'   : 'Underlined',
-                \   'IntimPyInstance'   : 'Identifier',
-                \   'IntimPyInt'        : 'Constant',
-                \   'IntimPyMethod'     : 'Underlined',
-                \   'IntimPyModule'     : 'helpNote',
-                \   'IntimPyNoneType'   : 'Constant',
-                \   'IntimPyString'     : 'Constant',
-                \   'IntimPyStandard'   : 'Identifier',
-                \   'IntimPyUnexistent' : 'Ignore',
-                \ },
-            \ }, 's:higroups')
+call s:createLanguageDictionnaryOption('highlightGroups')
+" default for R
+call s:setDefaultOption_highlightGroups('R', 'IntimRIdentifier', 'Identifier')
+call s:setDefaultOption_highlightGroups('R', 'IntimRFunction', 'Function')
+" default for python
+" (temp list for for readability here only)
+let temp = [
+            \ ['IntimPyBool'      , 'Constant'],
+            \ ['IntimPyBool'      , 'Constant'],
+            \ ['IntimPyBuiltin'   , 'Identifier'],
+            \ ['IntimPyClass'     , 'Type'],
+            \ ['IntimPyEnumType'  , 'Type'],
+            \ ['IntimPyFloat'     , 'Identifier'],
+            \ ['IntimPyFunction'  , 'Underlined'],
+            \ ['IntimPyInstance'  , 'Identifier'],
+            \ ['IntimPyInt'       , 'Constant'],
+            \ ['IntimPyMethod'    , 'Underlined'],
+            \ ['IntimPyModule'    , 'helpNote'],
+            \ ['IntimPyNoneType'  , 'Constant'],
+            \ ['IntimPyString'    , 'Constant'],
+            \ ['IntimPyStandard'  , 'Identifier'],
+            \ ['IntimPyUnexistent', 'Ignore']
+            \ ]
+for i in temp
+    call s:setDefaultOption_highlightGroups('python', i[0], i[1])
+endfor
 
 "}}}
 
@@ -815,7 +849,7 @@ function! s:UpdateColor() "{{{
     syntax clear
     syntax on
     " set the syntax group meaning
-    let higroups = s:higroups()
+    let higroups = s:get_highlightGroups()
     for group in keys(higroups)
         execute "highlight link " . group . " " . higroups[group]
     endfor
