@@ -139,34 +139,20 @@ function! s:SetLanguage(language) "{{{
 
     " HotKeys:
     " Declare all hotkeys relative to that language
-    " There are both the generic ones and the predefined special ones
-    " for instance: user may define g:intim_hotkeys or g:intim_prefix_hotkeys
-    " Define here the mapping between hotkeys dictionnary names and the
-    " corresponding mapper functions:
-    let tp = {'': 'DefineHotKey',
-            \ 'headed': 'DefineHeadedExpression',
-            \ 'latex': 'DefineLaTeXExpression',
-            \ 'prefix': 'DefinePrefixedExpression',
-            \ 'constant': 'DefineConstantExpression',
-            \ }
-    for i in items(tp)
-        let hotset = i[0]
-        let mapper = i[1]
-        " build the hotkey_dictionnary expected name
-        if !empty(hotset)
-            let hotset = hotset . '_'
-        endif
-        let hotkeys_dict = "g:intim_" . hotset . "hotkeys"
-        " if it exists, read it and define the mappings by calling the
-        " appropriate mapper function
-        if exists(hotkeys_dict)
-            let hotkeys_dict = eval(hotkeys_dict)
-            if has_key(hotkeys_dict, s:language)
-                for hotkey in hotkeys_dict[s:language]
-                    exec "call s:" . mapper . "(hotkey[0], hotkey[1])"
-                endfor
-            endif
-        endif
+    let dicts = [
+                \ [s:hotkeys, 's:DefineHotKey'],
+                \ [s:headedExpression, 's:DefineHeadedExpression'],
+                \ [s:latexExpression, 's:DefineLaTeXExpression'],
+                \ [s:prefixedExpression, 's:DefinePrefixedExpression'],
+                \ [s:constantExpression, 's:DefineConstantExpression'],
+                \ ]
+    echom string(dicts)
+    for i in dicts
+        let mappings = s:readOption(i[0])
+        let MapperFunction = function(i[1])
+        for [shortcut, expression] in items(mappings)
+            call MapperFunction(shortcut, expression)
+        endfor
     endfor
 
 endfunction
@@ -261,7 +247,7 @@ call s:setDefaultOption_helpSyntax('default', "")
 call s:setDefaultOption_helpSyntax('python', "pydoc")
 call s:setDefaultOption_helpSyntax('R', "rdoc")
 
-" Leaders for hotkeys
+" Leaders for hotkeys "{{{
 " Simple `,` for sending commands to interpreter, complicated `-;` to actually
 " edit the script
 " in the LaTeX case, reverse: simple `,` for edition since interaction with
@@ -285,6 +271,7 @@ call s:setDefaultOption_hotkeys_edit_nleader('LaTeX', ',')
 call s:createLanguageOption('hotkeys_edit_vleader')
 call s:setDefaultOption_hotkeys_edit_vleader('default', '-;')
 call s:setDefaultOption_hotkeys_edit_vleader('LaTeX', ',')
+"}}}
 
 "}}}
 
@@ -330,7 +317,7 @@ function! s:createLanguageDictionnaryOption(name) "{{{
     execute ""
      \ . "function! s:set_" . a:name . "(language, key, option)\n"
      \ . "   call s:defineLanguageOption('" . a:name . "')\n"
-     \ . "   call s:defineLanguageOptionKey(s:" . a:name . ", a:key)\n"
+     \ . "   call s:defineLanguageOptionKey(s:" . a:name . ", a:language)\n"
      \ . "   let s:" . a:name . "[a:language][a:key] = a:option\n"
      \ . "endfunction\n"
     " export one version to user
@@ -347,13 +334,13 @@ endfunction
 "}}}
 
 " Highlight groups for supported syntax groups, they depend on the language
-call s:createLanguageDictionnaryOption('highlightGroups')
+call s:createLanguageDictionnaryOption('highlightGroups') "{{{
 " default for R
 call s:setDefaultOption_highlightGroups('R', 'IntimRIdentifier', 'Identifier')
 call s:setDefaultOption_highlightGroups('R', 'IntimRFunction', 'Function')
 " default for python
 " (temp list for for readability here only)
-let temp = [
+let groups = [
             \ ['IntimPyBool'      , 'Constant'],
             \ ['IntimPyBool'      , 'Constant'],
             \ ['IntimPyBuiltin'   , 'Identifier'],
@@ -370,10 +357,141 @@ let temp = [
             \ ['IntimPyStandard'  , 'Identifier'],
             \ ['IntimPyUnexistent', 'Ignore']
             \ ]
-for i in temp
-    call s:setDefaultOption_highlightGroups('python', i[0], i[1])
+for [group, linked] in groups
+    call s:setDefaultOption_highlightGroups('python', group, linked)
 endfor
+"}}}
 
+" Generic Hotkeys
+call s:createLanguageDictionnaryOption('hotkeys') "{{{
+" no default provided, but here is an example to increment a counter
+" call s:setDefaultOption_hotkeys('R', 'ii', '* <- * + 1')
+" call s:setDefaultOption_hotkeys('python', 'ii', '* += 1')
+"}}}
+
+" Headed hotkeys.. provide a few common default ones
+call s:createLanguageDictionnaryOption('headedExpression') "{{{
+" R  "{{{
+let mappings = [
+            \ ['al', 'as.logical'],
+            \ ['ac', 'as.character'],
+            \ ['ai', 'as.integer'],
+            \ ['an', 'as.numeric'],
+            \ ['cl', 'class'],
+            \ ['cn', 'colnames'],
+            \ ['dm', 'dim'],
+            \ ['hd', 'head'],
+            \ ['ia', 'is.array'],
+            \ ['id', 'is.data.frame'],
+            \ ['il', 'is.list'],
+            \ ['im', 'is.matrix'],
+            \ ['in', 'is.numeric'],
+            \ ['is', 'is.sorted'],
+            \ ['iv', 'is.vector'],
+            \ ['lg', 'length'],
+            \ ['lv', 'levels'],
+            \ ['me', 'mean'],
+            \ ['mn', 'min'],
+            \ ['mx', 'max'],
+            \ ['nc', 'ncol'],
+            \ ['nh', 'nchar'],
+            \ ['nm', 'names'],
+            \ ['nr', 'nrow'],
+            \ ['pr', 'print'],
+            \ ['rg', 'range'],
+            \ ['rn', 'rownames'],
+            \ ['sm', 'summary'],
+            \ ['sd', 'std'],
+            \ ['sz', 'size'],
+            \ ['tb', 'table'],
+            \ ['tl', 'tail'],
+            \ ['tr', 't'],
+            \ ['un', 'unique'],
+            \ ]
+for [map, head] in mappings
+    call s:setDefaultOption_headedExpression('R', map, head)
+endfor
+"}}}
+" python  "{{{
+let mappings = [
+            \ ['dr' , 'dir'  ],
+            \ ['id' , 'id'   ],
+            \ ['ln' , 'len'  ],
+            \ ['mn' , 'min'  ],
+            \ ['mx' , 'max'  ],
+            \ ['pr' , 'print'],
+            \ ['ty' , 'type' ],
+            \ ]
+for [map, head] in mappings
+    call s:setDefaultOption_headedExpression('python', map, head)
+endfor
+"}}}
+"}}}
+
+" Latex-style expressions..
+call s:createLanguageDictionnaryOption('latexExpression') "{{{
+" provide a few common default ones
+let mappings = [
+            \ ['bb', 'subsubsection'   ],
+            \ ['bf', 'textbf'          ],
+            \ ['ch', 'chapter'         ],
+            \ ['cp', 'caption'         ],
+            \ ['ct', 'cite'            ],
+            \ ['ep', 'emph'            ],
+            \ ['in', 'includegraphics' ],
+            \ ['it', 'textit'          ],
+            \ ['lb', 'label'           ],
+            \ ['mb', 'mbox'            ],
+            \ ['nc', 'newcommand'      ],
+            \ ['pr', 'pageref'         ],
+            \ ['rf', 'ref'             ],
+            \ ['sb', 'subsection'      ],
+            \ ['sc', 'textsc'          ],
+            \ ['se', 'section'         ],
+            \ ['sf', 'textsf'          ],
+            \ ['tb', 'textbf'          ],
+            \ ['te', 'emph'            ],
+            \ ['ti', 'textit'          ],
+            \ ['tt', 'texttt'          ],
+            \ ['tx', 'text'            ],
+            \ ['up', 'usepackage'      ],
+            \ ]
+for [map, head] in mappings
+    call s:setDefaultOption_latexExpression('LaTeX', map, head)
+endfor
+"}}}
+
+" Prefixed expressions.. provide a few common default ones
+call s:createLanguageDictionnaryOption('prefixedExpression') "{{{
+" Python
+let mappings = [
+            \ ['sf', 'self = '],
+            \ ['cls', 'cls = '],
+            \ ]
+for [map, prefix] in mappings
+    call s:setDefaultOption_prefixedExpression('python', map, prefix)
+endfor
+"}}}
+
+" Constant expressions.. provide a few common default ones
+call s:createLanguageDictionnaryOption('constantExpression') "{{{
+let mappings = [
+            \ ['LaTeX', 'ex', '\expandafter'],
+            \ ['LaTeX', 'hf', '\hfill'],
+            \ ['LaTeX', 'hr', '\hrule'],
+            \ ['LaTeX', 'ne', '\noexpand'],
+            \ ['LaTeX', 'ni', '\noindent'],
+            \ ['LaTeX', 'nl', '\null'],
+            \ ['LaTeX', 'vf', '\vfill'],
+            \ ['LaTeX', 'vr', '\vrule'],
+            \ ['Rust', 'cb', 'cargo build'],
+            \ ['Rust', 'cr', 'cargo run'],
+            \ ['Rust', 'ct', 'cargo test'],
+            \ ['R', 'go', 'graphics.off()'],
+            \ ]
+for [language, map, prefix] in mappings
+    call s:setDefaultOption_prefixedExpression(language, map, prefix)
+endfor
 "}}}
 
 "}}}
@@ -1092,9 +1210,7 @@ function! s:DefineHotKey(shortcut, expression) "{{{
     " mode: word under cursor or visually selected area.
     let contents = {'n': "<c-r>=expand('<cword>')<cr>",
                   \ 'v': "<c-r>=@*<cr>"}
-    for i in items(contents)
-        let mode = i[0]
-        let content = i[1]
+    for [mode, content] in items(contents)
         " send the command to IntimSession
         let effect = ":call <SID>Send(\'"
                     \ .  substitute(a:expression, '*', content, 'g') . "\')<cr>"

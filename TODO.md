@@ -31,7 +31,6 @@ Feature requests:
 
 - add an explicit predefined `restart` mapping?
 - provide utilities to get into loops: python (easy) and R (trickier)
-> define hotkeys another way: maybe export `s:DefineHeadedExpression`, etc?
 
 ### Bigger ones
 

@@ -290,6 +290,13 @@ fall into various categories.
 
 HERE: provide default g:hotkeys
 
+example of generic: * = *.pop()
+examples:
+    mtrace()
+    mtrace.off()
+    del
+    plt.show().. etc.
+
 
 - hotkeys
   texcompile
