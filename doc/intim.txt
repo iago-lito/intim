@@ -219,13 +219,13 @@ your interpreter, such as the `len()` of one variable in `python` or the
 `summary()` of a `data.frame` in `R`. However, you don't really need to add
 those to your file, and it may be tedious to write them again and again.
 Instead, you may use Intim hotkeys to send dynamic quick, repetitive requests
-about your symbols. By default in `python`, for instance, with your cursor
+on your symbols. By default in `python`, for instance, with your cursor
 positionned here ----|
 
     my_list = [1, 5, 8, 9]
     my_list.append(12)
     print(my_list)
-|---------^
+|----------^
 
 typing >
 
@@ -248,7 +248,7 @@ example from your `R` script, with your cursor here ----|
 
 typing >
 
-    ,sm
+    ,hd
 
 will send
 
@@ -284,21 +284,262 @@ will send
 
     > plot(data)
 
+                                                            *Intim_ileader*
+                                                            *Intim_vleader*
+                                                            *Intim_nleader*
+
 to the `R` interpreter, and produce a nice graph. There are a bunch of hotkeys
 provided by default with Intim, and you can define your own, of course. Hotkeys
-fall into various categories.
+are built with a leader (here `,`) followed by a shortcut (here `pl`). You may
+define the leader you like best for various languages with the following
+functions: >
 
-HERE: provide default g:hotkeys
+    call Intim_nleader('python', ',') " for normal mode
+    call Intim_vleader('LaTeX', '.')  " for visual mode
+    call Intim_ileader('R', '-;')     " for insert mode
 
-example of generic: * = *.pop()
-examples:
-    mtrace()
-    mtrace.off()
-    del
-    plt.show().. etc.
+Hotkeys fall into various categories:
+
+1) Headed hotkeys: - - - - - - - - - - - - - - - - - - *Intim_headedExpression*
+                                                       *intim-headed-hotkeys*
+
+    Useful for sending expression of the form `head(inside)`. Just move your
+cursor to the `inside` part in your script and type your hotkey code right
+after your leader key. See the three above example for instance.
+
+    Use *Intim_headedExpression()* to define your own headed hotkey mappings.
+For instance, once you have called: >
+
+    call Intim_headedExpression('R', 'ac', 'as.character')
+    call Intim_headedExpression('R', 'mx', 'max')
+
+, you may type in normal mode >
+
+    ,ac
+    ,mx
+
+in `python` to successively to check the `dir` view of the variable your were
+currently pointing to, then its maximum value.
+
+                                                        *intim-edit-bonuses*
+                                                                   *bonuses*
+
+    Note: For each headed expression you define this way, Intim also provides a
+few edition bonuses in normal, visual and insert mode. For instance, if your
+keep the defaults *Intim_nleader* , *Intim_vleader* and *Intim_ileader*
+settings, typing in normal mode >
+
+    -;ac
+
+will wrap the `word` under cursor into a `as.character(word)` expression;
+typing in visual mode >
+
+    -;ac
+
+will wrap your selected `area` into a `as.character(area)` expression;
+and typing in insert mode >
+
+    ,ac
+
+inserts a full, ready-to-fill `as.character()` expression to your script.
+Try it out!
 
 
-- hotkeys
+2) Prefixed hotkeys: - - - - - - - - - - - - - - - - *Intim_prefixedExpression*
+                                                     *intim-prefixed-hotkeys*
+
+    Useful for sending expression of the form `prefix after` .Just move your
+cursor to the `after` part in your script and type your hotkey code right
+after your leading key.
+
+    Use *Intim_prefixedExpression()* to define your own prefixed hotkey
+mappings. For instance, once you have called: >
+
+    call Intim_prefixedExpression('python', 'sf', 'self = ')
+    call Intim_prefixedExpression('python', 'cl', 'cls = ')
+
+, you may type in normal mode
+
+    ,sf
+
+while pointing to your `instance` so that the command `self = instance` is sent
+to the interpreter. This may be useful for swift debugging activity.
+
+    Note: Intim's edit *bonuses* are also defined on each call to
+*Intim_prefixedExpression()* , try `-;sf` in normal and visual mode, or `,sf` in
+insert mode.
+
+3) LaTeX-style hotkeys: - - - - - - - - - - - - - - - - *Intim_latexExpression*
+                                                        *intim-latex-hotkeys*
+
+    These hotkeys are only useful as edit *bonuses* while writing LaTeX
+scripting. They transform any `text` into an expression like `\head{text}`. Use
+these calls to define your own heads and hotkeys: >
+
+    call Intim_latexExpression('LaTeX', 'pr', 'pageref')
+    call Intim_latexExpression('LaTeX', 'ep', 'emph')
+
+then playaround with `,pr`, in normal, visual or insert modes. Don't forget to
+set the leading key you like best with *Intim_ileader* function, etc.
+
+4) Constant hotkeys: - - - - - - - - - - - - - - - - *Intim_constantExpression*
+                                                     *intim-constant-hotkeys*
+
+    Useful for sending any fixed command to the interpreter.. or for enjoying
+associated fixed edit *bonuses* in non-intepreted languages like LaTeX. For
+instance, once you have called >
+
+    call Intim_constantExpression('R', 'go', 'graphics.off()')
+    call Intim_constantExpression('LaTeX', 'ea', '\expandafter')
+    call Intim_constantExpression('Rust', 'cr', 'cargo run')
+
+you'll be able to close every `R` graphs typing only `,go` in normal mode, to
+write `\expandafter` in LaTeX typing only `,ea` in insert mode, or
+compiling/running your whole `Rust` code typing only `,cr` in normal mode. Try
+them out!
+
+5) Generic hotkeys: - - - - - - - - - - - - - - - - - - - - - - *Intim_hotkeys*
+                                                        *intim-generic-hotkeys*
+
+    This is the most general type of hotkeys, with expressions defined as you
+wish with one placeholder written as a star `*`. For instance,
+
+- *Intim_headedExpression* are defined as `head(*)`
+- *Intim_prefixedExpression* are defined as `prefix *`
+- *Intim_latexExpression* are defined as `\head{*}`
+- *Intim_constantExpression* are defined as `constant`
+
+    You may define you own of course. For instance, once you have called >
+
+    Intim_hotkeys('R', 'ii', '* <- * + 1')
+    Intim_hotkeys('pyhon', 'ii', '* += 1')
+
+you'll be able to increment any `counter` in `R` or `python` by navigating to
+it, then type `,ii` in normal mode.
+
+Note: No edit *bonuses* are automatically defined for generic hotkeys expression
+like these. If you need something like this, you would probably make a very good
+use of the *Ultisnips* package, found at https://github.com/SirVer/ultisnips.
+
+- Default hotkeys - - - - - - - - - - - - - - - - - - - - *intim-default-hotkeys*
+
+    Here is the exhaustive list of every default hotkeys defined by Intim.
+
+Note: You can simply override these defaults with anything you like or prefer.
+Furthermore, if you had anything else mapped to these before you installed
+Intim, Intim will not override you personal, existing mappings, and will define
+nothing instead of one default :)
+
+    *intim-headed-hotkeys*
+
+    for `R`:
+            al    as.logical
+            ac    as.character
+            ai    as.integer
+            an    as.numeric
+            cl    class
+            cn    colnames
+            dm    dim
+            hd    head
+            ia    is.array
+            id    is.data.frame
+            il    is.list
+            im    is.matrix
+            in    is.numeric
+            is    is.sorted
+            iv    is.vector
+            lg    length
+            lv    levels
+            me    mean
+            mn    min
+            mx    max
+            nc    ncol
+            nh    nchar
+            nm    names
+            nr    nrow
+            pl    plot
+            pr    print
+            rg    range
+            rn    rownames
+            sm    summary
+            sd    std
+            sz    size
+            tb    table
+            tl    tail
+            tr    t
+            un    unique
+
+    for `python`:
+
+            dr    dir
+            id    id
+            ln    len
+            mn    min
+            mx    max
+            pr    prit
+            ty    type
+
+    *intim-prefixed-hotkeys*
+
+    for `python`:
+
+            sf    self =
+            cl    cls =
+
+    *intim-latex-hotkeys*
+
+    for `LateX`:
+
+            bb   subsubsection
+            bf   textbf
+            ch   chapter
+            cp   caption
+            ct   cite
+            ep   emph
+            in   includegraphic
+            it   textit
+            lb   label
+            mb   mbox
+            nc   newcommand
+            pr   pageref
+            rf   ref
+            sb   subsection
+            sc   textsc
+            se   section
+            sf   textsf
+            tb   textbf
+            te   emph
+            ti   textit
+            tt   texttt
+            tx   text
+            up   usepackage
+
+    *intim-constant-hotkeys*
+
+    for `R`:
+            go   graphics.off()
+
+    for `LaTeX`:
+
+            ex   \expandafter
+            hf   \hfill
+            hr   \hrule
+            ne   \noexpand
+            ni   \noindent
+            nl   \null
+            vf   \vfill
+            vr   \vrule
+
+    for `Rust`:
+
+            cb   cargo build
+            cr   cargo run
+            ct   cargo test
+
+==============================================================================
+3. LaTeX and non-interpreted languages.                          *intim-latex*
+                                                                 *intim-compiled*
+
   texcompile
   g:intim_openPdf_command
 

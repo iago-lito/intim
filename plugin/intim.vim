@@ -146,7 +146,6 @@ function! s:SetLanguage(language) "{{{
                 \ [s:prefixedExpression, 's:DefinePrefixedExpression'],
                 \ [s:constantExpression, 's:DefineConstantExpression'],
                 \ ]
-    echom string(dicts)
     for i in dicts
         let mappings = s:readOption(i[0])
         let MapperFunction = function(i[1])
@@ -397,6 +396,7 @@ let mappings = [
             \ ['nh', 'nchar'],
             \ ['nm', 'names'],
             \ ['nr', 'nrow'],
+            \ ['pl', 'plot'],
             \ ['pr', 'print'],
             \ ['rg', 'range'],
             \ ['rn', 'rownames'],
@@ -426,6 +426,18 @@ for [map, head] in mappings
     call s:setDefaultOption_headedExpression('python', map, head)
 endfor
 "}}}
+"}}}
+
+" Prefixed expressions.. provide a few common default ones
+call s:createLanguageDictionnaryOption('prefixedExpression') "{{{
+" Python
+let mappings = [
+            \ ['sf', 'self = '],
+            \ ['cl', 'cls = '],
+            \ ]
+for [map, prefix] in mappings
+    call s:setDefaultOption_prefixedExpression('python', map, prefix)
+endfor
 "}}}
 
 " Latex-style expressions..
@@ -461,18 +473,6 @@ for [map, head] in mappings
 endfor
 "}}}
 
-" Prefixed expressions.. provide a few common default ones
-call s:createLanguageDictionnaryOption('prefixedExpression') "{{{
-" Python
-let mappings = [
-            \ ['sf', 'self = '],
-            \ ['cls', 'cls = '],
-            \ ]
-for [map, prefix] in mappings
-    call s:setDefaultOption_prefixedExpression('python', map, prefix)
-endfor
-"}}}
-
 " Constant expressions.. provide a few common default ones
 call s:createLanguageDictionnaryOption('constantExpression') "{{{
 let mappings = [
@@ -490,8 +490,10 @@ let mappings = [
             \ ['R', 'go', 'graphics.off()'],
             \ ]
 for [language, map, prefix] in mappings
-    call s:setDefaultOption_prefixedExpression(language, map, prefix)
+    call s:setDefaultOption_constantExpression(language, map, prefix)
 endfor
+"}}}
+
 "}}}
 
 "}}}
