@@ -31,6 +31,8 @@ Feature requests:
 
 - add an explicit predefined `restart` mapping?
 - provide utilities to get into loops: for `python` (easy) and `R` (trickier)
+- add another placeholder like `%f` in hotkeys expressions to insert filenames.
+    - this will help making a neater implementation of default LaTeX commands.
 
 ### Bigger ones
 

@@ -97,8 +97,8 @@ launched: >
     call Intim_invokeCommand('bash', 'bash')
     call Intim_invokeCommand('LaTeX', '')
 
-If it seems unclear to Intim which language you intend to use, use the dedicated
-function >
+If it seems unclear to Intim which language you intend to use, use the
+dedicated function >
 
     call IntimSetLanguage('myLanguage')
 
@@ -142,20 +142,20 @@ file is set by option *g:intim_tempChunks* which defaults to Intim package
 folder.
 
 Once anything sent, Intim tries navigating to the next line of script in your
-file. You may find it comfy or annoying.. or it may depends on the situation. To
-send commands without navigating next, use >
+file. You may find it comfy or annoying.. or it may depends on the situation.
+To send commands without navigating next, use >
 
     nmap c<space> <Plug>IntimStaticSendLine
     vmap ,<space> <Plug>IntimStaticSendChunk
     vmap ,<space> <Plug>IntimStaticSendSelection
 
-Sometimes you feel like sending every line you have written to the interpreter,
-well you may >
+Sometimes you feel like sending every line you have written to the
+interpreter, well you may >
 
     nmap a<space><space> <Plug>IntimSendAll
 
-Or you can send your whole file as a chunk, as currently written on the disk (be
-aware that no unsaved change will be sent this way) >
+Or you can send your whole file as a chunk, as currently written on the disk
+(be aware that no unsaved change will be sent this way) >
 
     nmap a<space><space> <Plug>IntimSendFile
 
@@ -190,9 +190,9 @@ Help information is temporarily buffered into an intim file: >
     let g:intim_tempHelp = '~/.vim/intim/tmp/help'
 
 ==============================================================================
-6. Getting help                                                     *intim-help*
+6. Coloring                                                       *intim-colors*
 
-Intim can try to analyse your current interpreter session to dig out all
+Intim can try analysing your current interpreter session to dig out all
 declared currently declared symbols and their types. It will then use this
 information to paint your script in various colors depending on which you like
 most. Use >
@@ -200,13 +200,13 @@ most. Use >
     nmap ,uc <Plug>IntimUpdateColor
 
 to update your file coloring. This is only supported for `R` and `python`
-languages yet. Feel free to send presents to random developers so they get down
-to Intim repo and provide support for your favorite interpreter.
+languages yet. Feel free to send presents to random developers so they get
+down to Intim repo and provide support for your favorite interpreter.
 
 Note: In order not to make vim coloring procedure sluggish, Intim parses your
-script so that only the symbols used in your file need to be colored. Syntactic
-information about it can be found in Intim's temp files *g:intim_tempSyntax*
-found in the plugin folder by default.
+script so that only the symbols used in your file need to be colored.
+Syntactic information about it can be found in Intim's temp files
+*g:intim_tempSyntax* found in the plugin folder by default.
 
 ==============================================================================
 7. Hotkeys                                                       *intim-hotkeys*
@@ -284,10 +284,10 @@ will send
 to the `R` interpreter, and produce a nice graph.
                                                                   *intim-leader*
 
-There are a bunch of hotkeys provided by default with Intim, and you can define
-your own, of course. Hotkeys are built with a leader (here `,`) followed by a
-shortcut (here `pl`). You may define the leader you like best for various
-languages with the following functions: >
+There are a bunch of hotkeys provided by default with Intim, and you can
+define your own, of course. Hotkeys are built with a leader (here `,`)
+followed by a shortcut (here `pl`). You may define the leader you like best
+for various languages with the following functions: >
 
     call Intim_nleader('python', ',') " for normal mode
     call Intim_vleader('LaTeX', '.')  " for visual mode
@@ -320,8 +320,8 @@ were currently pointing to, then its maximum value.
                                                         *intim-edit-bonuses*
                                                                    *bonuses*
 
-    Note: For each headed expression you define this way, Intim also provides a
-few edition bonuses in normal, visual and insert mode. For instance, if your
+    Note: For each headed expression you define this way, Intim also provides
+a few edition bonuses in normal, visual and insert mode. For instance, if your
 keep the defaults *Intim_nleader* , *Intim_vleader* and *Intim_ileader*
 settings, typing in normal mode >
 
@@ -421,7 +421,7 @@ expression like these. If you need anything like this, you will probably
 make a good use of the *Ultisnips* package, found at
 https://github.com/SirVer/ultisnips.
 
-- Default hotkeys - - - - - - - - - - - - - - - - - - - - *intim-default-hotkeys*
+- Default hotkeys - - - - - - - - - - - - - - - - - - - *intim-default-hotkeys*
 
     Here is the exhaustive list of every default hotkeys defined by Intim.
 
@@ -537,11 +537,38 @@ define nothing instead of one default :)
             ct   cargo test
 
 ==============================================================================
-3. LaTeX and non-interpreted languages.                          *intim-latex*
-                                                                 *intim-compiled*
+3. LaTeX and non-interpreted languages.                            *intim-latex*
+                                                                *intim-compiled*
 
-  texcompile
-  g:intim_openPdf_command
+Although it is not an actually interpreted language, you may benefit from
+Intim even while using LaTeX. Because it often is useful to send compilation
+commands on-the-fly or to navigate to produced documents.. even edit *bonuses*
+and *Intim_latexExpression* may be useful. Use >
+
+    nmap ,lc <Plug>IntimTexCompileFast
+
+to send your document's compilation commands. Use >
+
+    nmap ,Lc <Plug>IntimTexCompileFull
+
+to compile twice with the bibliography. Use >
+
+    nmap ,mc <Plug>IntimTexClean
+
+to clean up every LaTeX intermediate file. And use >
+
+    nmap ,to <Plug>IntimOpenPdf
+
+to get your document opened in the pdf viewer you defined in >
+
+    let g:intim_openPdf_command = "evince * &"
+
+were `*` stands as a placeholder for your document's filename.
+
+Note: as the time of writing, these options are not much customizable. Your
+may create your own from scratch by making a good use of
+*Intim_constantExpression* and *IntimSend* functions. Do not hesitate visiting
+the repo and ask for features if you need more.
 
 ==============================================================================
 3. License                                                       *intim-license*
@@ -571,6 +598,7 @@ on GitHub:
 
 ==============================================================================
 5. Contributing                                               *intim-contribute*
+                                                                          *repo*
 
     Fork the source repository on GitHub and send a pull request if you have
 any code improvements. I'll be happy to work with you :)

@@ -923,6 +923,7 @@ endfunction
 
 " Colors:
 " Use interpreter's introspection to produces dynamic syntax files "{{{
+
 function! s:UpdateColor() "{{{
     " The introspection script is part of this plugin
     if s:language == 'python'
@@ -1334,6 +1335,8 @@ endfunction
 
 " Methods:
 " Provide user function call opportunities "{{{
+" Note: some other function calls are provided in this script during options
+" definitions. There are also guarded in their own way.
 
 " Macro declaring and guarding user wrappers to methods:
 function! s:functionExport(internalname, name) "{{{
