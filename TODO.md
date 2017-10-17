@@ -30,13 +30,15 @@ Feature requests:
 ### Easy ones
 
 - add an explicit predefined `restart` mapping?
-- provide utilities to get into loops: python (easy) and R (trickier)
+- provide utilities to get into loops: for `python` (easy) and `R` (trickier)
 
 ### Bigger ones
 
 - add explicit utilities for `bash` interpreter, does anyone know bash well?
 - disable simple sending for compiled language (LaTeX, Rust, ..), which make no
   sense.
+- ssh option? sending commands *via* is not difficult, but sending
+  chunk/help/color files could be something :)
 
 .. feel bored? grep 'TODO' anywhere in the project ;)
 

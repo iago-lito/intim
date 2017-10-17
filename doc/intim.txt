@@ -78,52 +78,49 @@ Choose the terminal you would like to see your interpreter running within with >
 
     let g:intim_terminal = "gnome-terminal"
 
-Here is a hook for you: these commands will be executed right after `tmux`
-session has been launched, and before invoking your interpreter. Use it, for
-example, to navigate to your favorite scripting directory, to temporarily edit
-your `$PATH`, or to tile the newly opened terminal so you get it comfy on your
-screen. >
+Here is a hook for you: these commands will be executed by your system right
+after `tmux` session has been launched, and before invoking your interpreter.
+Use it, for example, to navigate to your favorite scripting directory, to
+temporarily edit your `$PATH`, or to tile the newly opened terminal so you get
+it comfy on your screen. >
 
-    let g:intim_postLaunchCommand = {
-        \ 'default': ['my custom command'],
-        \ }
+    call Intim_postLaunchCommands('default', ['my default custom command'])
+    call Intim_postLaunchCommands('python', ['my custom command for python'])
+    call Intim_postLaunchCommands('R', ['my custom command for R'])
 
 Choose the interpreter you would like to invoke once `tmux` session has been
 launched: >
 
-    let g:intim_invokeCommand = {
-        \ 'default' : "",
-        \ 'python'  : "python3",
-        \ 'R'       : "R --no-save --no-restore",
-        \ 'bash'    : "bash",
-        \ 'LaTeX'   : "",
-        \ }
+    call Intim_invokeCommand('default', '')
+    call Intim_invokeCommand('python', 'python3')
+    call Intim_invokeCommand('R', 'R --no-save --no-restore')
+    call Intim_invokeCommand('bash', 'bash')
+    call Intim_invokeCommand('LaTeX', '')
 
 If it seems unclear to Intim which language you intend to use, use the dedicated
 function >
 
     call IntimSetLanguage('myLanguage')
 
-in your autocmd procedures, so that it'll be aware from now on.
+in your autocmd procedures, so that it'll be aware from now on. When Intim
+doesn't know, it falls back to option stored as `default`.
 
-Here is a hook for you: this command will be sent to the tmuxed terminal just
-before your interpreter invocation. In other words, it is pretty much the same
-as *g:intim_postLaunchCommand* but you may only set one command: >
+Here is a hook for you: these commands will be sent to the tmuxed terminal
+just before your interpreter invocation. In other words, it is pretty much the
+same as *Intim_postLaunchCommands()* but they will be sent to `tmux` instead
+of being sent directl to your system: >
 
-    let g:intim_preInvokeCommands = {
-        \ 'default': "cd ~",
-        \ }
+    call Intim_preInvokeCommands('default', ['cd ~'])
 
 Here is another hook: this command will we executed right after the
 interpreter has been invoked. In other words, it will be the first command to
 be interpreted. Use it to load your favorite package, or to print a hello
 test: >
 
-    let g:intim_postInvokeCommands = {
-        \ 'default': "",
-        \ 'python': "import numpy as np"
-        \ 'R': "setwd('~/MyFavoriteRMessFolder/'); print('Hello!')"
-        \ }
+    call Intim_postInvokeCommands('default', [''])
+    call Intim_postInvokeCommands('python', ['import numpy as np', 'import os'])
+    call Intim_postInvokeCommands('R', ['setwd("~/myR/")',
+                                      \ 'print("Hello!")'])
 
 ==============================================================================
 4. Passing commands                                              *intim-passing*
@@ -219,7 +216,7 @@ your interpreter, such as the `len()` of one variable in `python` or the
 `summary()` of a `data.frame` in `R`. However, you don't really need to add
 those to your file, and it may be tedious to write them again and again.
 Instead, you may use Intim hotkeys to send dynamic quick, repetitive requests
-on your symbols. By default in `python`, for instance, with your cursor
+about your symbols. By default in `python`, for instance, with your cursor
 positionned here ----|
 
     my_list = [1, 5, 8, 9]
@@ -284,21 +281,20 @@ will send
 
     > plot(data)
 
-                                                            *Intim_ileader*
-                                                            *Intim_vleader*
-                                                            *Intim_nleader*
+to the `R` interpreter, and produce a nice graph.
+                                                                  *intim-leader*
 
-to the `R` interpreter, and produce a nice graph. There are a bunch of hotkeys
-provided by default with Intim, and you can define your own, of course. Hotkeys
-are built with a leader (here `,`) followed by a shortcut (here `pl`). You may
-define the leader you like best for various languages with the following
-functions: >
+There are a bunch of hotkeys provided by default with Intim, and you can define
+your own, of course. Hotkeys are built with a leader (here `,`) followed by a
+shortcut (here `pl`). You may define the leader you like best for various
+languages with the following functions: >
 
     call Intim_nleader('python', ',') " for normal mode
     call Intim_vleader('LaTeX', '.')  " for visual mode
     call Intim_ileader('R', '-;')     " for insert mode
 
 Hotkeys fall into various categories:
+
 
 1) Headed hotkeys: - - - - - - - - - - - - - - - - - - *Intim_headedExpression*
                                                        *intim-headed-hotkeys*
@@ -318,8 +314,8 @@ For instance, once you have called: >
     ,ac
     ,mx
 
-in `python` to successively to check the `dir` view of the variable your were
-currently pointing to, then its maximum value.
+in `R` to successively to get the `as.character` view of the variable your
+were currently pointing to, then its maximum value.
 
                                                         *intim-edit-bonuses*
                                                                    *bonuses*
@@ -348,7 +344,7 @@ Try it out!
 2) Prefixed hotkeys: - - - - - - - - - - - - - - - - *Intim_prefixedExpression*
                                                      *intim-prefixed-hotkeys*
 
-    Useful for sending expression of the form `prefix after` .Just move your
+    Useful for sending expression of the form `prefix after` . Just move your
 cursor to the `after` part in your script and type your hotkey code right
 after your leading key.
 
@@ -369,6 +365,7 @@ to the interpreter. This may be useful for swift debugging activity.
 *Intim_prefixedExpression()* , try `-;sf` in normal and visual mode, or `,sf` in
 insert mode.
 
+
 3) LaTeX-style hotkeys: - - - - - - - - - - - - - - - - *Intim_latexExpression*
                                                         *intim-latex-hotkeys*
 
@@ -381,6 +378,7 @@ these calls to define your own heads and hotkeys: >
 
 then playaround with `,pr`, in normal, visual or insert modes. Don't forget to
 set the leading key you like best with *Intim_ileader* function, etc.
+
 
 4) Constant hotkeys: - - - - - - - - - - - - - - - - *Intim_constantExpression*
                                                      *intim-constant-hotkeys*
@@ -397,6 +395,7 @@ you'll be able to close every `R` graphs typing only `,go` in normal mode, to
 write `\expandafter` in LaTeX typing only `,ea` in insert mode, or
 compiling/running your whole `Rust` code typing only `,cr` in normal mode. Try
 them out!
+
 
 5) Generic hotkeys: - - - - - - - - - - - - - - - - - - - - - - *Intim_hotkeys*
                                                         *intim-generic-hotkeys*
@@ -417,9 +416,10 @@ wish with one placeholder written as a star `*`. For instance,
 you'll be able to increment any `counter` in `R` or `python` by navigating to
 it, then type `,ii` in normal mode.
 
-Note: No edit *bonuses* are automatically defined for generic hotkeys expression
-like these. If you need something like this, you would probably make a very good
-use of the *Ultisnips* package, found at https://github.com/SirVer/ultisnips.
+Note: No edit *bonuses* are automatically defined for generic hotkeys
+expression like these. If you need anything like this, you will probably
+make a good use of the *Ultisnips* package, found at
+https://github.com/SirVer/ultisnips.
 
 - Default hotkeys - - - - - - - - - - - - - - - - - - - - *intim-default-hotkeys*
 
@@ -427,8 +427,8 @@ use of the *Ultisnips* package, found at https://github.com/SirVer/ultisnips.
 
 Note: You can simply override these defaults with anything you like or prefer.
 Furthermore, if you had anything else mapped to these before you installed
-Intim, Intim will not override you personal, existing mappings, and will define
-nothing instead of one default :)
+Intim, Intim will not override you personal, existing mappings, and will
+define nothing instead of one default :)
 
     *intim-headed-hotkeys*
 
@@ -556,7 +556,7 @@ Here is a list of Intim options and the most relevant doc to read about them:
 
     g:intim_invokeCommand ........... |intim-starting|
     g:intim_postInvokeCommands ...... |intim-starting|
-    g:intim_postLaunchCommand ....... |g:intim_postLaunchCommand|
+    g:intim_postLaunchCommands ....... |g:intim_postLaunchCommands|
     g:intim_preInvokeCommands ....... |intim-starting|
     g:intim_tempChunks .............. |g:intim_tempChunks|
     g:intim_terminal ................ |intim-starting|
