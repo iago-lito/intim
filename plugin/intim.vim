@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2017-06-02
+" Last Change:	2017-10-20
 " Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 " License:      This file is placed under the GNU PublicLicense 3.
 

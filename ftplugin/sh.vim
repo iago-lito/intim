@@ -1,0 +1,2 @@
+call IntimLanguage('bash')
+
