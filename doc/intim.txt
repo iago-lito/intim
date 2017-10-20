@@ -57,11 +57,6 @@ mappings and options or example mappings and options. They will not be set by
 Intim if you already had them mapped to something else. Do not hesitate to
 change them so it is the most comfortable for you.
 
-    Some options are defined as dictionnaries, whose entries are Intim's
-supported scripting languages (`python`, `R`, `LaTeX`, `bash`, etc). For now,
-if you wish not to use the default ones, you need to explicitly define all
-language entries that will be useful to you.
-
     Of course, this is an open project licenced under GNU3. Feel free to get
 into the code, share, provide feedback, fork or contribute ;)
 

@@ -41,6 +41,10 @@ Feature requests:
   sense.
 - ssh option? sending commands *via* is not difficult, but sending
   chunk/help/color files could be something :)
+- rewrite `syntax.R` with new `syntax.py` logic
+    - parse `R` script and only query `R` for used tokens
+    - accordingly, color `list$name` constructs iif they are defined, just like
+      `object.attribute` in `python`
 - provide full syntax files instead of working around already defined groups.
   grep `pythonFunction` to see the problem, which may occurs because of other
   plugins or vim80-dependents stuff or anything ugly like that.
