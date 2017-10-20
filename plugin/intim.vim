@@ -988,8 +988,14 @@ function! s:UpdateColor() "{{{
     " duplicated, sorry:
     syntax match IntimPyMethod
       \ "\%(\%(^\s*\)\%(\%(>>>\|\.\.\.\)\s\+\)\=\%(def\)\s\+\)\@<=\h\w*"
-    " .. but the original one is masking:
-    syntax clear pythonFunction
+    " TODO: make this editable by user? Higlight groups in this list will be
+    " cleared at this point, in order not to mask intim colors:
+    let overriding_groups = ['pythonFunction'] " defined by EasyTags plugin
+    for group in overriding_groups
+        if hlexists(group)
+            execute "syntax clear " . group
+        endif
+    endfor
 endfunction
 "}}}
 
