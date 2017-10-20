@@ -1,6 +1,6 @@
-*intim.txt*                       Version 0.1            Last change: 2017-10-02
+*intim.txt*                       Version 1.0            Last change: 2017-10-20
 
-                                    *Intim*
+                                    Intim
 
                  Interactively Interface Vim with Interpreters
 
@@ -9,10 +9,21 @@ CONTENT                                                          *intim-content*
 
     1. Introduction .......................... |intim-introduction|
     2. Starting Intim ........................ |intim-starting|
-    3. License ............................... |intim-license|
-    4. Bugs .................................. |intim-bugs|
-    5. Contributing .......................... |intim-contribute|
-    6. Credits ............................... |intim-credits|
+    3. Passing commands ...................... |intim-passing|
+    4. Getting help .......................... |intim-help|
+    5. Coloring .............................. |intim-colors|
+    6. Hotkeys ............................... |intim-hotkeys|
+        headed ............................... |intim-headed-hotkeys|
+        prefixed ............................. |intim-prefixed-hotkeys|
+        latex ................................ |intim-latex-hotkeys|
+        constant ............................. |intim-constant-hotkeys|
+        generic .............................. |intim-generic-hotkeys|
+        default .............................. |intim-default-hotkeys|
+    7. LaTeX and non-interpreted languages ... |intim-compiled|
+    8. License ............................... |intim-license|
+    9. Bugs .................................. |intim-bugs|
+    10. Contributing ......................... |intim-contribute|
+    11. Credits .............................. |intim-credits|
 
 ==============================================================================
 1. Introduction                                             *intim-introduction*
@@ -123,7 +134,7 @@ test: >
                                       \ 'print("Hello!")'])
 
 ==============================================================================
-4. Passing commands                                              *intim-passing*
+3. Passing commands                                              *intim-passing*
 
 The main feature of Intim is command passing to the tmuxed terminal session.
 Use the default mappings: >
@@ -172,7 +183,7 @@ function for that, feel free to use >
 in any of your custom recipes.
 
 ==============================================================================
-5. Getting help                                                     *intim-help*
+4. Getting help                                                     *intim-help*
 
 Intim can try to fetch help files from your interpreter, and open them in a
 unnammed buffer. Put your Vim cursor on the symbol you need help about, or
@@ -190,7 +201,7 @@ Help information is temporarily buffered into an intim file: >
     let g:intim_tempHelp = '~/.vim/intim/tmp/help'
 
 ==============================================================================
-6. Coloring                                                       *intim-colors*
+5. Coloring                                                       *intim-colors*
 
 Intim can try analysing your current interpreter session to dig out all
 declared currently declared symbols and their types. It will then use this
@@ -209,7 +220,7 @@ Syntactic information about it can be found in Intim's temp files
 *g:intim_tempSyntax* found in the plugin folder by default.
 
 ==============================================================================
-7. Hotkeys                                                       *intim-hotkeys*
+6. Hotkeys                                                       *intim-hotkeys*
 
 While you are developping your script, you often want to ask small things to
 your interpreter, such as the `len()` of one variable in `python` or the
@@ -537,7 +548,7 @@ define nothing instead of one default :)
             ct   cargo test
 
 ==============================================================================
-3. LaTeX and non-interpreted languages.                            *intim-latex*
+7. LaTeX and non-interpreted languages.                            *intim-latex*
                                                                 *intim-compiled*
 
 Although it is not an actually interpreted language, you may benefit from
@@ -571,25 +582,13 @@ may create your own from scratch by making a good use of
 the repo and ask for features if you need more.
 
 ==============================================================================
-3. License                                                       *intim-license*
+8. License                                                       *intim-license*
 
     Intim is released under the GPL3.
     See https://www.gnu.org/licenses/gpl-3.0.html
 
 ==============================================================================
-5. Options                                                        *intim-option*
-
-Here is a list of Intim options and the most relevant doc to read about them:
-
-    g:intim_invokeCommand ........... |intim-starting|
-    g:intim_postInvokeCommands ...... |intim-starting|
-    g:intim_postLaunchCommands ....... |g:intim_postLaunchCommands|
-    g:intim_preInvokeCommands ....... |intim-starting|
-    g:intim_tempChunks .............. |g:intim_tempChunks|
-    g:intim_terminal ................ |intim-starting|
-
-==============================================================================
-4. Bugs                                                             *intim-bugs*
+9. Bugs                                                             *intim-bugs*
 
     If you experience any bugs or have feature requests, please open an issue
 on GitHub:
@@ -597,7 +596,7 @@ on GitHub:
     https://github.com/iago-lito/intim/issues
 
 ==============================================================================
-5. Contributing                                               *intim-contribute*
+10. Contributing                                              *intim-contribute*
                                                                           *repo*
 
     Fork the source repository on GitHub and send a pull request if you have
@@ -606,7 +605,7 @@ any code improvements. I'll be happy to work with you :)
 Source repository: https://github.com/iago-lito/intim
 
 ==============================================================================
-6. Credits                                                       *intim-credits*
+11. Credits                                                      *intim-credits*
 
 Authors: ~
 
@@ -614,6 +613,6 @@ Authors: ~
 
 Special thanks to: ~
 
-        José Cláudio Faria for his inspiring plugin:
+        José Cláudio Faria for this inspiring plugin:
             https://github.com/jcfaria/Vim-R-plugin
 
