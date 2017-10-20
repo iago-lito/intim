@@ -300,9 +300,10 @@ define your own, of course. Hotkeys are built with a leader (here `,`)
 followed by a shortcut (here `pl`). You may define the leader you like best
 for various languages with the following functions: >
 
-    call Intim_nleader('python', ',') " for normal mode
-    call Intim_vleader('LaTeX', '.')  " for visual mode
-    call Intim_ileader('R', '-;')     " for insert mode
+    call Intim_hotkeys_nleader('python', ',') " for normal mode sending
+    call Intim_hotkeys_vleader('python', ',') " for visual mode sending
+    call Intim_hotkeys_edit_vleader('LaTeX', ',') " for visual mode editing
+    call Intim_hotkeys_edit_ileader('R', ';')     " for insert mode editing
 
 Hotkeys fall into various categories:
 
@@ -336,12 +337,12 @@ a few edition bonuses in normal, visual and insert mode. For instance, if your
 keep the defaults *Intim_nleader* , *Intim_vleader* and *Intim_ileader*
 settings, typing in normal mode >
 
-    -;ac
+    ;ac
 
 will wrap the `word` under cursor into a `as.character(word)` expression;
 typing in visual mode >
 
-    -;ac
+    ;ac
 
 will wrap your selected `area` into a `as.character(area)` expression;
 and typing in insert mode >
@@ -373,7 +374,7 @@ while pointing to your `instance` so that the command `self = instance` is sent
 to the interpreter. This may be useful for swift debugging activity.
 
     Note: Intim's edit *bonuses* are also defined on each call to
-*Intim_prefixedExpression()* , try `-;sf` in normal and visual mode, or `,sf` in
+*Intim_prefixedExpression()* , try `;sf` in normal and visual mode, or `,sf` in
 insert mode.
 
 

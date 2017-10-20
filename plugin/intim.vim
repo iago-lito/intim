@@ -247,28 +247,26 @@ call s:setDefaultOption_helpSyntax('python', "pydoc")
 call s:setDefaultOption_helpSyntax('R', "rdoc")
 
 " Leaders for hotkeys "{{{
-" Simple `,` for sending commands to interpreter, complicated `-;` to actually
-" edit the script
-" in the LaTeX case, reverse: simple `,` for edition since interaction with
-" interpreter is quite weak and complicated `-;` for sending commands
-" for sending in normal mode
+" `,` for sending commands to interpreter, `;` to actually edit the script
+" in the LaTeX case, reverse: `,` for edition since interaction with
+" interpreter is less frequent and `;` for sending in normal mode
 call s:createLanguageOption('hotkeys_nleader')
 call s:setDefaultOption_hotkeys_nleader('default', ',')
-call s:setDefaultOption_hotkeys_nleader('LaTeX', '-;')
+call s:setDefaultOption_hotkeys_nleader('LaTeX', ';')
 " for sending in visual mode
 call s:createLanguageOption('hotkeys_vleader')
 call s:setDefaultOption_hotkeys_vleader('default', ',')
-call s:setDefaultOption_hotkeys_vleader('LaTeX', '-;')
+call s:setDefaultOption_hotkeys_vleader('LaTeX', ';')
 " for editing in insert mode
 call s:createLanguageOption('hotkeys_edit_ileader')
 call s:setDefaultOption_hotkeys_edit_ileader('default', ',')
 " for editing in normal mode
 call s:createLanguageOption('hotkeys_edit_nleader')
-call s:setDefaultOption_hotkeys_edit_nleader('default', '-;')
+call s:setDefaultOption_hotkeys_edit_nleader('default', ';')
 call s:setDefaultOption_hotkeys_edit_nleader('LaTeX', ',')
 " for editin in visual mode
 call s:createLanguageOption('hotkeys_edit_vleader')
-call s:setDefaultOption_hotkeys_edit_vleader('default', '-;')
+call s:setDefaultOption_hotkeys_edit_vleader('default', ';')
 call s:setDefaultOption_hotkeys_edit_vleader('LaTeX', ',')
 "}}}
 
