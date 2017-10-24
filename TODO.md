@@ -30,6 +30,8 @@ Feature requests:
 ### Easy ones
 
 - add an explicit predefined `restart` mapping?
+- explicit that `nmap` command could be set in `.vimrc` for "noobs like me",
+  cheers to Vincent
 - provide utilities to get into loops: for `python` (easy) and `R` (trickier)
 - add another placeholder like `%f` in hotkeys expressions to insert filenames.
     - this will help making a neater implementation of default LaTeX commands.
@@ -40,7 +42,9 @@ Feature requests:
 - disable simple sending for compiled language (LaTeX, Rust, ..), which make no
   sense.
 - ssh option? sending commands *via* is not difficult, but sending
-  chunk/help/color files could be something :)
+  chunk/help/color files could be something.. maybe easy with sshfs?
+- Yeaah! check out new features at [Vim-R](https://github.com/jalvesaq/Nvim-R)
+  :) TCP connections would feel great! ^ ^ Try'em out!
 - rewrite `syntax.R` with new `syntax.py` logic
     - parse `R` script and only query `R` for used tokens
     - accordingly, color `list$name` constructs iif they are defined, just like
@@ -48,6 +52,7 @@ Feature requests:
 - provide full syntax files instead of working around already defined groups.
   grep `pythonFunction` to see the problem, which may occurs because of other
   plugins or vim80-dependents stuff or anything ugly like that.
+- python debugger facilities? R debugger facilities?
 
 .. feel bored? grep 'TODO' anywhere in the project ;)
 
