@@ -2,6 +2,7 @@ Find work here
 
 Bugs:
 --
+- bunch of remapping errors when opening a new LaTeX file from a LaTeX file!
 
 - Here, `np` seems not lexed:
 
@@ -24,6 +25,7 @@ Bugs:
         test.member.member.member.member.member
         test.member.member.member.member.member.member # undefined, okay.
 
+
 Feature requests:
 --
 
@@ -35,6 +37,7 @@ Feature requests:
 - provide utilities to get into loops: for `python` (easy) and `R` (trickier)
 - add another placeholder like `%f` in hotkeys expressions to insert filenames.
     - this will help making a neater implementation of default LaTeX commands.
+- tex constant expression hotkeys behaviour should be less word-based
 
 ### Bigger ones
 

@@ -475,7 +475,7 @@ endfor
 call s:createLanguageDictionnaryOption('constantExpression') "{{{
 let mappings = [
             \ ['LaTeX', 'ex', '\expandafter'],
-            \ ['LaTeX', 'hf', '\hfill'],
+            \ ['LaTeX', 'hf', '\hfill '],
             \ ['LaTeX', 'hr', '\hrule'],
             \ ['LaTeX', 'ne', '\noexpand'],
             \ ['LaTeX', 'ni', '\noindent'],
@@ -1158,6 +1158,8 @@ call s:declareMap('n', 'UpdateColor',
 
 " Special LaTeX case: send a compilation command
 augroup intimLaTeX
+    autocmd!
+
     " "Latex Compile"
     autocmd FileType tex call s:declareMap('n', 'TexCompileFast',
                 \ ":w<cr>:call <SID>CompileTex('fast')<cr>",
