@@ -347,7 +347,7 @@ call s:setDefaultOption_highlightGroups('R', 'IntimRFunction', 'Function')
 " (temp list for for readability here only)
 let groups = [
             \ ['IntimPyBool'      , 'Constant'],
-            \ ['IntimPyBuiltin'   , 'Identifier'],
+            \ ['IntimPyBuiltin'   , 'Underlined'],
             \ ['IntimPyClass'     , 'Type'],
             \ ['IntimPyEnumType'  , 'Type'],
             \ ['IntimPyFloat'     , 'Constant'],
