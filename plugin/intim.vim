@@ -239,6 +239,14 @@ call s:setDefaultOption_invokeCommand('LaTeX', '')
 call s:createLanguageOption('postInvokeCommands')
 call s:setDefaultOption_postInvokeCommands('default', [''])
 
+" Pattern matching for gathering all opened files to be colored
+" TODO: make this automatic reading &ft in all buffers?
+" TODO: document this
+call s:createLanguageOption('filePattern')
+call s:setDefaultOption_filePattern('default', '.*')
+call s:setDefaultOption_filePattern('python', '.*\.py') " TODO: .pythonrc etc.
+call s:setDefaultOption_filePattern('R', '.*\.r') " TODO: .r,.R,.Rprofile etc.
+
 " Help highlighting
 " TODO: make sure those syntax file are neat and available
 call s:createLanguageOption('helpSyntax')
@@ -921,7 +929,24 @@ endfunction
 " Colors:
 " Use interpreter's introspection to produces dynamic syntax files "{{{
 
-function! s:UpdateColor() "{{{
+function! s:MatchingFiles() "{{{
+    " lists every opened buffer whose name matches the pattern
+    let pattern = s:get_filePattern()
+    let result = []
+    for i in range(bufnr('$') + 1)
+        if bufloaded(i)
+            let fname = bufname(i)
+            if match(fname, pattern) > -1
+                " slack it between quotes
+                call add(result, "\"".fname."\"")
+            endif
+        endif
+    endfor
+    return result
+endfunction
+"}}}
+
+function! s:UpdateSyntaxFile() "{{{
     " The introspection script is part of this plugin
     if s:language == 'python'
         let script = s:path . "/plugin/syntax.py"
@@ -941,7 +966,8 @@ function! s:UpdateColor() "{{{
     call system("sed 's/INTIMSYNTAXFILE/\"" . path . "\"/' " . script
                 \ . "> " . chunk)
     let user_script = substitute(expand('%:p'), '/', '\\/', 'g')
-    call system("sed -i 's/USERSCRIPTFILE/\"" . user_script . "\"/' " . chunk)
+    let files = s:MatchingFiles()
+    call system("sed -i 's/USERSCRIPTFILES/" . join(files, ', ') . "/' " . chunk)
     " produce the syntaxfile
     call s:Send(s:sourceCommand(chunk))
     " dirty wait for it to finish: the syntax program should end it by a special
@@ -963,6 +989,10 @@ function! s:UpdateColor() "{{{
         call s:SendInterrupt()
         return
     endif
+    call s:UpdateColor()
+endfunction
+
+function s:UpdateColor() " {{{
     " reset current syntax
     syntax clear
     syntax on
@@ -995,6 +1025,15 @@ function! s:UpdateColor() "{{{
     endfor
 endfunction
 "}}}
+
+" call it each time you enter a python buffer
+" TODO: adapt it for R and for the `filePattern` logic
+augroup Intim_syntax
+    autocmd!
+
+    autocmd BufEnter *.py call s:UpdateColor()
+
+augroup end
 
 "}}}
 
@@ -1151,8 +1190,8 @@ call s:declareMap('v', 'GetHelpSelection',
             \ "<F1>")
 
 " Update coloring
-call s:declareMap('n', 'UpdateColor',
-            \ ":call <SID>UpdateColor()<cr>",
+call s:declareMap('n', 'UpdateSyntaxFile',
+            \ ":call <SID>UpdateSyntaxFile()<cr>",
             \ ",uc")
 
 " Special LaTeX case: send a compilation command

@@ -39,9 +39,11 @@ def intim_introspection():
     from types import ModuleType, MethodType # to define particular types
     from numpy import ufunc as UFuncType     # yet other particular types
 
-    filename = USERSCRIPTFILE # sed by vimscript
-    with open(filename, 'r') as file:
-        source = file.read()
+    filenames = {USERSCRIPTFILES} # sed by vimscript, remove duplicates
+    source = '' # concat here all these files
+    for filename in filenames:
+        with open(filename, 'r') as file:
+            source += '\n' + file.read()
 
 
     class Type(object):
