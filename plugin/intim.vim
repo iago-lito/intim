@@ -946,7 +946,7 @@ function! s:MatchingFiles() "{{{
 endfunction
 "}}}
 
-function! s:UpdateSyntaxFile() "{{{
+function! s:UpdateColor() "{{{
     " The introspection script is part of this plugin
     if s:language == 'python'
         let script = s:path . "/plugin/syntax.py"
@@ -989,10 +989,14 @@ function! s:UpdateSyntaxFile() "{{{
         call s:SendInterrupt()
         return
     endif
-    call s:UpdateColor()
+    call s:ReadColor()
 endfunction
+" }}}
 
-function s:UpdateColor() " {{{
+function s:ReadColor() " {{{
+    if !s:isSessionOpen()
+        return
+    endif
     " reset current syntax
     syntax clear
     syntax on
@@ -1031,7 +1035,7 @@ endfunction
 augroup Intim_syntax
     autocmd!
 
-    autocmd BufEnter *.py call s:UpdateColor()
+    autocmd BufEnter *.py call s:ReadColor()
 
 augroup end
 
@@ -1190,8 +1194,8 @@ call s:declareMap('v', 'GetHelpSelection',
             \ "<F1>")
 
 " Update coloring
-call s:declareMap('n', 'UpdateSyntaxFile',
-            \ ":call <SID>UpdateSyntaxFile()<cr>",
+call s:declareMap('n', 'UpdateColor',
+            \ ":call <SID>UpdateColor()<cr>",
             \ ",uc")
 
 " Special LaTeX case: send a compilation command
