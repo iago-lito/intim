@@ -247,6 +247,20 @@ call s:setDefaultOption_filePattern('default', '.*')
 call s:setDefaultOption_filePattern('python', '.*\.py') " TODO: .pythonrc etc.
 call s:setDefaultOption_filePattern('R', '.*\.r') " TODO: .r,.R,.Rprofile etc.
 
+" Syntax function to be ran after s:ReadColor update
+call s:createLanguageOption('syntaxFunction')
+call s:setDefaultOption_syntaxFunction('default', 's:Void')
+call s:setDefaultOption_syntaxFunction('python', 's:DefaultPythonSyntaxFunction')
+
+function! s:Void()
+    " does nothing
+endfunction
+
+function! s:DefaultPythonSyntaxFunction()
+    " parenthesis etc.
+    syntax match Special "[()\[\]{}\-\*+\/]"
+endfunction
+
 " Help highlighting
 " TODO: make sure those syntax file are neat and available
 call s:createLanguageOption('helpSyntax')
@@ -1027,6 +1041,8 @@ function s:ReadColor() " {{{
             execute "syntax clear " . group
         endif
     endfor
+    " in the end, execute custom user's syntax, provided as a function
+    execute 'call ' . s:get_syntaxFunction() . '()'
 endfunction
 "}}}
 

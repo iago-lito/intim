@@ -210,9 +210,20 @@ languages yet. Feel free to send presents to random developers so they get
 down to Intim repo and provide support for your favorite interpreter.
 
 Note: In order not to make vim coloring procedure sluggish, Intim parses your
-script so that only the symbols used in your file need to be colored.
+scripts so that only the symbols used in your files need to be colored.
 Syntactic information about it can be found in Intim's temp files
 *g:intim_tempSyntax* found in the plugin folder by default.
+
+Should you like appending custom syntax coloring rules after this automatic
+coloring, then you can write your own post-coloring syntax function, and tell
+Intim you'd like to run it after each refresh: >
+
+    function! MyPythonFurtherSyntax()
+        " color parentheses etc.
+        syntax match Special "[()\[\]{}\-\*+\/]"
+    endfunction
+
+    call Intim_syntaxFunction('python', 'MyPythonFurtherSyntax')
 
 ==============================================================================
 6. Hotkeys                                                       *intim-hotkeys*
