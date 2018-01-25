@@ -596,6 +596,7 @@ function! s:ExitInterpreter()
         call s:SendEOF()
     else
         call s:Send(s:get_exitCommand())
+    endif
 endfunction
 
 function! s:RestartInterpreter()
