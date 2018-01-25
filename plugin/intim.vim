@@ -233,11 +233,20 @@ call s:setDefaultOption_invokeCommand('python', 'python')
 call s:setDefaultOption_invokeCommand('R', 'R')
 call s:setDefaultOption_invokeCommand('bash', 'bash')
 call s:setDefaultOption_invokeCommand('LaTeX', '')
+call s:setDefaultOption_invokeCommand('javascript', 'node')
 
 " First interpreter commands to execute after invoking the interpreter (I use it
 " to load packages etc.). One command per item in the list. Silent if empty.
 call s:createLanguageOption('postInvokeCommands')
 call s:setDefaultOption_postInvokeCommands('default', [''])
+
+" Leave the interpreter
+" <c-D> if empty.
+call s:createLanguageOption('exitCommand')
+call s:setDefaultOption_exitCommand('default', '')
+call s:setDefaultOption_exitCommand('python', 'exit()')
+call s:setDefaultOption_exitCommand('R', "quit(save='no')")
+call s:setDefaultOption_exitCommand('javascript', "process.exit()")
 
 " Pattern matching for gathering all opened files to be colored
 " TODO: make this automatic reading &ft in all buffers?
@@ -563,11 +572,7 @@ function! s:LaunchSession() "{{{
             call s:Send(i)
         endfor
         " invoke the interpreter
-        call s:Send(s:get_invokeCommand())
-        " initiate the interpreter
-        for i in s:get_postInvokeCommands()
-            call s:Send(i)
-        endfor
+        call s:InvokeInterpreter()
         " remove bottom bar
         " TODO: make this optional
         call s:System("tmux set -g status off;")
@@ -575,6 +580,29 @@ function! s:LaunchSession() "{{{
         echom "Intim session launched"
     endif
 endfunction
+
+function! s:InvokeInterpreter()
+    call s:Send(s:get_invokeCommand())
+    " initiate the interpreter
+    for i in s:get_postInvokeCommands()
+        call s:Send(i)
+    endfor
+endfunction
+
+function! s:ExitInterpreter()
+    let ec = s:get_exitCommand()
+    " if we have no exit command, use EOF
+    if ec == ''
+        call s:SendEOF()
+    else
+        call s:Send(s:get_exitCommand())
+endfunction
+
+function! s:RestartInterpreter()
+    call s:ExitInterpreter()
+    call s:InvokeInterpreter()
+endfunction
+
 "}}}
 
 " End the tmuxed session
@@ -620,6 +648,11 @@ endfunction
 " Or a keyboard interrupt
 function! s:SendInterrupt() "{{{
     call s:SendText('c-c')
+endfunction
+"}}}
+" Or an end-of-file signal
+function! s:SendEOF() "{{{
+    call s:SendText('c-d')
 endfunction
 "}}}
 " Sneaky little escape tricks
@@ -1159,6 +1192,22 @@ call s:declareMap('n', 'EndSession',
 call s:declareMap('n', 'Interrupt',
             \ ":call <SID>SendInterrupt()<cr>",
             \ "<c-c>")
+" Send keyboard EOF to the session
+call s:declareMap('n', 'EOF',
+            \ ":call <SID>SendEOF()<cr>",
+            \ "<c-d>")
+" Send invoke command
+call s:declareMap('n', 'InvokeInterpreter',
+            \ ":call <SID>InvokeInterpreter()<cr>",
+            \ ",ii")
+" Send exit command
+call s:declareMap('n', 'ExitInterpreter',
+            \ ":call <SID>ExitInterpreter()<cr>",
+            \ ",ex")
+" Send restart commands
+call s:declareMap('n', 'RestartInterpreter',
+            \ ":call <SID>RestartInterpreter()<cr>",
+            \ ",rs")
 " Send line and jump to the next
 call s:declareMap('n', 'SendLine',
             \ ":call <SID>SendLine()<cr>:call <SID>NextScriptLine()<cr>",

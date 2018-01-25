@@ -128,6 +128,19 @@ test: >
     call Intim_postInvokeCommands('R', ['setwd("~/myR/")',
                                       \ 'print("Hello!")'])
 
+Here is a last hook to make the interpreter leave: >
+
+    call Intim_exitCommands('default', '')
+    call Intim_exitCommands('python', 'exit()')
+    call Intim_exitCommands('R', "quit(save='no')")
+    call Intim_exitCommands('javascript', "process.exit()")
+
+Here are shortcuts to invoke, exit or restart your interpreter: >
+
+    nmap ,ii <Plug>IntimInvokeInterpreter
+    nmap ,ex <Plug>IntimExitInterpreter
+    nmap ,rs <Plug>IntimRestartInterpreter
+
 ==============================================================================
 3. Passing commands                                              *intim-passing*
 
@@ -169,6 +182,10 @@ Sometimes, commands evaluate too long for you to wait. You may then interrupt
 your interpreter using >
 
     nmap <c-c> <Plug>IntimSendInterrupt
+
+To leave you interpreter the End-Of-File way, use >
+
+    nmap <c-d> <Plug>IntimSendEOF
 
 Should you like to create your own sending mappings. Intims provides a vim
 function for that, feel free to use >
