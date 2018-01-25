@@ -829,8 +829,9 @@ endfunction
 " Send all lines (file might not be saved):
 function! s:SendAll() "{{{
     let all = getline(0, line('$'))
-    let raw = join(all, "\n")
-    call s:SendChunk(raw)
+    for line in all
+        call s:Send(line)
+    endfor
 endfunction
 "}}}
 
@@ -1241,11 +1242,11 @@ call s:declareMap('v', 'SendChunk',
             \ "<esc>:call <SID>SendChunk(@*)<cr>"
             \ . ":call <SID>NextScriptLine()<cr>",
             \ "<space>")
-" Send the whole script
+" Send the whole script as a chunk
 call s:declareMap('n', 'SendFile',
             \ ":call <SID>SendFile()<cr>",
             \ "")
-" Send all lines as a chunk
+" Send all lines
 call s:declareMap('n', 'SendAll',
             \ ":call <SID>SendAll()<cr>",
             \ "a<space><space>")
