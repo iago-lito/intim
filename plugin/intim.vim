@@ -1120,7 +1120,7 @@ function! s:NextScriptLine() "{{{
 endfunction
 
 " The latter function depends on this data:
-let s:regexNextLine = {'default': "^.+$",
+let s:regexNextLine = {'default': "^.\\+$",
                     \  'python': "^\\(\\s*#\\)\\@!.",
                     \  'R':      "^\\(\\s*#\\)\\@!."}
 "}}}
