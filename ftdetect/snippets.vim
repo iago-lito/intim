@@ -23,4 +23,8 @@ if has("autocmd")
     autocmd BufNewFile,BufRead *.bash setf sh
     autocmd BufNewFile,BufRead *.zsh setf sh
 
+    " recognize sage files
+    autocmd BufNewFile,BufRead *.sage setf sage 
+
+
 endif
