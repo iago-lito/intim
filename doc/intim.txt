@@ -212,7 +212,7 @@ your interpreter using >
 
 To leave you interpreter the End-Of-File way, use >
 
-    nmap <c-d> <Plug>IntimSendEOF
+    nmap <c-e> <Plug>IntimSendEOF
 
 Should you like to create your own sending mappings. Intims provides a vim
 function for that, feel free to use >
