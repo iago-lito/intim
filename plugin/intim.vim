@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2017-10-20
+" Last Change:	2018-01-27
 " Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 " License:      This file is placed under the GNU PublicLicense 3.
 
@@ -195,10 +195,15 @@ function! s:createLanguageOption(name) "{{{
     " function to be exported to user: define your own option.. this may require
     " the variable to be defined then, because .vimrc is sourced before this
     " script.
+    " New: also provide a hook so other options may be automagically set when
+    " user sets basic options. Override if actually needed.
     execute ""
+     \ . "function! s:setHook_" . a:name . "(language, option)\n"
+     \ . "endfunction\n"
      \ . "function! s:set_" . a:name . "(language, option)\n"
      \ . "   call s:defineLanguageOption('" . a:name . "')\n"
      \ . "   let s:" . a:name . "[a:language] = a:option\n"
+     \ . "   call s:setHook_" . a:name . "(a:language, a:option)\n"
      \ . "endfunction\n"
     " export one version to user
     let fname = "Intim_" . a:name
@@ -260,6 +265,19 @@ call s:setDefaultOption_filePattern('R', '.*\.r') " TODO: .r,.R,.Rprofile etc.
 call s:createLanguageOption('syntaxFunction')
 call s:setDefaultOption_syntaxFunction('default', 's:Void')
 call s:setDefaultOption_syntaxFunction('python', 's:DefaultPythonSyntaxFunction')
+
+" How should we <Plug>IntimSendSelection?
+call s:createLanguageOption('sendSelection')
+call s:setDefaultOption_sendSelection('default', 'LineByLine')
+call s:setDefaultOption_sendSelection('sage', 'MagicCpaste')
+" Automagically set it to MagicCpaste if language if invoked interpreter is Sage
+" or ipython :P
+function! s:setHook_invokeCommand(language, option)
+    if match(a:option, 'ipython') >= 0
+    \ || match(a:option, 'sage') >= 0
+        call s:set_sendSelection(a:language, 'MagicCpaste')
+    endif
+endfunction
 
 function! s:Void()
     " does nothing
@@ -729,11 +747,23 @@ endfunction
 "}}}
 " Send the current selection as multiple lines
 function! s:SendSelection(raw) "{{{
+    " The way we'll do this depends on our interpreter/language
+    if s:get_sendSelection() == 'MagicCpaste'
+        call s:SendMagicCpaste(a:raw)
+    else
+        " default
+        call s:SendLineByLine(a:raw)
+    endif
+endfunction
+"}}}
+" Send the current selection as plain successive lines
+function! s:SendLineByLine(raw) "{{{
     " (this is the `raw` content of the selection)
     " get each line of the selection in a different list item
     let selection = split(a:raw, '\n')
-    " then send them all!
+    " then send them all..
     for line in selection
+        " .. one by one ;)
         call s:Send(line)
     endfor
     " python-specific: if the last line was empty, better not to ignore it
@@ -751,7 +781,7 @@ function! s:SendChunk(raw) "{{{
     " guard: if language is not set, we cannot source a chunk
     if s:language == 'default'
         echom "Intim: No sourcing chunk without a language. "
-                    \ . "Fall back on line-by-line."
+                    \ . "Fall back on sending selection."
         call s:SendSelection(raw)
         return
     endif
@@ -891,6 +921,25 @@ function! s:OpenPdf(command) "{{{
     endif
     let cmd = substitute(a:command, '*', filename, 'g')
     call s:Send(cmd)
+endfunction
+"}}}
+" Send the current selection as an ipython/sage `%cpaste`
+function! s:SendMagicCpaste(raw) "{{{
+    " Workaround ipython/sage autoindent procedure
+    " https://github.com/kassio/neoterm/issues/71
+    " The solution is to:
+    " - use the selection as whole plain text
+    " - invoke ipython's magic `%cpaste` command
+    " - append an explicit end-of-file command
+    " - send it as-is
+    " whole selection
+    let selection = s:HandleEscapes(a:raw)
+    " append end-of file to tmux command (+ one CR for inlined case)
+    let text = '"' . selection . '" c-d'
+    " invoke ipython's magic command
+    call s:Send('%cpaste')
+    " and send!
+    call s:SendText(text)
 endfunction
 "}}}
 "}}}

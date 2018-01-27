@@ -1,4 +1,4 @@
-*intim.txt*                       Version 1.0            Last change: 2017-10-20
+*intim.txt*                       Version 1.0            Last change: 2018-01-27
 
                                     Intim
 
@@ -64,6 +64,7 @@ into the code, share, provide feedback, fork or contribute ;)
 
 ==============================================================================
 2. Starting Intim                                               *intim-starting*
+                                                                *intim-launch*
 
 Once your script file is opened in Vim, use >
 
@@ -73,6 +74,8 @@ to launch a new `tmux` session and invoke your interpreter inside. For those
 familiar with `tmux`, the session is called "IntimSession", unless you set
 *g:intim_sessionName* to anything else.
 
+                                                                   *intim-end*
+
 To terminate the session, use >
 
     nmap <F2> <Plug>IntimEndSession
@@ -80,9 +83,13 @@ To terminate the session, use >
 If you close Vim without terminating the session, it will just stay open and
 you may communicate with it again the next time you open Vim.
 
+                                                              *intim-terminal*
+
 Choose the terminal you would like to see your interpreter running within with >
 
     let g:intim_terminal = "gnome-terminal"
+<
+                                                           *intim-postlaunch*
 
 Here is a hook for you: these commands will be executed by your system right
 after `tmux` session has been launched, and before invoking your interpreter.
@@ -93,6 +100,8 @@ it comfy on your screen. >
     call Intim_postLaunchCommands('default', ['my default custom command'])
     call Intim_postLaunchCommands('python', ['my custom command for python'])
     call Intim_postLaunchCommands('R', ['my custom command for R'])
+<
+                                                                *intim-invoke*
 
 Choose the interpreter you would like to invoke once `tmux` session has been
 launched: >
@@ -102,6 +111,9 @@ launched: >
     call Intim_invokeCommand('R', 'R --no-save --no-restore')
     call Intim_invokeCommand('bash', 'bash')
     call Intim_invokeCommand('LaTeX', '')
+<
+
+                                                              *intim-language*
 
 If it seems unclear to Intim which language you intend to use, use the
 dedicated function >
@@ -111,12 +123,16 @@ dedicated function >
 in your autocmd procedures, so that it'll be aware from now on. When Intim
 doesn't know, it falls back to option stored as `default`.
 
+                                                             *intim-preinvoke*
+
 Here is a hook for you: these commands will be sent to the tmuxed terminal
 just before your interpreter invocation. In other words, it is pretty much the
-same as *Intim_postLaunchCommands()* but they will be sent to `tmux` instead
-of being sent directl to your system: >
+same as *intim-postlaunch* but they will be sent to `tmux` instead of being
+sent directly to your system: >
 
     call Intim_preInvokeCommands('default', ['cd ~'])
+<
+                                                            *intim-postinvoke*
 
 Here is another hook: this command will we executed right after the
 interpreter has been invoked. In other words, it will be the first command to
@@ -127,15 +143,20 @@ test: >
     call Intim_postInvokeCommands('python', ['import numpy as np', 'import os'])
     call Intim_postInvokeCommands('R', ['setwd("~/myR/")',
                                       \ 'print("Hello!")'])
+<
 
-Here is a last hook to make the interpreter leave: >
+                                                                  *intim-exit*
+
+Here is a last option defining how to make the interpreter leave: >
 
     call Intim_exitCommands('default', '')
     call Intim_exitCommands('python', 'exit()')
     call Intim_exitCommands('R', "quit(save='no')")
     call Intim_exitCommands('javascript', "process.exit()")
+<
+                                                        *intim-exit-shortcuts*
 
-Here are shortcuts to invoke, exit or restart your interpreter: >
+And here are direct shortcuts to invoke, exit or restart your interpreter: >
 
     nmap ,ii <Plug>IntimInvokeInterpreter
     nmap ,ex <Plug>IntimExitInterpreter
@@ -167,16 +188,22 @@ To send commands without navigating next, use >
     nmap c<space> <Plug>IntimStaticSendLine
     vmap ,<space> <Plug>IntimStaticSendChunk
     vmap ,<space> <Plug>IntimStaticSendSelection
+<
+                                                              *intim-send-all*
 
 Sometimes you feel like sending every line you have written to the
 interpreter, well you may >
 
     nmap a<space><space> <Plug>IntimSendAll
+<
+                                                             *intim-send-file*
 
 Or you can send your whole file as a chunk, as currently written on the disk
 (be aware that no unsaved change will be sent this way) >
 
     nmap a<space><space> <Plug>IntimSendFile
+<
+                                                             *intim-interrupt*
 
 Sometimes, commands evaluate too long for you to wait. You may then interrupt
 your interpreter using >
@@ -193,6 +220,23 @@ function for that, feel free to use >
     call IntimSend('my command')
 
 in any of your custom recipes.
+
+                                                            *intim-autoindent*
+                                                               *intim-ipython*
+                                                                  *intim-sage*
+
+Note: Special case for `ipython` and `sage` users:
+
+    Because of auto-indentation feature in these interpreters,
+    `<Plug>IntimSendSelection` etc. use a different sending procedure,
+    controlled by the option: >
+
+        call Intim_sendSelection('sage', 'MagicCpaste')
+
+<    This option should have been set automagically for you if Intim detects
+    `ipython` or `sage` in your *intim-invoke* command.
+
+    However, you may need to set it manually in some cases.
 
 ==============================================================================
 4. Getting help                                                     *intim-help*
