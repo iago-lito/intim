@@ -1,2 +1,2 @@
-call IntimLanguage('Rust')
+call IntimSetLanguage('Rust')
 

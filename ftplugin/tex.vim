@@ -1,2 +1,2 @@
-call IntimLanguage('LaTeX')
+call IntimSetLanguage('LaTeX')
 

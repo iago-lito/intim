@@ -1,2 +1,2 @@
-call IntimLanguage('R')
+call IntimSetLanguage('R')
 

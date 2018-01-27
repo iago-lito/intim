@@ -1468,7 +1468,7 @@ endfunction
 
 " Prefix them all with Intim-
 call s:functionExport('Send'        , 'IntimSend')
-call s:functionExport('SetLanguage' , 'IntimLanguage')
+call s:functionExport('SetLanguage' , 'IntimSetLanguage')
 
 "}}}
 

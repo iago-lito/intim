@@ -1,2 +1,2 @@
-call IntimLanguage('bash')
+call IntimSetLanguage('bash')
 
