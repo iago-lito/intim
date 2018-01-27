@@ -1294,11 +1294,11 @@ call s:declareMap('v', 'SendChunk',
 " Send the whole script as a chunk
 call s:declareMap('n', 'SendFile',
             \ ":call <SID>SendFile()<cr>",
-            \ "")
+            \ "a<space><space>")
 " Send all lines
 call s:declareMap('n', 'SendAll',
             \ ":call <SID>SendAll()<cr>",
-            \ "a<space><space>")
+            \ "")
 
 " Get help about the  word under cursor
 call s:declareMap('n', 'GetHelpWord',
