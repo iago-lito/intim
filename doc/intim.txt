@@ -114,6 +114,7 @@ Intim can be configured in your `.vimrc` via three channels:
 <
         (see intim-invoke or search this file for `call` for other examples).
 
+
         Note: For now (but any contribution is welcome), Intim function are
         only guaranteed to be defined after vim has started. So, in order to
         avoid `E117 undefined function` errors on vim start, you are encouraged
