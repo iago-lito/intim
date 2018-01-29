@@ -112,7 +112,8 @@ Intim can be configured in your `.vimrc` via three channels:
 
         call Intim_invokeCommand('python', 'ipython3')
 <
-        (see *intim-invoke* or search this file for `call` for other examples).
+        (see intim-invoke or search this file for `call` for other examples).
+
 
         Note: For now (but any contribution is welcome), Intim function are
         only guaranteed to be defined after vim has started. So, in order to
@@ -192,7 +193,7 @@ doesn't know, it falls back to option stored as `default`.
 
 Here is a hook for you: these commands will be sent to the tmuxed terminal
 just before your interpreter invocation. In other words, it is pretty much the
-same as *intim-postlaunch* but they will be sent to `tmux` instead of being
+same as intim-postlaunch but they will be sent to `tmux` instead of being
 sent directly to your system: >
 
     call Intim_preInvokeCommands('default', ['cd ~'])
@@ -299,7 +300,7 @@ Note: Special case for `ipython` and `sage` users:
         call Intim_sendSelection('sage', 'MagicCpaste')
 
 <    This option should have been set automagically for you if Intim detects
-    `ipython` or `sage` in your *intim-invoke* command.
+    `ipython` or `sage` in your intim-invoke command.
 
     However, you may need to set it manually in some cases.
 
@@ -492,7 +493,7 @@ Try it out!
 cursor to the `after` part in your script and type your hotkey code right
 after your leading key.
 
-    Use *Intim_prefixedExpression()* to define your own prefixed hotkey
+    Use Intim_prefixedExpression() to define your own prefixed hotkey
 mappings. For instance, once you have called: >
 
     call Intim_prefixedExpression('python', 'sf', 'self = ')
@@ -505,15 +506,15 @@ mappings. For instance, once you have called: >
 while pointing to your `instance` so that the command `self = instance` is sent
 to the interpreter. This may be useful for swift debugging activity.
 
-    Note: Intim's edit *bonuses* are also defined on each call to
-*Intim_prefixedExpression()* , try `;sf` in normal and visual mode, or `,sf` in
+    Note: Intim's edit bonuses are also defined on each call to
+Intim_prefixedExpression() , try `;sf` in normal and visual mode, or `,sf` in
 insert mode.
 
 
 3) LaTeX-style hotkeys: - - - - - - - - - - - - - - - - *Intim_latexExpression*
                                                         *intim-latex-hotkeys*
 
-    These hotkeys are only useful as edit *bonuses* while writing LaTeX
+    These hotkeys are only useful as edit bonuses while writing LaTeX
 scripting. They transform any `text` into an expression like `\head{text}`. Use
 these calls to define your own heads and hotkeys: >
 
@@ -521,14 +522,14 @@ these calls to define your own heads and hotkeys: >
     call Intim_latexExpression('LaTeX', 'ep', 'emph')
 
 then playaround with `,pr`, in normal, visual or insert modes. Don't forget to
-set the leading key you like best with *Intim_ileader* function, etc.
+set the leading key you like best with Intim_ileader function, etc.
 
 
 4) Constant hotkeys: - - - - - - - - - - - - - - - - *Intim_constantExpression*
                                                      *intim-constant-hotkeys*
 
     Useful for sending any fixed command to the interpreter.. or for enjoying
-associated fixed edit *bonuses* in non-intepreted languages like LaTeX. For
+associated fixed edit bonuses in non-intepreted languages like LaTeX. For
 instance, once you have called >
 
     call Intim_constantExpression('R', 'go', 'graphics.off()')
@@ -547,10 +548,10 @@ them out!
     This is the most general type of hotkeys, with expressions defined as you
 wish with one placeholder written as a star `*`. For instance,
 
-- *Intim_headedExpression* are defined as `head(*)`
-- *Intim_prefixedExpression* are defined as `prefix *`
-- *Intim_latexExpression* are defined as `\head{*}`
-- *Intim_constantExpression* are defined as `constant`
+- Intim_headedExpression are defined as `head(*)`
+- Intim_prefixedExpression are defined as `prefix *`
+- Intim_latexExpression are defined as `\head{*}`
+- Intim_constantExpression are defined as `constant`
 
     You may define you own of course. For instance, once you have called >
 
@@ -560,7 +561,7 @@ wish with one placeholder written as a star `*`. For instance,
 you'll be able to increment any `counter` in `R` or `python` by navigating to
 it, then type `,ii` in normal mode.
 
-Note: No edit *bonuses* are automatically defined for generic hotkeys
+Note: No edit bonuses are automatically defined for generic hotkeys
 expression like these. If you need anything like this, you will probably
 make a good use of the *Ultisnips* package, found at
 https://github.com/SirVer/ultisnips.
@@ -574,7 +575,7 @@ Furthermore, if you had anything else mapped to these before you installed
 Intim, Intim will not override you personal, existing mappings, and will
 define nothing instead of one default :)
 
-    *intim-headed-hotkeys*
+    intim-headed-hotkeys
 
     for `R`:
             al    as.logical
@@ -623,14 +624,14 @@ define nothing instead of one default :)
             pr    prit
             ty    type
 
-    *intim-prefixed-hotkeys*
+    intim-prefixed-hotkeys
 
     for `python`:
 
             sf    self =
             cl    cls =
 
-    *intim-latex-hotkeys*
+    intim-latex-hotkeys
 
     for `LateX`:
 
@@ -658,7 +659,7 @@ define nothing instead of one default :)
             tx   text
             up   usepackage
 
-    *intim-constant-hotkeys*
+    intim-constant-hotkeys
 
     for `R`:
             go   graphics.off()
@@ -686,8 +687,8 @@ define nothing instead of one default :)
 
 Although it is not an actually interpreted language, you may benefit from
 Intim even while using LaTeX. Because it often is useful to send compilation
-commands on-the-fly or to navigate to produced documents.. even edit *bonuses*
-and *Intim_latexExpression* may be useful. Use >
+commands on-the-fly or to navigate to produced documents.. even edit bonuses
+and Intim_latexExpression may be useful. Use >
 
     nmap ,lc <Plug>IntimTexCompileFast
 
@@ -711,7 +712,7 @@ were `*` stands as a placeholder for your document's filename.
 
 Note: as the time of writing, these options are not much customizable. Your
 may create your own from scratch by making a good use of
-*Intim_constantExpression* and *IntimSend* functions. Do not hesitate visiting
+Intim_constantExpression and *IntimSend* functions. Do not hesitate visiting
 the repo and ask for features if you need more.
 
 ==============================================================================
