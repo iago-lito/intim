@@ -112,7 +112,7 @@ Intim can be configured in your `.vimrc` via three channels:
 
         call Intim_invokeCommand('python', 'ipython3')
 <
-        (see *intim-invoke* or search this file for `call` for other examples).
+        (see intim-invoke or search this file for `call` for other examples).
 
         Note: For now (but any contribution is welcome), Intim function are
         only guaranteed to be defined after vim has started. So, in order to

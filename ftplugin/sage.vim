@@ -1,1 +1,1 @@
-call IntimLanguage('python')
+call IntimSetLanguage('python')
