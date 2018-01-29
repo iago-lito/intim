@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2018-01-27
+" Last Change:	2018-01-29
 " Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 " License:      This file is placed under the GNU PublicLicense 3.
 
@@ -195,15 +195,16 @@ function! s:createLanguageOption(name) "{{{
     " function to be exported to user: define your own option.. this may require
     " the variable to be defined then, because .vimrc is sourced before this
     " script.
-    " New: also provide a hook so other options may be automagically set when
-    " user sets basic options. Override if actually needed.
     execute ""
-     \ . "function! s:setHook_" . a:name . "(language, option)\n"
-     \ . "endfunction\n"
      \ . "function! s:set_" . a:name . "(language, option)\n"
      \ . "   call s:defineLanguageOption('" . a:name . "')\n"
      \ . "   let s:" . a:name . "[a:language] = a:option\n"
      \ . "   call s:setHook_" . a:name . "(a:language, a:option)\n"
+     \ . "endfunction\n"
+    " New: also provide a hook so other options may be automagically set when
+    " user sets basic options. Override if actually needed.
+    execute ""
+     \ . "function! s:setHook_" . a:name . "(language, option)\n"
      \ . "endfunction\n"
     " export one version to user
     let fname = "Intim_" . a:name
