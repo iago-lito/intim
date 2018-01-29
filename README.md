@@ -39,6 +39,14 @@ Once done, install Intim using
     
 and this should be it :)
 
+If you are using [Vundle](https://github.com/VundleVim/Vundle.vim), you have
+just to add the following line to your `.vimrc`:
+
+    Plugin 'iago-lito/intim'
+
+Do not forget to run `:PluginInstall` after. It should be as simple as this =)
+
+
 ## First steps
 
 Once you know how to launch and close an Intim session with these default
