@@ -1,4 +1,4 @@
-*intim.txt*                       Version 1.0            Last change: 2018-01-27
+*intim.txt*                       Version 1.0            Last change: 2018-01-29
 
                                     Intim
 
@@ -9,21 +9,23 @@ CONTENT                                                          *intim-content*
 
     1. Introduction .......................... |intim-introduction|
     2. Starting Intim ........................ |intim-starting|
-    3. Passing commands ...................... |intim-passing|
-    4. Getting help .......................... |intim-help|
-    5. Coloring .............................. |intim-colors|
-    6. Hotkeys ............................... |intim-hotkeys|
+    3. Configuring ........................... |intim-configure|
+    4. Tweaking startup ...................... |intim-startup|
+    5. Passing commands ...................... |intim-passing|
+    6. Getting help .......................... |intim-help|
+    7. Coloring .............................. |intim-colors|
+    8. Hotkeys ............................... |intim-hotkeys|
         headed ............................... |intim-headed-hotkeys|
         prefixed ............................. |intim-prefixed-hotkeys|
         latex ................................ |intim-latex-hotkeys|
         constant ............................. |intim-constant-hotkeys|
         generic .............................. |intim-generic-hotkeys|
         default .............................. |intim-default-hotkeys|
-    7. LaTeX and non-interpreted languages ... |intim-compiled|
-    8. License ............................... |intim-license|
-    9. Bugs .................................. |intim-bugs|
-    10. Contributing ......................... |intim-contribute|
-    11. Credits .............................. |intim-credits|
+    9 . LaTeX and non-interpreted languages ... |intim-compiled|
+    10. License ............................... |intim-license|
+    11. Bugs .................................. |intim-bugs|
+    12. Contributing ......................... |intim-contribute|
+    13. Credits .............................. |intim-credits|
 
 ==============================================================================
 1. Introduction                                             *intim-introduction*
@@ -88,7 +90,70 @@ you may communicate with it again the next time you open Vim.
 Choose the terminal you would like to see your interpreter running within with >
 
     let g:intim_terminal = "gnome-terminal"
+
+==============================================================================
+3. Configuring Intim                                         *intim-configure*
+
+Intim can be configured in your `.vimrc` via three channels:
+
+    First: define traditional mappings that suits your need best, like >
+
+        nmap ,oi <Plug>IntimLaunchSession
 <
+        if you don't like the default <F10>.
+
+    Second: set global variables, like >
+
+        let g:intim_terminal = "xterm"
+<
+        if you don't like default gnome-terminal or cannot use it.
+
+    Third: call Intim functions like >
+
+        call Intim_invokeCommand('python', 'ipython3')
+<
+        (see *intim-invoke* or search this file for `call` for other examples).
+
+        Note: For now (but any contribution is welcome), Intim function are
+        only guaranteed to be defined after vim has started. So, in order to
+        avoid `E117 undefined function` errors on vim start, you are encouraged
+        to wrap these calls in vim autocommands, like: >
+
+        augroup IntimGroup
+            autocmd!
+            autocmd BufEnter *.py call Intim_invokeCommand('python', 'ipython3')
+        augroup end
+
+Note: Intim should work out-of-the-box. However, it is also much configurable.
+If it eventually turns out that you have many configuration options to define,
+then, our recommandation to keep things tidy, is to define a dedicated function
+in your `.vimrc` to be ran as an autocmd. For instance: >
+
+    function! IntimForPython()
+        " Prepare Intim for a python file
+
+        " global variables
+        let g:intim_terminal = "gnome-terminal"
+
+        " mappings
+        nmap <buffer> ,oi <Plug>IntimLaunchSession
+
+        " Intim functions
+        call Intim_invokeCommand('python', 'ipython3')
+        call Intim_hotkeys('pyhon', 'ii', '* += 1')
+
+        call IntimSetLanguage('python')
+
+    endfunction
+
+    " call the function for setup once for all in python files:
+    autocmd VimEnter,BufEnter *.py,*.sage call IntimForPython()
+
+so it is easy to tweak it aftewards and shape it just like you prefer.
+
+==============================================================================
+4. Tweaking Intim Startup                                      *intim-startup*
+
                                                            *intim-postlaunch*
 
 Here is a hook for you: these commands will be executed by your system right
@@ -163,7 +228,7 @@ And here are direct shortcuts to invoke, exit or restart your interpreter: >
     nmap ,rs <Plug>IntimRestartInterpreter
 
 ==============================================================================
-3. Passing commands                                              *intim-passing*
+5. Passing commands                                              *intim-passing*
 
 The main feature of Intim is command passing to the tmuxed terminal session.
 Use the default mappings: >
@@ -239,7 +304,7 @@ Note: Special case for `ipython` and `sage` users:
     However, you may need to set it manually in some cases.
 
 ==============================================================================
-4. Getting help                                                     *intim-help*
+6. Getting help                                                     *intim-help*
 
 Intim can try to fetch help files from your interpreter, and open them in a
 unnammed buffer. Put your Vim cursor on the symbol you need help about, or
@@ -257,7 +322,7 @@ Help information is temporarily buffered into an intim file: >
     let g:intim_tempHelp = '~/.vim/intim/tmp/help'
 
 ==============================================================================
-5. Coloring                                                       *intim-colors*
+7. Coloring                                                       *intim-colors*
 
 Intim can try analysing your current interpreter session to dig out all
 declared currently declared symbols and their types. It will then use this
@@ -287,7 +352,7 @@ Intim you'd like to run it after each refresh: >
     call Intim_syntaxFunction('python', 'MyPythonFurtherSyntax')
 
 ==============================================================================
-6. Hotkeys                                                       *intim-hotkeys*
+8. Hotkeys                                                       *intim-hotkeys*
 
 While you are developping your script, you often want to ask small things to
 your interpreter, such as the `len()` of one variable in `python` or the
@@ -489,8 +554,8 @@ wish with one placeholder written as a star `*`. For instance,
 
     You may define you own of course. For instance, once you have called >
 
-    Intim_hotkeys('R', 'ii', '* <- * + 1')
-    Intim_hotkeys('pyhon', 'ii', '* += 1')
+    call Intim_hotkeys('R', 'ii', '* <- * + 1')
+    call Intim_hotkeys('pyhon', 'ii', '* += 1')
 
 you'll be able to increment any `counter` in `R` or `python` by navigating to
 it, then type `,ii` in normal mode.
@@ -616,7 +681,7 @@ define nothing instead of one default :)
             ct   cargo test
 
 ==============================================================================
-7. LaTeX and non-interpreted languages.                            *intim-latex*
+9. LaTeX and non-interpreted languages.                            *intim-latex*
                                                                 *intim-compiled*
 
 Although it is not an actually interpreted language, you may benefit from
@@ -650,13 +715,13 @@ may create your own from scratch by making a good use of
 the repo and ask for features if you need more.
 
 ==============================================================================
-8. License                                                       *intim-license*
+10. License                                                       *intim-license*
 
     Intim is released under the GPL3.
     See https://www.gnu.org/licenses/gpl-3.0.html
 
 ==============================================================================
-9. Bugs                                                             *intim-bugs*
+11. Bugs                                                             *intim-bugs*
 
     If you experience any bugs or have feature requests, please open an issue
 on GitHub:
@@ -664,7 +729,7 @@ on GitHub:
     https://github.com/iago-lito/intim/issues
 
 ==============================================================================
-10. Contributing                                              *intim-contribute*
+12. Contributing                                              *intim-contribute*
                                                                           *repo*
 
     Fork the source repository on GitHub and send a pull request if you have
@@ -673,7 +738,7 @@ any code improvements. I'll be happy to work with you :)
 Source repository: https://github.com/iago-lito/intim
 
 ==============================================================================
-11. Credits                                                      *intim-credits*
+13. Credits                                                      *intim-credits*
 
 Authors: ~
 
