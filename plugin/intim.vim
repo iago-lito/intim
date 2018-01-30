@@ -1245,7 +1245,7 @@ call s:declareMap('n', 'Interrupt',
             \ ":call <SID>SendInterrupt()<cr>",
             \ "<c-c>")
 " Send keyboard EOF to the session
-call s:declareMap('n', 'EOF',
+call s:declareMap('n', 'SendEOF',
             \ ":call <SID>SendEOF()<cr>",
             \ "<c-e>")
 " Send invoke command
