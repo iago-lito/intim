@@ -614,7 +614,7 @@ function! s:ExitInterpreter()
     if ec == ''
         call s:SendEOF()
     else
-        call s:Send(s:get_exitCommand())
+        call s:Send(ec)
     endif
 endfunction
 
@@ -1066,7 +1066,9 @@ function! s:UpdateColor() "{{{
                 \ . "> " . chunk)
     let user_script = substitute(expand('%:p'), '/', '\\/', 'g')
     let files = s:MatchingFiles()
-    call system("sed -i 's/USERSCRIPTFILES/" . join(files, ', ') . "/' " . chunk)
+    " escape slashes for sed
+    let files = substitute(join(files, ', '), '/', '\\/', 'g')
+    call system("sed -i 's/USERSCRIPTFILES/" . files . "/' " . chunk)
     " produce the syntaxfile
     call s:Send(s:sourceCommand(chunk))
     " dirty wait for it to finish: the syntax program should end it by a special
@@ -1241,7 +1243,7 @@ call s:declareMap('n', 'EndSession',
             \ ":call <SID>EndSession()<cr>",
             \ "<F2>")
 " Send keyboard interrupt to the session
-call s:declareMap('n', 'Interrupt',
+call s:declareMap('n', 'SendInterrupt',
             \ ":call <SID>SendInterrupt()<cr>",
             \ "<c-c>")
 " Send keyboard EOF to the session
