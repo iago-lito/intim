@@ -38,6 +38,7 @@ def intim_introspection():
     from sys import stdout                   # for default 'file'
     from types import ModuleType, MethodType # to define particular types
     from numpy import ufunc as UFuncType     # yet other particular types
+    from inspect import isclass              # to check for type types
 
     filenames = {USERSCRIPTFILES} # sed by vimscript, remove duplicates
     source = '' # concat here all these files
@@ -54,6 +55,9 @@ def intim_introspection():
         _instances = set()
 
         def __init__(self, id, python_type):
+            """
+            python_type: either
+            """
             self.id = 'IntimPy' + id
             self._instances.add(self)
             self.type = python_type
@@ -67,11 +71,11 @@ def intim_introspection():
     # Supported types
     Bool       = Type("Bool"       , type(True))
     BuiltIn    = Type("Builtin"    , type(dir))
-    Class      = Type("Class"      , type(object))
+    Class      = Type("Class"      , None) # checked while typing node
     EnumType   = Type("EnumType"   , type(Enum))
     Float      = Type("Float"      , type(1.))
-    Function   = Type("Function"   , type(lambda a: a))
-    Function   = Type("Method"     , type(lambda a: a))
+    Function   = Type("Function"   , None) # checked while typing node
+    Method     = Type("Method"     , None) # checked while typing node
     Instance   = Type("Instance"   , None) # instance of user's custom class
     Int        = Type("Int"        , type(1))
     Module     = Type("Module"     , type(os))
@@ -81,7 +85,7 @@ def intim_introspection():
 
     # Store them so that they can easily be found from actual python types
     types_map = {}
-    for cls in Type.instances():  # Instance and Unexistent override each other
+    for cls in Type.instances():  # All `None` keys override each other..
         types_map[cls.type] = cls # .. never mind.
 
 
@@ -211,8 +215,12 @@ def intim_introspection():
             else:
                 # then it is just a plain valid, known node, probably
                 # instance of a custom class or a function, method
-                if eval("callable({})".format(path), globals()):
+                if eval("inspect.ismethod({})".format(path), globals()):
+                    self.type = Method
+                elif eval("inspect.isfunction({})".format(path), globals()):
                     self.type = Function
+                elif eval("inspect.isclass({})".format(path), globals()):
+                    self.type = Class
                 else:
                     self.type = Instance
             for kid in self.kids:
