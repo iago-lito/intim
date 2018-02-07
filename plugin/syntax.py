@@ -38,7 +38,7 @@ def intim_introspection():
     from sys import stdout                   # for default 'file'
     from types import ModuleType, MethodType # to define particular types
     from numpy import ufunc as UFuncType     # yet other particular types
-    from inspect import isclass              # to check for type types
+    import inspect                           # to check for type types
 
     filenames = {USERSCRIPTFILES} # sed by vimscript, remove duplicates
     source = '' # concat here all these files
@@ -215,11 +215,15 @@ def intim_introspection():
             else:
                 # then it is just a plain valid, known node, probably
                 # instance of a custom class or a function, method
-                if eval("inspect.ismethod({})".format(path), globals()):
+                # unelegant way to get these functions into eval scope:
+                if eval("f({})".format(path), globals(),
+                        {'f': inspect.ismethod}):
                     self.type = Method
-                elif eval("inspect.isfunction({})".format(path), globals()):
+                elif eval("f({})".format(path), globals(),
+                        {'f': inspect.isfunction}):
                     self.type = Function
-                elif eval("inspect.isclass({})".format(path), globals()):
+                elif eval("f({})".format(path), globals(),
+                        {'f': inspect.isclass}):
                     self.type = Class
                 else:
                     self.type = Instance

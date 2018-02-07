@@ -1034,7 +1034,7 @@ function! s:MatchingFiles() "{{{
     let result = []
     for i in range(bufnr('$') + 1)
         if bufloaded(i)
-            let fname = bufname(i)
+            let fname = expand('#'.i.':p') " full path
             if match(fname, pattern) > -1
                 " slack it between quotes
                 call add(result, "\"".fname."\"")
