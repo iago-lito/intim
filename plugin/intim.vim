@@ -730,16 +730,28 @@ function! s:SendLine() "{{{
     if empty(line)
         call s:SendEmpty()
     else
+        " TODO: gather these preprocessing into one single procedure with
+        " options etc.
         if s:language == 'python'
-            " remove indentation
+            let line = s:RemovePythonDoctestPrompt(line)
             " TODO: make it optional
-            let line = substitute(line, '^\s*','', '')
-            " remove doctest prompt
-            let line = substitute(line, '^>>>\s*','', '')
-            let line = substitute(line, '^\.\.\.\s*','', '')
+            " remove indentation
+            let line = s:RemoveIndentation(line)
         endif
         call s:Send(line)
     endif
+endfunction
+"}}}
+" Small preprocessing:
+function! s:RemoveIndentation(line) "{{{
+    return substitute(a:line, '^\s*', '', '')
+endfunction
+"}}}
+" A small special case to handle
+function! s:RemovePythonDoctestPrompt(line) "{{{
+    let line = substitute(a:line, '^>>>','', '')
+    let line = substitute(line, '^\.\.\.','', '')
+    return line
 endfunction
 "}}}
 " Send the current word to the session
@@ -766,6 +778,10 @@ function! s:SendLineByLine(raw) "{{{
     " then send them all..
     for line in selection
         " .. one by one ;)
+        if s:language == 'python'
+            let line = s:RemovePythonDoctestPrompt(line)
+            let line = s:RemoveIndentation(line)
+        endif
         call s:Send(line)
     endfor
     " python-specific: if the last line was empty, better not to ignore it
@@ -828,6 +844,30 @@ function! s:MinimalIndent(expr) "{{{
     " that the minimal indentation level is now 0, but the relative indentation
     " of the lines hasn't changed.
     let lines = split(a:expr, '\n')
+    " First, if this is python and there are some, remove the doctest prompts!
+    if s:language == 'python'
+        let pattern = '^\(>>>\|\.\.\.\)'
+        " Check for doctest prompt presence
+        let doctest = 0
+        for line in lines
+            if match(line, pattern) > -1
+                let doctest = 1
+                break
+            endif
+        endfor
+        if doctest
+            let processed = []
+            for line in lines
+                if match(line, pattern) > -1
+                    " remove the doctest but remember the line
+                    call add(processed, substitute(line, pattern, '', ''))
+                else
+                    " ignore the line, it should not be a command then :)
+                endif
+            endfor
+            let lines = processed
+        endif
+    endif
     " search for the smallest indentation level and record it
     let smallestLevel = 1 / 0
     let smallest = ''
