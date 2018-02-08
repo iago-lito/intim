@@ -9,6 +9,12 @@ Improvements:
 
 Bugs:
 -----
+[ ] This dot seems to be considered a navigation dot, so `identifier` is not
+colored:
+
+    # comment.
+    identifier
+
 [ ] bunch of remapping errors when opening a new LaTeX file from a LaTeX file!
 
 [ ] Here, `np` seems not lexed:

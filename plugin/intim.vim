@@ -576,7 +576,7 @@ function! s:LaunchSession() "{{{
     else
         " build the launching command: term -e 'tmux new -s sname' &
         let launchCommand = s:terminal()
-                    \ . " -e 'tmux new -s " . s:sname() . "' &;"
+                    \ . " -e 'tmux -2 new -s " . s:sname() . "' &;"
         " send the command
         call s:System(launchCommand)
         " + send additionnal command if user needs it
