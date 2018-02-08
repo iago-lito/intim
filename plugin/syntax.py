@@ -33,12 +33,13 @@ def intim_introspection():
     # to install them.
     from pygments.token import Token, is_token_subtype
     from pygments.lexers import python as pylex
-    from enum import Enum                    # for analysing enum types
     import os                                # for module type
     from sys import stdout                   # for default 'file'
     from types import ModuleType, MethodType # to define particular types
     from numpy import ufunc as UFuncType     # yet other particular types
     import inspect                           # to check for type types
+    from enum import Enum                    # for analysing enum types
+    Example_enum = Enum("Example", 'value')
 
     filenames = {USERSCRIPTFILES} # sed by vimscript, remove duplicates
     source = '' # concat here all these files
@@ -72,7 +73,8 @@ def intim_introspection():
     Bool       = Type("Bool"       , type(True))
     BuiltIn    = Type("Builtin"    , type(dir))
     Class      = Type("Class"      , None) # checked while typing node
-    EnumType   = Type("EnumType"   , type(Enum))
+    EnumType   = Type("EnumType"   , type(Example_enum))
+    EnumValue  = Type("EnumValue"  , type(Example_enum.value))
     Float      = Type("Float"      , type(1.))
     Function   = Type("Function"   , None) # checked while typing node
     Method     = Type("Method"     , None) # checked while typing node
@@ -224,7 +226,14 @@ def intim_introspection():
                     self.type = Function
                 elif eval("f({})".format(path), globals(),
                         {'f': inspect.isclass}):
-                    self.type = Class
+                    if eval("f({})".format(path), globals(),
+                            {'f': lambda c: issubclass(c, Enum)}):
+                        self.type = EnumType
+                    else:
+                        self.type = Class
+                elif eval("f({})".format(path), globals(),
+                        {'f': lambda i: isinstance(i, Enum)}):
+                    self.type = EnumValue
                 else:
                     self.type = Instance
             for kid in self.kids:

@@ -392,6 +392,7 @@ let groups = [
             \ ['IntimPyBuiltin'   , 'Underlined'],
             \ ['IntimPyClass'     , 'Type'],
             \ ['IntimPyEnumType'  , 'Type'],
+            \ ['IntimPyEnumValue'  , 'Constant'],
             \ ['IntimPyFloat'     , 'Constant'],
             \ ['IntimPyFunction'  , 'Underlined'],
             \ ['IntimPyInstance'  , 'Identifier'],
