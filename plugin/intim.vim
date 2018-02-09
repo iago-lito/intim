@@ -74,6 +74,38 @@ let g:loaded_intim = 1
 let s:path = fnamemodify(resolve(expand('<sfile>:p')), ':h:h')
 let g:intim_path = s:path
 
+" Methods:
+" Provide user function call opportunities "{{{
+" Note: some other function calls are provided in this script during options
+" definitions. There are also guarded in their own way.
+
+" Macro declaring and guarding user wrappers to methods:
+function! s:functionExport(internalname, name, nargs) "{{{
+    if !exists('*' . a:name)
+        if a:nargs == 0
+            execute "function " . a:name . "()\n"
+                \ . "    return s:" . a:internalname . "()\n"
+                \ . "endfunction"
+        elseif a:nargs == 1
+            execute "function " . a:name . "(arg)\n"
+                \ . "    return s:" . a:internalname . "(a:arg)\n"
+                \ . "endfunction"
+        else
+            echoerr "Cannot export functions with more than 1 arguments yet."
+        endif
+    else
+        echom a:name . "already declared, Intim won't overwrite it."
+    endif
+endfunction
+"}}}
+
+" Prefix them all with Intim-
+call s:functionExport('Send'        , 'IntimSend', 1)
+call s:functionExport('SetLanguage' , 'IntimSetLanguage', 1)
+call s:functionExport('GetLanguage' , 'IntimGetLanguage', 0)
+
+"}}}
+
 " Options:
 " Define here user's options "{{{
 
@@ -157,6 +189,11 @@ function! s:SetLanguage(language) "{{{
 endfunction
 "}}}
 
+" Read access for user:
+function! s:GetLanguage()
+    return s:language
+endfunction
+
 " Read a particular option from a dictionnary or return the default one
 function! s:readOption(dico) "{{{
     if has_key(a:dico, s:language)
@@ -192,6 +229,9 @@ function! s:createLanguageOption(name) "{{{
      \ . "function! s:get_" . a:name . "()\n"
      \ . "    return s:readOption(s:" . a:name . ")\n"
      \ . "endfunction"
+    " export this access to user
+    call s:functionExport("get_" . a:name,
+                        \ "IntimGet".toupper(a:name[0]).a:name[1:], 0)
     " function to be exported to user: define your own option.. this may require
     " the variable to be defined then, because .vimrc is sourced before this
     " script.
@@ -705,6 +745,7 @@ function! s:Send(command) "{{{
 
     let text = a:command
     if s:language == 'R'
+        " TODO: make this work together with python doctest prompt removal
         " remove roxygen2 comment sign before doctests:
         let commentSign = "^\\s*#\'"
         if match(a:command, commentSign) > -1
@@ -749,8 +790,8 @@ endfunction
 "}}}
 " A small special case to handle
 function! s:RemovePythonDoctestPrompt(line) "{{{
-    let line = substitute(a:line, '^>>>','', '')
-    let line = substitute(line, '^\.\.\.','', '')
+    let line = substitute(a:line, '^\s*>>>','', '')
+    let line = substitute(line, '^\s*\.\.\.','', '')
     return line
 endfunction
 "}}}
@@ -846,7 +887,7 @@ function! s:MinimalIndent(expr) "{{{
     let lines = split(a:expr, '\n')
     " First, if this is python and there are some, remove the doctest prompts!
     if s:language == 'python'
-        let pattern = '^\(>>>\|\.\.\.\)'
+        let pattern = '^\s*\(>>>\|\.\.\.\)'
         " Check for doctest prompt presence
         let doctest = 0
         for line in lines
@@ -1538,30 +1579,6 @@ endfunction
 "}}}
 
 "}}}
-
-"}}}
-
-" Methods:
-" Provide user function call opportunities "{{{
-" Note: some other function calls are provided in this script during options
-" definitions. There are also guarded in their own way.
-
-" Macro declaring and guarding user wrappers to methods:
-function! s:functionExport(internalname, name) "{{{
-    if !exists('*' . a:name)
-        " /!\ assumption: only one argument
-        execute "function " . a:name . "(arg)\n"
-            \ . "    call s:" . a:internalname . "(a:arg)\n"
-            \ . "endfunction"
-    else
-        echom a:name . "already declared, I won't overwrite it."
-    endif
-endfunction
-"}}}
-
-" Prefix them all with Intim-
-call s:functionExport('Send'        , 'IntimSend')
-call s:functionExport('SetLanguage' , 'IntimSetLanguage')
 
 "}}}
 

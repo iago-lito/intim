@@ -3,8 +3,10 @@ Find work here
 Improvements:
 -------------
 
-- [ ] make doc tags more fleshed (all function names *etc.*) and their layout
+[ ] make doc tags more fleshed (all function names *etc.*) and their layout
   more consistent (tags bunches: where, how, why? lining up).
+[ ] make function names more consistent `IntimInvokeCommand` *vs.*
+`IntimGetInvokeCommand` for instance.. or `IntimSetInvokeCommand`.
 
 
 Bugs:

@@ -112,8 +112,13 @@ Intim can be configured in your `.vimrc` via three channels:
 
         call Intim_invokeCommand('python', 'ipython3')
 <
-        (see intim-invoke or search this file for `call` for other examples).
+        (see intim-invoke or search this file for `call` to read other examples).
 
+        In this channel, options can be read with the following `IntimGet`
+        functions, like: >
+
+        :echo IntimGetInvokeCommand()
+<
 
         Note: For now (but any contribution is welcome), Intim function are
         only guaranteed to be defined after vim has started. So, in order to
@@ -125,7 +130,7 @@ Intim can be configured in your `.vimrc` via three channels:
             autocmd BufEnter *.py call Intim_invokeCommand('python', 'ipython3')
         augroup end
 
-Note: Intim should work out-of-the-box. However, it is also much configurable.
+Note: Intim should work out of the box. However, it is also much configurable.
 If it eventually turns out that you have many configuration options to define,
 then, our recommandation to keep things tidy, is to define a dedicated function
 in your `.vimrc` to be ran as an autocmd. For instance: >
