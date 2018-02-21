@@ -265,7 +265,8 @@ def intim_introspection():
             print(command, file=file)
             # ask the kids to do so :)
             for kid in self.kids: # ** second iteration, could be the only one
-                kid.write(prefix + whitespace + kid.id, depth + 1, file)
+                if kid.type is not Unexistent: # to release burden a little bit
+                    kid.write(prefix + whitespace + kid.id, depth + 1, file)
 
 
     class Forest(Node):
@@ -314,7 +315,8 @@ def intim_introspection():
             # the root name starts without being a subname of something else:
             root_prefix = r" '\([a-zA-Z][a-zA-Z0-9]*[ \s\t\n]*\.[ \s\t\n]*\)\@<!\<"
             for kid in self.kids:
-                kid.write(root_prefix + kid.id, 0, file=file)
+                if kid.type is not Unexistent: # to ease the file a little bit
+                    kid.write(root_prefix + kid.id, 0, file=file)
             # signal to Intim: the syntax file may be read now!
             print('" end', file=file)
 

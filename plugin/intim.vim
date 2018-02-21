@@ -442,7 +442,6 @@ let groups = [
             \ ['IntimPyNoneType'  , 'Constant'],
             \ ['IntimPyString'    , 'Constant'],
             \ ['IntimPyStandard'  , 'Identifier'],
-            \ ['IntimPyUnexistent', 'Ignore']
             \ ]
 for [group, linked] in groups
     call s:setDefaultOption_highlightGroups('python', group, linked)
