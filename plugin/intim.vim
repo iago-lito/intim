@@ -104,6 +104,20 @@ call s:functionExport('Send'        , 'IntimSend', 1)
 call s:functionExport('SetLanguage' , 'IntimSetLanguage', 1)
 call s:functionExport('GetLanguage' , 'IntimGetLanguage', 0)
 
+" Some "languages" actually the same, right?
+let s:python_like = ['python',
+                   \ 'python3',
+                   \ 'ipython',
+                   \ 'ipython3',
+                   \ 'bpython',
+                   \ 'bpython3',
+                   \ 'django',
+                   \ 'sage',
+                   \ ]
+function! s:pythonBased(language)
+    return index(s:python_like, a:language) > -1
+endfunction
+
 "}}}
 
 " Options:
@@ -276,6 +290,7 @@ call s:setDefaultOption_preInvokeCommands('default', [''])
 call s:createLanguageOption('invokeCommand')
 call s:setDefaultOption_invokeCommand('default', '')
 call s:setDefaultOption_invokeCommand('python', 'python')
+call s:setDefaultOption_invokeCommand('django', 'python manage.py shell')
 call s:setDefaultOption_invokeCommand('R', 'R')
 call s:setDefaultOption_invokeCommand('bash', 'bash')
 call s:setDefaultOption_invokeCommand('LaTeX', '')
@@ -575,6 +590,11 @@ let mappings = [
             \ ['Rust', 'cr', 'cargo run'],
             \ ['Rust', 'ct', 'cargo test'],
             \ ['R', 'go', 'graphics.off()'],
+            \ ['django', 'dr', 'python manage.py runserver'],
+            \ ['django', 'dk', 'python manage.py makemigrations'],
+            \ ['django', 'dm', 'python manage.py migrate'],
+            \ ['django', 'dt', 'python manage.py test'],
+            \ ['django', 'df', 'python manage.py flush'],
             \ ]
 for [language, map, prefix] in mappings
     call s:setDefaultOption_constantExpression(language, map, prefix)
@@ -772,7 +792,7 @@ function! s:SendLine() "{{{
     else
         " TODO: gather these preprocessing into one single procedure with
         " options etc.
-        if s:language == 'python'
+        if s:pythonBased(s:language)
             let line = s:RemovePythonDoctestPrompt(line)
             " TODO: make it optional
             " remove indentation
@@ -818,7 +838,7 @@ function! s:SendLineByLine(raw) "{{{
     " then send them all..
     for line in selection
         " .. one by one ;)
-        if s:language == 'python'
+        if s:pythonBased(s:langage)
             let line = s:RemovePythonDoctestPrompt(line)
             let line = s:RemoveIndentation(line)
         endif
@@ -826,7 +846,7 @@ function! s:SendLineByLine(raw) "{{{
     endfor
     " python-specific: if the last line was empty, better not to ignore it
     " because the interpreter might still be waiting for it
-    if s:language == 'python'
+    if s:pythonBased(s:language)
         if match(selection[-1], '^\s*$') == 0
             call s:SendEmpty()
         endif
@@ -850,7 +870,7 @@ function! s:SendChunk(raw) "{{{
 
     " retrieve current selected lines:
     " python-specific: keep a minimal indent not to make the interpreter grumble
-    if s:language == 'python'
+    if s:PythonBased(s:language)
         let selection = s:MinimalIndent(a:raw)
     else
         let selection = split(a:raw, '\n')
@@ -866,7 +886,7 @@ endfunction
 function! s:sourceCommand(file) "{{{
     " depending on the language, return a command to source a file:
     let lang = s:language
-    if lang == 'python'
+    if s:pythonBased(lang)
         return "exec(open('". a:file ."').read())"
     elseif lang == 'R'
         return "base::source('" . a:file . "')"
@@ -885,7 +905,7 @@ function! s:MinimalIndent(expr) "{{{
     " of the lines hasn't changed.
     let lines = split(a:expr, '\n')
     " First, if this is python and there are some, remove the doctest prompts!
-    if s:language == 'python'
+    if s:pythonBased(s:language)
         let pattern = '^\s*\(>>>\|\.\.\.\)'
         " Check for doctest prompt presence
         let doctest = 0
@@ -1081,7 +1101,7 @@ function! s:SinkHelp(topic, file) "{{{
     let chunk = s:chunk()
     call s:CheckFile(chunk)
     " build a small script to write help to a file
-    if s:language == 'python'
+    if s:pythonBased(s:language)
         let script  = [
           \ "import pydoc",
           \ "with open('" . help . "', 'w') as file:",
@@ -1128,15 +1148,16 @@ endfunction
 
 function! s:UpdateColor() "{{{
     " The introspection script is part of this plugin
-    if s:language == 'python'
+    let lang = s:language
+    if s:pythonBased(lang)
         let script = s:path . "/plugin/syntax.py"
-    elseif s:language == 'R'
+    elseif lang == 'R'
         let script = s:path . "/plugin/syntax.R"
-    elseif s:language == 'default'
+    elseif lang == 'default'
         echoerr "There is no default Intim color updating."
         return
     else
-        echoerr "Intim does not support " . s:language . " color updating yet."
+        echoerr "Intim does not support " . lang . " color updating yet."
         return
     endif
     " copy the script to chunk file, fill the missing fields

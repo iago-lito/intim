@@ -7,6 +7,8 @@ Improvements:
   more consistent (tags bunches: where, how, why? lining up).
 [ ] make function names more consistent `IntimInvokeCommand` *vs.*
 `IntimGetInvokeCommand` for instance.. or `IntimSetInvokeCommand`.
+[ ] guard: do not send python/R command if the interpreter has not been invoked
+or has been exited()
 
 
 Bugs:
