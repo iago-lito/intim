@@ -9,6 +9,7 @@ if has("autocmd")
     " recognize python files
     autocmd BufNewFile,BufRead *.py setf python
     autocmd BufNewFile,BufRead *pythonrc setf python
+    autocmd BufNewFile,BufRead *.sage setf python
 
     " recognize latex files
     autocmd BufNewFile,BufRead *.tex setf tex

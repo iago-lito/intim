@@ -1,1 +1,2 @@
-call IntimSetLanguage('python')
+call IntimSetLanguage('sage')
+

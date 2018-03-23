@@ -289,7 +289,10 @@ call s:setDefaultOption_preInvokeCommands('default', [''])
 " Interpreter to invoke (e.g. `bpython`) One command (string) only.
 call s:createLanguageOption('invokeCommand')
 call s:setDefaultOption_invokeCommand('default', '')
-call s:setDefaultOption_invokeCommand('python', 'python')
+" all python-likes :P
+for pl in s:python_like
+    call s:setDefaultOption_invokeCommand(pl, pl)
+endfor
 call s:setDefaultOption_invokeCommand('django', 'python manage.py shell')
 call s:setDefaultOption_invokeCommand('R', 'R')
 call s:setDefaultOption_invokeCommand('bash', 'bash')
@@ -326,8 +329,8 @@ call s:setDefaultOption_syntaxFunction('python', 's:DefaultPythonSyntaxFunction'
 call s:createLanguageOption('sendSelection')
 call s:setDefaultOption_sendSelection('default', 'LineByLine')
 call s:setDefaultOption_sendSelection('sage', 'MagicCpaste')
-" Automagically set it to MagicCpaste if language if invoked interpreter is Sage
-" or ipython :P
+" Automagically set it to MagicCpaste if invoked interpreter is Sage or ipython
+" :P
 function! s:setHook_invokeCommand(language, option)
     if match(a:option, 'ipython') >= 0
     \ || match(a:option, 'sage') >= 0
@@ -838,7 +841,7 @@ function! s:SendLineByLine(raw) "{{{
     " then send them all..
     for line in selection
         " .. one by one ;)
-        if s:pythonBased(s:langage)
+        if s:pythonBased(s:language)
             let line = s:RemovePythonDoctestPrompt(line)
             let line = s:RemoveIndentation(line)
         endif
@@ -870,7 +873,7 @@ function! s:SendChunk(raw) "{{{
 
     " retrieve current selected lines:
     " python-specific: keep a minimal indent not to make the interpreter grumble
-    if s:PythonBased(s:language)
+    if s:pythonBased(s:language)
         let selection = s:MinimalIndent(a:raw)
     else
         let selection = split(a:raw, '\n')
