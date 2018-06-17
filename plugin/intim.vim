@@ -1489,7 +1489,7 @@ function! s:DefineHotKey(shortcut, expression) "{{{
 
     for mode in ['n', 'v']
         call s:CheckAndDeclare(mode, map,
-            \ ":call <SID>SendHotkey('" . a:shortcut . "', '" . mode . "')")
+            \ ":call <SID>SendHotkey('" . a:shortcut . "', '" . mode . "')<cr>")
     endfor
 
 endfunction
