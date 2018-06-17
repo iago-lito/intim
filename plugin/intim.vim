@@ -1471,28 +1471,52 @@ function! s:CheckAndDeclare(type, map, effect) "{{{
 endfunction
 "}}}
 
+" all hotkeys expressions are stored here
+let s:hotkeys_expressions = {}
+
 " Define one hotkey map: send an expression containing either visually selected
 " area or the word under cursor. The expression is written with `*` representing
 " the variable part.
 " TODO: handle actual `*` characters escaping
 function! s:DefineHotKey(shortcut, expression) "{{{
-    " called while reading user's hotkeys
+    " called while reading user's :hotkeys:
+
+    " fill up the dict
+    let s:hotkeys_expressions[a:shortcut] = a:expression
 
     " final mapping for user
     let map = s:get_hotkeys_nleader() . a:shortcut
 
-    " the actual content varies depending on whether it is normal or visual
-    " mode: word under cursor or visually selected area.
-    let contents = {'n': "<c-r>=expand('<cword>')<cr>",
-                  \ 'v': "<c-r>=@*<cr>"}
-    for [mode, content] in items(contents)
-        " send the command to IntimSession
-        let effect = ":call <SID>Send(\'"
-                    \ .  substitute(a:expression, '*', content, 'g') . "\')<cr>"
-        call s:CheckAndDeclare(mode, map, effect)
+    for mode in ['n', 'v']
+        call s:CheckAndDeclare(mode, map,
+            \ ":call <SID>SendHotkey('" . a:shortcut . "', '" . mode . "')")
     endfor
 
 endfunction
+
+" Function actually called when using a hotkey
+" Searches for the right expression to replace with the shortcut as a key
+" Depending on the 'v' or 'n' mode, fill it up with '<cword>' or '@*'
+function! s:SendHotkey(shortcut, mode)
+
+    " retrieve expression
+    let expression = s:hotkeys_expressions[a:shortcut]
+
+    " replace placeholder `*` with either..
+    if a:mode == 'v'
+        " visually selected area
+        let content = @*
+    else
+        " or word under cursor
+        let content = expand('<cword>')
+    endif
+    let expression = substitute(expression, '*', content, 'g')
+
+    " and send that :)
+    call s:Send(expression)
+
+endfunction
+
 "}}}
 
 " Here is a special, predefined case expression: headed expressions of the form
