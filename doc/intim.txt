@@ -568,7 +568,7 @@ it, then type `,ii` in normal mode.
 
 Note: No edit bonuses are automatically defined for generic hotkeys
 expression like these. If you need anything like this, you will probably
-make a good use of the *Ultisnips* package, found at
+make a good use of the `Ultisnips` package, found at
 https://github.com/SirVer/ultisnips.
 
 - Default hotkeys - - - - - - - - - - - - - - - - - - - *intim-default-hotkeys*
