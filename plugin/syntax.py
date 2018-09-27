@@ -222,7 +222,8 @@ def intim_introspection():
                         {'f': inspect.ismethod}):
                     self.type = Method
                 elif eval("f({})".format(path), globals(),
-                        {'f': inspect.isfunction}):
+                        {'f': lambda x: inspect.isfunction(x)
+                           or type(x) is UFuncType}): # inspect misses this one
                     self.type = Function
                 elif eval("f({})".format(path), globals(),
                         {'f': inspect.isclass}):
