@@ -767,8 +767,8 @@ function! s:Send(command) "{{{
 
     let text = a:command
     if s:language == 'R'
-        " TODO: make this work together with python doctest prompt removal
         " remove roxygen2 comment sign before doctests:
+        " TODO: make this work together with python doctest prompt removal
         let commentSign = "^\\s*#\'"
         if match(a:command, commentSign) > -1
             let text = substitute(a:command, commentSign, '', '')
@@ -777,9 +777,15 @@ function! s:Send(command) "{{{
 
     " main code for strings:
     " prepare the text for SendText: "command" ENTER
+    " " Update from https://unix.stackexchange.com/a/472112/87656 (cheers :)
+    " " Send litteral text first, then actual 'ENTER' command, or we had random
+    " " commands not working like `up`, `right` or `-3` (interpreted as keywords
+    " " or options)
     if !empty(text)
-        let text = '"' . s:HandleEscapes(text) . '" ENTER'
+        let text = '-l '''' "' . s:HandleEscapes(text) . '"'
         call s:SendText(text)
+        " then "press ENTER"
+        call s:SendEmpty()
     endif
 
 endfunction
