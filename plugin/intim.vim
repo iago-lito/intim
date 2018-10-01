@@ -100,9 +100,12 @@ endfunction
 "}}}
 
 " Prefix them all with Intim-
-call s:functionExport('Send'        , 'IntimSend', 1)
-call s:functionExport('SetLanguage' , 'IntimSetLanguage', 1)
-call s:functionExport('GetLanguage' , 'IntimGetLanguage', 0)
+call s:functionExport('Send'          , 'IntimSend', 1)
+call s:functionExport('SendEnter'     , 'IntimSendEnter', 0)
+call s:functionExport('SendInterrupt' , 'IntimSendInterrupt', 0)
+call s:functionExport('SendEOF'       , 'IntimSendEOF', 0)
+call s:functionExport('SetLanguage'   , 'IntimSetLanguage', 1)
+call s:functionExport('GetLanguage'   , 'IntimGetLanguage', 0)
 
 " Some "languages" actually the same, right?
 let s:python_like = ['python',
@@ -724,7 +727,7 @@ function! s:SendText(text) "{{{
 endfunction
 "}}}
 " Convenience for sending an empty line
-function! s:SendEmpty() "{{{
+function! s:SendEnter() "{{{
     call s:SendText('ENTER')
 endfunction
 "}}}
@@ -785,7 +788,7 @@ function! s:Send(command) "{{{
         let text = '-l '''' "' . s:HandleEscapes(text) . '"'
         call s:SendText(text)
         " then "press ENTER"
-        call s:SendEmpty()
+        call s:SendEnter()
     endif
 
 endfunction
@@ -797,7 +800,7 @@ function! s:SendLine() "{{{
     let line = getline('.')
     " if the line is empty, send an empty command
     if empty(line)
-        call s:SendEmpty()
+        call s:SendEnter()
     else
         " TODO: gather these preprocessing into one single procedure with
         " options etc.
@@ -857,7 +860,7 @@ function! s:SendLineByLine(raw) "{{{
     " because the interpreter might still be waiting for it
     if s:pythonBased(s:language)
         if match(selection[-1], '^\s*$') == 0
-            call s:SendEmpty()
+            call s:SendEnter()
         endif
     endif
 endfunction
@@ -1353,6 +1356,10 @@ call s:declareMap('n', 'LaunchSession',
 call s:declareMap('n', 'EndSession',
             \ ":call <SID>EndSession()<cr>",
             \ "<F2>")
+" Send keyboard enter to the session
+call s:declareMap('n', 'SendEnter',
+            \ ":call <SID>SendEnter()<cr>",
+            \ "<cr>")
 " Send keyboard interrupt to the session
 call s:declareMap('n', 'SendInterrupt',
             \ ":call <SID>SendInterrupt()<cr>",
