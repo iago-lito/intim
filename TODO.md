@@ -9,6 +9,7 @@ Improvements:
 `IntimGetInvokeCommand` for instance.. or `IntimSetInvokeCommand`.
 [ ] guard: do not send python/R command if the interpreter has not been invoked
 or has been exited()
+[ ] enable syntax coloring in pdb debug mode
 
 
 Bugs:
