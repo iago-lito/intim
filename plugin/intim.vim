@@ -301,6 +301,7 @@ call s:setDefaultOption_invokeCommand('R', 'R')
 call s:setDefaultOption_invokeCommand('bash', 'bash')
 call s:setDefaultOption_invokeCommand('LaTeX', '')
 call s:setDefaultOption_invokeCommand('javascript', 'node')
+call s:setDefaultOption_invokeCommand('psql', 'psql')
 
 " First interpreter commands to execute after invoking the interpreter (I use it
 " to load packages etc.). One command per item in the list. Silent if empty.
@@ -314,6 +315,7 @@ call s:setDefaultOption_exitCommand('default', '')
 call s:setDefaultOption_exitCommand('python', 'exit()')
 call s:setDefaultOption_exitCommand('R', "quit(save='no')")
 call s:setDefaultOption_exitCommand('javascript', "process.exit()")
+call s:setDefaultOption_exitCommand('psql', "exit")
 
 " Pattern matching for gathering all opened files to be colored
 " TODO: make this automatic reading &ft in all buffers?
@@ -322,6 +324,7 @@ call s:createLanguageOption('filePattern')
 call s:setDefaultOption_filePattern('default', '.*')
 call s:setDefaultOption_filePattern('python', '.*\.py') " TODO: .pythonrc etc.
 call s:setDefaultOption_filePattern('R', '.*\.r') " TODO: .r,.R,.Rprofile etc.
+call s:setDefaultOption_filePattern('psql', '.*\.sql') " TODO: .r,.R,.Rprofile etc.
 
 " Syntax function to be ran after s:ReadColor update
 call s:createLanguageOption('syntaxFunction')
@@ -902,6 +905,8 @@ function! s:sourceCommand(file) "{{{
         return "exec(open('". a:file ."').read())"
     elseif lang == 'R'
         return "base::source('" . a:file . "')"
+    elseif lang == 'psql'
+        return "\\include '" . a:file . "';"
     endif
     echoerr "Intim chunking does not support " . lang . " language yet."
     return ""
