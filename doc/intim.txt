@@ -725,6 +725,30 @@ to get your document opened in the pdf viewer you defined in >
 
 were `*` stands as a placeholder for your document's filename.
 
+Or do the same with the function >
+
+    call IntimCompileTex('fast')
+
+Available options are:
+
+    'full'  pdflatex && biber && pdflatex
+    'lncs'  pdflatex && bibtex && pdflatex && pdflatex
+    'twice' pdflatex && pdflatex
+    'fast'  pdflatex
+    'clean' remove files with extension
+                .out
+                .aux
+                .blg
+                .log
+                -blx.bib
+                .toc
+                .xml
+                .bcf
+                .bbl
+                .nav
+                .snm
+                .run.xml
+
 Note: as the time of writing, these options are not much customizable. Your
 may create your own from scratch by making a good use of
 Intim_constantExpression and *IntimSend* functions. Do not hesitate visiting

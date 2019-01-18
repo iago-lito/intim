@@ -106,6 +106,7 @@ call s:functionExport('SendInterrupt' , 'IntimSendInterrupt', 0)
 call s:functionExport('SendEOF'       , 'IntimSendEOF', 0)
 call s:functionExport('SetLanguage'   , 'IntimSetLanguage', 1)
 call s:functionExport('GetLanguage'   , 'IntimGetLanguage', 0)
+call s:functionExport('CompileTex'    , 'IntimCompileTex', 1)
 
 " Some "languages" actually the same, right?
 let s:python_like = ['python',
@@ -988,22 +989,39 @@ endfunction
 " Send compilation command to latex
 function! s:CompileTex(option) "{{{
     " option:
-    "   'full' compile everything twice with bibliography
-    "   'fast' compile just once to refresh doc a little
+    "   'full'  pdflatex && biber && pdflatex
+    "   'twice' pdflatex && pdflatex
+    "   'fast'  pdflatex
+    "   'lncs' pdflatex && bibtex && pdflatex && pdflatex
     "   'clean' remove all temporary tex files except produced pdf
     " retrieve filename and send full compilation command
     " TODO: make the compilation command more customizable, or use a third tool
     " that guesses the right command. I've heard this exists, right?
     let filename = expand('%:r')
-    let pdflatexcmd = "pdflatex -synctex=1 --shell-escape "
+    let pdflatexcmd = "pdflatex -synctex=1 --shell-escape --halt-on-error "
+    " echo colored result
+    let output = " && echo '\\033[32m \ndone.\n\\033[0m' "
+               \ " || echo '\\033[31m \nfailed.\n\\033[0m' "
     if a:option == 'full'
         let cmd = pdflatexcmd . filename . ".tex"
               \ . " && biber " . filename
               \ . " && " . pdflatexcmd . filename . ".tex"
+              \ . output
+    elseif a:option == 'twice'
+        let cmd = pdflatexcmd . filename . ".tex"
+              \ . " && " . pdflatexcmd . filename . ".tex"
+              \ . output
+    elseif a:option == 'lncs'
+        let cmd = pdflatexcmd . filename . ".tex"
+              \ . " && bibtex " . filename
+              \ . " && " . pdflatexcmd . filename . ".tex"
+              \ . " && " . pdflatexcmd . filename . ".tex"
+              \ . output
     elseif a:option == 'fast'
         let cmd = pdflatexcmd . filename . ".tex"
+              \ . output
     elseif a:option == 'clean'
-        " every common latex garbage we may wish to get rid of
+        " every common latex garbage one may wish to get rid of
         let cmd = "rm -f " . filename . ".out && "
               \ . "rm -f " . filename . ".aux && "
               \ . "rm -f " . filename . ".blg && "
