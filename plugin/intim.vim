@@ -90,6 +90,10 @@ function! s:functionExport(internalname, name, nargs) "{{{
             execute "function " . a:name . "(arg)\n"
                 \ . "    return s:" . a:internalname . "(a:arg)\n"
                 \ . "endfunction"
+        elseif a:nargs == -1 " variable number of arguments
+            execute "function " . a:name . "(...)\n"
+                \ . "    return s:" . a:internalname . "(a:000)\n"
+                \ . "endfunction"
         else
             echoerr "Cannot export functions with more than 1 arguments yet."
         endif
@@ -106,7 +110,7 @@ call s:functionExport('SendInterrupt' , 'IntimSendInterrupt', 0)
 call s:functionExport('SendEOF'       , 'IntimSendEOF', 0)
 call s:functionExport('SetLanguage'   , 'IntimSetLanguage', 1)
 call s:functionExport('GetLanguage'   , 'IntimGetLanguage', 0)
-call s:functionExport('CompileTex'    , 'IntimCompileTex', 1)
+call s:functionExport('CompileTex'    , 'IntimCompileTex', -1)
 
 " Some "languages" actually the same, right?
 let s:python_like = ['python',
@@ -987,40 +991,44 @@ endfunction
 
 " SpecialSenders:
 " Send compilation command to latex
-function! s:CompileTex(option) "{{{
+function! s:CompileTex(args) "{{{
+    " variable number of arguments, passed as a list
     " option:
     "   'full'  pdflatex && biber && pdflatex
     "   'twice' pdflatex && pdflatex
     "   'fast'  pdflatex
     "   'lncs' pdflatex && bibtex && pdflatex && pdflatex
     "   'clean' remove all temporary tex files except produced pdf
+    let option = a:args[0]
+    " first optional argument: filename (no extension).
+    " If not provided, pick current one.
+    let filename = len(a:args) > 1? a:args[1] : expand('%:r')
     " retrieve filename and send full compilation command
     " TODO: make the compilation command more customizable, or use a third tool
     " that guesses the right command. I've heard this exists, right?
-    let filename = expand('%:r')
     let pdflatexcmd = "pdflatex -synctex=1 --shell-escape --halt-on-error "
     " echo colored result
     let output = " && echo '\\033[32m \ndone.\n\\033[0m' "
                \ " || echo '\\033[31m \nfailed.\n\\033[0m' "
-    if a:option == 'full'
+    if option == 'full'
         let cmd = pdflatexcmd . filename . ".tex"
               \ . " && biber " . filename
               \ . " && " . pdflatexcmd . filename . ".tex"
               \ . output
-    elseif a:option == 'twice'
+    elseif option == 'twice'
         let cmd = pdflatexcmd . filename . ".tex"
               \ . " && " . pdflatexcmd . filename . ".tex"
               \ . output
-    elseif a:option == 'lncs'
+    elseif option == 'lncs'
         let cmd = pdflatexcmd . filename . ".tex"
               \ . " && bibtex " . filename
               \ . " && " . pdflatexcmd . filename . ".tex"
               \ . " && " . pdflatexcmd . filename . ".tex"
               \ . output
-    elseif a:option == 'fast'
+    elseif option == 'fast'
         let cmd = pdflatexcmd . filename . ".tex"
               \ . output
-    elseif a:option == 'clean'
+    elseif option == 'clean'
         " every common latex garbage one may wish to get rid of
         let cmd = "rm -f " . filename . ".out && "
               \ . "rm -f " . filename . ".aux && "
@@ -1036,7 +1044,7 @@ function! s:CompileTex(option) "{{{
               \ . "rm -f " . filename . ".run.xml && "
               \ . "rm -rf figure"
     else
-        echoe "Intim: CompileTex does not know option '" . a:option . "'!"
+        echoe "Intim: CompileTex does not know option '" . option . "'!"
     endif
     " after the operation, list files to see what happened
     let cmd = cmd . " && ls -lah"

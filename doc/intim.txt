@@ -728,6 +728,7 @@ were `*` stands as a placeholder for your document's filename.
 Or do the same with the function >
 
     call IntimCompileTex('fast')
+    call IntimCompileTex('lncs', 'filename_without_extension')
 
 Available options are:
 
