@@ -1472,15 +1472,15 @@ augroup intimLaTeX
 
     " "Latex Compile"
     autocmd FileType tex call s:declareMap('n', 'TexCompileFast',
-                \ ":w<cr>:call <SID>CompileTex('fast')<cr>",
+                \ ":w<cr>:call <SID>CompileTex(['fast'])<cr>",
                 \ ",lc")
     " big "Latex Compile"
     autocmd FileType tex call s:declareMap('n', 'TexCompileFull',
-                \ ":w<cr>:call <SID>CompileTex('full')<cr>",
+                \ ":w<cr>:call <SID>CompileTex(['full'])<cr>",
                 \ ",Lc")
     " "Make clean"
     autocmd FileType tex call s:declareMap('n', 'TexClean',
-                \ ":call <SID>CompileTex('clean')<cr>",
+                \ ":call <SID>CompileTex(['clean'])<cr>",
                 \ ",mc")
     " "x" stop latex compilation when there is an error
     autocmd FileType tex call s:declareMap('n', 'TexInterrupt',
