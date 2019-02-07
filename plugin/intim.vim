@@ -839,22 +839,39 @@ function! s:SendWord() "{{{
     call s:Send(expand('<cword>'))
 endfunction
 "}}}
+" Retrieve current selection content
+" https://stackoverflow.com/a/6271254/3719101
+function! s:getVisualSelection() "{{{
+    " Why is this not a built-in Vim script function?!
+    let [line_start, column_start] = getpos("'<")[1:2]
+    let [line_end, column_end] = getpos("'>")[1:2]
+    let lines = getline(line_start, line_end)
+    if len(lines) == 0
+        return ''
+    endif
+    let lines[-1] = lines[-1][: column_end - (&selection == 'inclusive' ? 1 : 2)]
+    let lines[0] = lines[0][column_start - 1:]
+    return join(lines, "\n")
+endfunction
+"}}}
 " Send the current selection as multiple lines
-function! s:SendSelection(raw) "{{{
+function! s:SendSelection() "{{{
+    let raw = s:getVisualSelection()
     " The way we'll do this depends on our interpreter/language
     if s:get_sendSelection() == 'MagicCpaste'
-        call s:SendMagicCpaste(a:raw)
+        call s:SendMagicCpaste(raw)
     else
         " default
-        call s:SendLineByLine(a:raw)
+        call s:SendLineByLine(raw)
     endif
 endfunction
 "}}}
 " Send the current selection as plain successive lines
-function! s:SendLineByLine(raw) "{{{
+function! s:SendLineByLine() "{{{
+    let raw = s:getVisualSelection()
     " (this is the `raw` content of the selection)
     " get each line of the selection in a different list item
-    let selection = split(a:raw, '\n')
+    let selection = split(raw, '\n')
     " then send them all..
     for line in selection
         " .. one by one ;)
@@ -874,13 +891,15 @@ function! s:SendLineByLine(raw) "{{{
 endfunction
 "}}}
 " Send a chunk by sinking it to a temporary file
-function! s:SendChunk(raw) "{{{
+function! s:SendChunk() "{{{
+
+    let raw = s:getVisualSelection()
 
     " guard: if language is not set, we cannot source a chunk
     if s:language == 'default'
         echom "Intim: No sourcing chunk without a language. "
                     \ . "Fall back on sending selection."
-        call s:SendSelection(raw)
+        call s:SendSelection()
         return
     endif
 
@@ -891,9 +910,9 @@ function! s:SendChunk(raw) "{{{
     " retrieve current selected lines:
     " python-specific: keep a minimal indent not to make the interpreter grumble
     if s:pythonBased(s:language)
-        let selection = s:MinimalIndent(a:raw)
+        let selection = s:MinimalIndent(raw)
     else
-        let selection = split(a:raw, '\n')
+        let selection = split(raw, '\n')
     endif
     " write this to the file
     call writefile(selection, file)
@@ -1072,7 +1091,8 @@ function! s:OpenPdf(command) "{{{
 endfunction
 "}}}
 " Send the current selection as an ipython/sage `%cpaste`
-function! s:SendMagicCpaste(raw) "{{{
+function! s:SendMagicCpaste() "{{{
+    let raw = s:getVisualSelection()
     " Workaround ipython/sage autoindent procedure
     " https://github.com/kassio/neoterm/issues/71
     " The solution is to:
@@ -1081,7 +1101,7 @@ function! s:SendMagicCpaste(raw) "{{{
     " - append an explicit end-of-file command
     " - send it as-is
     " whole selection
-    let selection = s:HandleEscapes(a:raw)
+    let selection = s:HandleEscapes(raw)
     " append end-of file to tmux command (+ one CR for inlined case)
     let text = '"' . selection . '" c-d'
     " invoke ipython's magic command
@@ -1428,22 +1448,22 @@ call s:declareMap('n', 'SendWord',
             \ ",<space>")
 " Send selection as multiple lines, without loosing it
 call s:declareMap('v', 'StaticSendSelection',
-            \ "<esc>:call <SID>SendSelection(@*)<cr>gv",
+            \ "<esc>:call <SID>SendSelection()<cr>gv",
             \ ",<space>")
 " (for an obscure reason, the function is called twice from visual mode, hence
 " the <esc> and gv)
 " Send selection as multiple lines then jump to next
 call s:declareMap('v', 'SendSelection',
-            \ "<esc>:call <SID>SendSelection(@*)<cr>"
+            \ "<esc>:call <SID>SendSelection()<cr>"
             \ . ":call <SID>NextScriptLine()<cr>",
             \ "c<space>")
 " Send chunk and keep it
 call s:declareMap('v', 'StaticSendChunk',
-            \ "<esc>:call <SID>SendChunk(@*)<cr>gv",
+            \ "<esc>:call <SID>SendChunk()<cr>gv",
             \ ",<space>")
 " Send chunk and move on
 call s:declareMap('v', 'SendChunk',
-            \ "<esc>:call <SID>SendChunk(@*)<cr>"
+            \ "<esc>:call <SID>SendChunk()<cr>"
             \ . ":call <SID>NextScriptLine()<cr>",
             \ "<space>")
 " Send the whole script as a chunk
@@ -1461,7 +1481,7 @@ call s:declareMap('n', 'GetHelpWord',
             \ "<F1>")
 " Get help about the selection
 call s:declareMap('v', 'GetHelpSelection',
-            \ "<esc>:call <SID>GetHelp(@*)<cr>",
+            \ "<esc>:call <SID>GetHelp()<cr>",
             \ "<F1>")
 
 " Update coloring
@@ -1552,7 +1572,7 @@ function! s:SendHotkey(shortcut, mode)
     " replace placeholder `*` with either..
     if a:mode == 'v'
         " visually selected area
-        let content = @*
+        let content = s:getVisualSelection()
     else
         " or word under cursor
         let content = expand('<cword>')
