@@ -859,10 +859,10 @@ function! s:SendSelection() "{{{
     let raw = s:getVisualSelection()
     " The way we'll do this depends on our interpreter/language
     if s:get_sendSelection() == 'MagicCpaste'
-        call s:SendMagicCpaste(raw)
+        call s:SendMagicCpaste()
     else
         " default
-        call s:SendLineByLine(raw)
+        call s:SendLineByLine()
     endif
 endfunction
 "}}}
