@@ -1160,6 +1160,10 @@ function! s:GetHelp(topic) "{{{
 
 endfunction
 "}}}
+function! s:GetHelpSelection() "{{{
+    call s:GetHelp(s:getVisualSelection())
+endfunction
+"}}}
 
 " Write a man page to a file
 function! s:SinkHelp(topic, file) "{{{
@@ -1481,7 +1485,7 @@ call s:declareMap('n', 'GetHelpWord',
             \ "<F1>")
 " Get help about the selection
 call s:declareMap('v', 'GetHelpSelection',
-            \ "<esc>:call <SID>GetHelp()<cr>",
+            \ "<esc>:call <SID>GetHelpSelection()<cr>",
             \ "<F1>")
 
 " Update coloring
