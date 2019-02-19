@@ -1381,9 +1381,12 @@ function! s:declareMap(type, name, effect, default)
     " Declare the <Plug> specific map prefixed with Intim-
     let plug = "<Plug>Intim" . a:name
     let sid  = "<SID>" . a:name
-    execute a:type . "noremap <unique> <script> " . plug . " " . sid
-    " Explicit its effect:
-    execute a:type . "noremap " . sid . " " . a:effect
+    " Unless already done
+    if !hasmapto(sid)
+        execute a:type . "noremap <unique> <script> " . plug . " " . sid
+        " Explicit its effect:
+        execute a:type . "noremap " . sid . " " . a:effect
+    endif
     " Guard and set the default map we are offering (if we intend offering any)
     if !empty(a:default)
         " Don't set the default if the user has already a map to this one
@@ -1493,7 +1496,7 @@ call s:declareMap('n', 'UpdateColor',
             \ ":call <SID>UpdateColor()<cr>",
             \ ",uc")
 
-" Special LaTeX case: send a compilation command
+" Special LaTeX case: send compilation commands etc
 augroup intimLaTeX
     autocmd!
 
@@ -1517,6 +1520,7 @@ augroup intimLaTeX
     autocmd FileType tex call s:declareMap('n', 'OpenPdf',
                 \ ":call <SID>OpenPdf(g:intim_openPdf_command)<cr>",
                 \ ",to")
+
 augroup end
 "}}}
 
