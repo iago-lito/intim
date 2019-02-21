@@ -1377,16 +1377,14 @@ endfunction
 " plain shortcuts to script functions "{{{
 
 " Convenience macro for declaring and guarding default maps: "{{{
+" Should be called only once per argument set
 function! s:declareMap(type, name, effect, default)
     " Declare the <Plug> specific map prefixed with Intim-
     let plug = "<Plug>Intim" . a:name
     let sid  = "<SID>" . a:name
-    " Unless already done
-    if !hasmapto(sid)
-        execute a:type . "noremap <unique> <script> " . plug . " " . sid
-        " Explicit its effect:
-        execute a:type . "noremap " . sid . " " . a:effect
-    endif
+    execute a:type . "noremap <unique> <script> " . plug . " " . sid
+    " Explicit its effect:
+    execute a:type . "noremap " . sid . " " . a:effect
     " Guard and set the default map we are offering (if we intend offering any)
     if !empty(a:default)
         " Don't set the default if the user has already a map to this one
@@ -1520,6 +1518,9 @@ augroup intimLaTeX
     autocmd FileType tex call s:declareMap('n', 'OpenPdf',
                 \ ":call <SID>OpenPdf(g:intim_openPdf_command)<cr>",
                 \ ",to")
+
+    " Only do this once
+    autocmd FileType tex autocmd! intimLaTeX
 
 augroup end
 "}}}
