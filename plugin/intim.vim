@@ -641,37 +641,61 @@ function! s:isSessionOpen() "{{{
 endfunction
 "}}}
 
+" Build and execute the call to a new tmuxed terminal
+function! s:LaunchTmux() "{{{
+    " build the launching command
+    let launchCommand = s:terminal()
+    " xterm and gnome-terminal have different launching logics, as far as I
+    " understand.
+    let term = s:terminal()
+    if term == "gnome-terminal"
+        " this one is relatively easy
+        " watch out, the `-e` argument is deprecated.
+        let term = "gnome-terminal -- <tmux>"
+    elseif term == "xterm"
+        " this is more difficult because calls are blocking
+        " the following solution is the best I have found so far :\
+        " TODO: understand why this is necessary and/or simplify
+        " TODO: this still hungs for ages (~30s here) before vim actually
+        " responds. FIX.
+        let term = 'eval "nohup xterm -e ''<tmux>'' &" > /dev/null 2>&1'
+    endif
+    " replace the <tmux> placeholder with actual tmux command
+    " TODO: escape quotes correctly
+    " TODO: document
+    let launchCommand = substitute(term, "<tmux>", "tmux -2 new -s " . s:sname(), "g")
+    " send the command
+    call s:System(launchCommand)
+endfunction
+"}}}
 " Launch a new tmuxed session
 function! s:LaunchSession() "{{{
     " Don't try to open it twice
     if s:isSessionOpen()
         echom "Intim session seems already opened"
-    else
-        " build the launching command: term -e 'tmux new -s sname' &
-        let launchCommand = s:terminal()
-	            \ . " -- tmux -2 new -s " . s:sname() . " &"
-        " send the command
-        call s:System(launchCommand)
-        " + send additionnal command if user needs it
-        for i in s:get_postLaunchCommands()
-            call s:System(i)
-        endfor
-        " dirty wait for the session to be ready:
-        if s:Wait("!s:isSessionOpen()", 300, 3000)
-            echom "Too long for an Intim launching wait. Aborting."
-        endif
-        " prepare invocation
-        for i in s:get_preInvokeCommands()
-            call s:Send(i)
-        endfor
-        " invoke the interpreter
-        call s:InvokeInterpreter()
-        " remove bottom bar
-        " TODO: make this optional
-        call s:System("tmux set -g status off;")
-        " did everything go well?
-        echom "Intim session launched"
+        return
     endif
+    " Open tmux!
+    call s:LaunchTmux()
+    " + send additionnal command if user needs it
+    for i in s:get_postLaunchCommands()
+        call s:System(i)
+    endfor
+    " dirty wait for the session to be ready:
+    if s:Wait("!s:isSessionOpen()", 300, 3000)
+        echom "Too long for an Intim launching wait. Aborting."
+    endif
+    " prepare invocation
+    for i in s:get_preInvokeCommands()
+        call s:Send(i)
+    endfor
+    " invoke the interpreter
+    call s:InvokeInterpreter()
+    " remove bottom bar
+    " TODO: make this optional
+    call s:System("tmux set -g status off;")
+    " did everything go well?
+    echom "Intim session launched"
 endfunction
 
 function! s:InvokeInterpreter()
