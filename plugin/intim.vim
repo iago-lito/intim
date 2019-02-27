@@ -1586,6 +1586,8 @@ function! s:SendHotkey(shortcut, mode)
         " or word under cursor
         let content = expand('<cword>')
     endif
+    " & needs to be escaped: see :help sub-replace-special
+    let content = substitute(content, '&', '\\\&', 'g')
     let expression = substitute(expression, '*', content, 'g')
 
     " and send that :)
