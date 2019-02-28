@@ -7,23 +7,23 @@
 ==============================================================================
 CONTENT                                                          *intim-content*
 
-    1. Introduction .......................... |intim-introduction|
-    2. Starting Intim ........................ |intim-starting|
-    3. Configuring ........................... |intim-configure|
-    4. Tweaking startup ...................... |intim-startup|
-    5. Passing commands ...................... |intim-passing|
-    6. Getting help .......................... |intim-help|
-    7. Coloring .............................. |intim-colors|
-    8. Hotkeys ............................... |intim-hotkeys|
-        headed ............................... |intim-headed-hotkeys|
-        prefixed ............................. |intim-prefixed-hotkeys|
-        latex ................................ |intim-latex-hotkeys|
-        constant ............................. |intim-constant-hotkeys|
-        generic .............................. |intim-generic-hotkeys|
-        default .............................. |intim-default-hotkeys|
-    9 . LaTeX and non-interpreted languages ... |intim-compiled|
-    10. License ............................... |intim-license|
-    11. Bugs .................................. |intim-bugs|
+     1. Introduction ......................... |intim-introduction|
+     2. Starting Intim ....................... |intim-starting|
+     3. Configuring .......................... |intim-configure|
+     4. Tweaking startup ..................... |intim-startup|
+     5. Passing commands ..................... |intim-passing|
+     6. Getting help ......................... |intim-help|
+     7. Coloring ............................. |intim-colors|
+     8. Hotkeys .............................. |intim-hotkeys|
+          headed ............................. |intim-headed-hotkeys|
+          prefixed ........................... |intim-prefixed-hotkeys|
+          latex .............................. |intim-latex-hotkeys|
+          constant ........................... |intim-constant-hotkeys|
+          generic ............................ |intim-generic-hotkeys|
+          default ............................ |intim-default-hotkeys|
+     9. LaTeX and non-interpreted languages .. |intim-compiled|
+    10. License .............................. |intim-license|
+    11. Bugs ................................. |intim-bugs|
     12. Contributing ......................... |intim-contribute|
     13. Credits .............................. |intim-credits|
 
@@ -72,9 +72,7 @@ Once your script file is opened in Vim, use >
 
     nmap <F10> <Plug>IntimLaunchSession
 
-to launch a new `tmux` session and invoke your interpreter inside. For those
-familiar with `tmux`, the session is called "IntimSession", unless you set
-*g:intim_sessionName* to anything else.
+to launch a new `tmux` session and invoke your interpreter inside.
 
                                                                    *intim-end*
 
@@ -90,6 +88,33 @@ you may communicate with it again the next time you open Vim.
 Choose the terminal you would like to see your interpreter running within with >
 
     let g:intim_terminal = "gnome-terminal"
+
+Note: If you wish to explicitly state the terminal invocation command, you may
+use the <tmux> placeholder to define position of the `tmux` launch command.
+In a nutshell, <tmux> represents the first command sent to your terminal. The
+one that serves opening the `tmux` session that Intim relies on.
+For instance, `"gnome-terminal"` is automatically interpreted as >
+
+    let g:intim_terminal = "gnome-terminal -- <tmux>"
+
+and `"xterm"` as: >
+
+    let g:intim_terminal = "xterm"
+    let g:intim_terminal = "eval \"nohup xterm -e '<tmux>' &\" > /dev/null 2>&1"
+
+For other terminal emulators, you may have to build the command yourself.
+Typically, `myterminal -e '<tmux>'` or `myterminal -c '<tmux>'` will do.
+
+                                                                  *intim-tmux*
+
+For those familiar with `tmux`, the invocation command hidden behind <tmux> is
+defined by the default variable >
+
+    let g:intim_tmux = "tmux -2 new -s <sessionName>"
+
+So you may redefine it any way you prefer. The <sessionName> placeholder is
+replaced by `"IntimSession"` by default. This will be the name of your `tmux`
+session, unless you set *g:intim_sessionName* to anything else.
 
 ==============================================================================
 3. Configuring Intim                                         *intim-configure*
@@ -132,7 +157,7 @@ Intim can be configured in your `.vimrc` via three channels:
 
 Note: Intim should work out of the box. However, it is also much configurable.
 If it eventually turns out that you have many configuration options to define,
-then, our recommandation to keep things tidy, is to define a dedicated function
+our recommandation to keep things tidy is then to define a dedicated function
 in your `.vimrc` to be ran as an autocmd. For instance: >
 
     function! IntimForPython()

@@ -150,6 +150,9 @@ call s:declareOption('g:intim_sessionName', "'IntimSession'", 's:sname')
 " Which terminal to use?
 call s:declareOption('g:intim_terminal', "'gnome-terminal'", 's:terminal')
 
+" How to invoke tmux?
+call s:declareOption('g:intim_tmuxInvokation', "'tmux -2 new -s <sessionName>'", 's:tmux')
+
 " temporary file to write chunks to and source them from
 call s:declareOption('g:intim_tempChunks', "s:path . '/tmp/chunk'", 's:chunk')
 " temporary file to read help in
@@ -653,21 +656,24 @@ function! s:LaunchTmux() "{{{
         " watch out, the `-e` argument is deprecated.
         let term = "gnome-terminal -- <tmux>"
     elseif term == "xterm"
-        " this is more difficult because calls are blocking
+        " This is more difficult because xterm calls are blocking
         " the following solution is the best I have found so far :\
-        " TODO: understand why this is necessary and/or simplify
-        " TODO: this still hungs for ages (~30s here) before vim actually
-        " responds. FIX.
         let term = 'eval "nohup xterm -e ''<tmux>'' &" > /dev/null 2>&1'
+    elseif term !~ "<tmux>"
+        " Then it must be the plain invocation name of the terminal, wild guess:
+        let term = term . " -e '<tmux>'"
+        echom "Terminal command assumed to be `" . term . "`."
     endif
-    " replace the <tmux> placeholder with actual tmux command
     " TODO: escape quotes correctly
-    " TODO: document
-    let launchCommand = substitute(term, "<tmux>", "tmux -2 new -s " . s:sname(), "g")
+    " Build the tmux launch command by correct session name.
+    let tmuxCommand = substitute(s:tmux(), "<sessionName>", s:sname(), "g")
+    " Replace the <tmux> placeholder with actual tmux command.
+    let launchCommand = substitute(term, "<tmux>", tmuxCommand, "g")
     " send the command
     call s:System(launchCommand)
 endfunction
 "}}}
+
 " Launch a new tmuxed session
 function! s:LaunchSession() "{{{
     " Don't try to open it twice
