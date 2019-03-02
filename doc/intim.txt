@@ -12,20 +12,21 @@ CONTENT                                                          *intim-content*
      3. Configuring .......................... |intim-configure|
      4. Tweaking startup ..................... |intim-startup|
      5. Passing commands ..................... |intim-passing|
-     6. Getting help ......................... |intim-help|
-     7. Coloring ............................. |intim-colors|
-     8. Hotkeys .............................. |intim-hotkeys|
+     6. Language specific features ........... |intim-language-specific|
+     7. Getting help ......................... |intim-help|
+     8. Coloring ............................. |intim-colors|
+     9. Hotkeys .............................. |intim-hotkeys|
           headed ............................. |intim-headed-hotkeys|
           prefixed ........................... |intim-prefixed-hotkeys|
           latex .............................. |intim-latex-hotkeys|
           constant ........................... |intim-constant-hotkeys|
           generic ............................ |intim-generic-hotkeys|
           default ............................ |intim-default-hotkeys|
-     9. LaTeX and non-interpreted languages .. |intim-compiled|
-    10. License .............................. |intim-license|
-    11. Bugs ................................. |intim-bugs|
-    12. Contributing ......................... |intim-contribute|
-    13. Credits .............................. |intim-credits|
+    10. LaTeX and non-interpreted languages .. |intim-compiled|
+    11. License .............................. |intim-license|
+    12. Bugs ................................. |intim-bugs|
+    13. Contributing ......................... |intim-contribute|
+    14. Credits .............................. |intim-credits|
 
 ==============================================================================
 1. Introduction                                             *intim-introduction*
@@ -326,7 +327,6 @@ functions for that, feel free to use >
     call IntimSendEOF()
 
 in any of your custom recipes.
-
                                                             *intim-autoindent*
                                                                *intim-ipython*
                                                                   *intim-sage*
@@ -345,7 +345,28 @@ Note: Special case for `ipython` and `sage` users:
     However, you may need to set it manually in some cases.
 
 ==============================================================================
-6. Getting help                                                     *intim-help*
+6. Language-specific features                        *intim-language-specific*
+
+These utilities depend on the language you are working with.
+
+                                                                  *intim-loop*
+
+In `python` files, you may enter / initiate a loop with >
+
+    nmap ,il <Plug>IntimInitiatePythonLoop
+
+In this situation for instance:
+
+    for i in range(10):
+        # ^ cursor here
+        # rest of the loop..
+
+This works by launching the loop and immediately stopping it.
+Sending `for i in range(10): break` is enough.
+After this action, the variable `i` will be initialized.
+
+==============================================================================
+7. Getting help                                                   *intim-help*
 
 Intim can try to fetch help files from your interpreter, and open them in a
 unnammed buffer. Put your Vim cursor on the symbol you need help about, or
@@ -363,7 +384,7 @@ Help information is temporarily buffered into an intim file: >
     let g:intim_tempHelp = '~/.vim/intim/tmp/help'
 
 ==============================================================================
-7. Coloring                                                       *intim-colors*
+8. Coloring                                                       *intim-colors*
 
 Intim can try analysing your current interpreter session to dig out all
 declared currently declared symbols and their types. It will then use this
@@ -393,7 +414,7 @@ Intim you'd like to run it after each refresh: >
     call Intim_syntaxFunction('python', 'MyPythonFurtherSyntax')
 
 ==============================================================================
-8. Hotkeys                                                       *intim-hotkeys*
+9. Hotkeys                                                       *intim-hotkeys*
 
 While you are developping your script, you often want to ask small things to
 your interpreter, such as the `len()` of one variable in `python` or the
@@ -722,7 +743,7 @@ define nothing instead of one default :)
             ct   cargo test
 
 ==============================================================================
-9. LaTeX and non-interpreted languages.                            *intim-latex*
+10. LaTeX and non-interpreted languages.                           *intim-latex*
                                                                 *intim-compiled*
 
 Although it is not an actually interpreted language, you may benefit from
@@ -781,13 +802,13 @@ Intim_constantExpression and *IntimSend* functions. Do not hesitate visiting
 the repo and ask for features if you need more.
 
 ==============================================================================
-10. License                                                       *intim-license*
+11. License                                                       *intim-license*
 
     Intim is released under the GPL3.
     See https://www.gnu.org/licenses/gpl-3.0.html
 
 ==============================================================================
-11. Bugs                                                             *intim-bugs*
+12. Bugs                                                             *intim-bugs*
 
     If you experience any bugs or have feature requests, please open an issue
 on GitHub:
@@ -795,7 +816,7 @@ on GitHub:
     https://github.com/iago-lito/intim/issues
 
 ==============================================================================
-12. Contributing                                              *intim-contribute*
+13. Contributing                                              *intim-contribute*
                                                                           *repo*
 
     Fork the source repository on GitHub and send a pull request if you have
@@ -804,7 +825,7 @@ any code improvements. I'll be happy to work with you :)
 Source repository: https://github.com/iago-lito/intim
 
 ==============================================================================
-13. Credits                                                      *intim-credits*
+14. Credits                                                      *intim-credits*
 
 Authors: ~
 

@@ -1140,7 +1140,17 @@ function! s:SendMagicCpaste() "{{{
     call s:SendText(text)
 endfunction
 "}}}
+" Initiate python loop
+function! s:InitiatePythonLoop() "{{{
+    " This is like sending the header line of the loop, followed by immediate
+    " break.
+    let line = getline('.')
+    call s:Send(line . ' break')
+    call s:SendEnter()
+endfunction
 "}}}
+"}}}
+
 
 " ReadHelp:
 " Access interpreter's man page from within Vim "{{{
@@ -1524,35 +1534,62 @@ call s:declareMap('n', 'UpdateColor',
             \ ":call <SID>UpdateColor()<cr>",
             \ ",uc")
 
-" Special LaTeX case: send compilation commands etc
-augroup intimLaTeX
+" Special Python case
+function IntimPython()
+
+    " Initiate loops
+    call s:declareMap('n', 'InitiatePythonLoop',
+                \ ":call <SID>InitiatePythonLoop()<cr>",
+                \ ",il")
+
+endfunction
+
+augroup IntimPython
     autocmd!
 
+    autocmd FileType python call IntimPython()
+
+    " Only do this once
+    autocmd FileType python autocmd! IntimPython
+
+augroup end
+
+" Special LaTeX case: send compilation commands etc
+function IntimLatex()
+
     " "Latex Compile"
-    autocmd FileType tex call s:declareMap('n', 'TexCompileFast',
+    call s:declareMap('n', 'TexCompileFast',
                 \ ":w<cr>:call <SID>CompileTex(['fast'])<cr>",
                 \ ",lc")
     " big "Latex Compile"
-    autocmd FileType tex call s:declareMap('n', 'TexCompileFull',
+    call s:declareMap('n', 'TexCompileFull',
                 \ ":w<cr>:call <SID>CompileTex(['full'])<cr>",
                 \ ",Lc")
     " "Make clean"
-    autocmd FileType tex call s:declareMap('n', 'TexClean',
+    call s:declareMap('n', 'TexClean',
                 \ ":call <SID>CompileTex(['clean'])<cr>",
                 \ ",mc")
     " "x" stop latex compilation when there is an error
-    autocmd FileType tex call s:declareMap('n', 'TexInterrupt',
+    call s:declareMap('n', 'TexInterrupt',
                 \ ":call <SID>Send('x')<cr>",
                 \ "<c-x>")
     " "TeX Open" Open produced files
-    autocmd FileType tex call s:declareMap('n', 'OpenPdf',
+    call s:declareMap('n', 'OpenPdf',
                 \ ":call <SID>OpenPdf(g:intim_openPdf_command)<cr>",
                 \ ",to")
+
+endfunction
+
+augroup intimLaTeX
+    autocmd!
+
+    autocmd FileType tex call IntimLatex()
 
     " Only do this once
     autocmd FileType tex autocmd! intimLaTeX
 
 augroup end
+
 "}}}
 
 " Hotkeys:
