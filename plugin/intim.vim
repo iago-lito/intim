@@ -1145,6 +1145,7 @@ function! s:InitiatePythonLoop() "{{{
     " This is like sending the header line of the loop, followed by immediate
     " break.
     let line = getline('.')
+    let line = s:RemoveIndentation(line)
     call s:Send(line . ' break')
     call s:SendEnter()
 endfunction
