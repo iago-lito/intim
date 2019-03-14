@@ -36,7 +36,7 @@ Once done, install Intim using
 
     cd ~/.vim/bundle
     git clone https://github.com/iago-lito/intim
-    
+
 and this should be it :)
 
 If you are using [Vundle](https://github.com/VundleVim/Vundle.vim), you have

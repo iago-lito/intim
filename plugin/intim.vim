@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2018-01-29
+" Last Change:	2019-03-14
 " Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 " License:      This file is placed under the GNU PublicLicense 3.
 
@@ -783,6 +783,7 @@ endfunction
 function! s:HandleEscapes(text) "{{{
     " escape the escape characters
     let res = substitute(a:text, '\\', '\\\\', 'g')
+    " TODO: loop over those.
     " escape the quotes
     let res = substitute(res, '\"', '\\\"', 'g')
     let res = substitute(res, "\'", "\\\'", 'g')
@@ -790,6 +791,8 @@ function! s:HandleEscapes(text) "{{{
     let res = substitute(res, ';$', '\\\;', 'g')
     " escape dollar sign
     let res = substitute(res, '\$', '\\\$', 'g')
+    " escape backticks
+    let res = substitute(res, '\`', '\\\`', 'g')
     return res
 endfunction
 "}}}

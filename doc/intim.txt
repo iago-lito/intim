@@ -617,7 +617,7 @@ wish with one placeholder written as a star `*`. For instance,
     You may define you own of course. For instance, once you have called >
 
     call Intim_hotkeys('R', 'ii', '* <- * + 1')
-    call Intim_hotkeys('pyhon', 'ii', '* += 1')
+    call Intim_hotkeys('python', 'ii', '* += 1')
 
 you'll be able to increment any `counter` in `R` or `python` by navigating to
 it, then type `,ii` in normal mode.
