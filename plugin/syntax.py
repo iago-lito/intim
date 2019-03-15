@@ -313,8 +313,15 @@ def intim_introspection():
             """Visit the forest to build an ad-hoc vim syntax file and color
             the nodes in the source file.
             """
-            # the root name starts without being a subname of something else:
-            root_prefix = r" '\([a-zA-Z][a-zA-Z0-9]*[ \s\t\n]*\.[ \s\t\n]*\)\@<!\<"
+            # The root name starts without being a subname of something else.
+            root_prefix = (
+                    r" '\("
+                    # (exclude comments endind with a period)
+                    r"\n\s\{-}[^#].\{-}"
+                    # previous identifier + period
+                    r"[a-zA-Z][0-9]\{-}[\s\n]\{-}\.[\s\n]\{-}"
+                    # well, do not match all this.
+                    r"\)\@<!\<")
             for kid in self.kids:
                 if kid.type is not Unexistent: # to ease the file a little bit
                     kid.write(root_prefix + kid.id, 0, file=file)
