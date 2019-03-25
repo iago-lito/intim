@@ -936,7 +936,7 @@ function! s:SendChunk() "{{{
         return
     endif
 
-    " security
+    " safety check
     let file = s:chunk()
     call s:CheckFile(file)
 
@@ -1141,16 +1141,6 @@ function! s:SendMagicCpaste() "{{{
     call s:Send('%cpaste')
     " and send!
     call s:SendText(text)
-endfunction
-"}}}
-" Initiate python loop
-function! s:InitiatePythonLoop() "{{{
-    " This is like sending the header line of the loop, followed by immediate
-    " break.
-    let line = getline('.')
-    let line = s:RemoveIndentation(line)
-    call s:Send(line . ' break')
-    call s:SendEnter()
 endfunction
 "}}}
 "}}}
@@ -1538,29 +1528,50 @@ call s:declareMap('n', 'UpdateColor',
             \ ":call <SID>UpdateColor()<cr>",
             \ ",uc")
 
-" Special Python case
-function IntimPython()
+" Special Python autocmd {{{
+function! IntimPython()
 
     " Initiate loops
+    " This is like sending the header line of the loop, followed by immediate
+    " break. Uses * buffer and <> marks.
     call s:declareMap('n', 'InitiatePythonLoop',
-                \ ":call <SID>InitiatePythonLoop()<cr>",
+                \ "l?for<cr>m</:<cr>m>gv\"*y"
+                \ .":call IntimSend(@* . ' break')<cr>"
+                \ .":call IntimSendEnter()<cr>",
                 \ ",il")
 
 endfunction
-
 augroup IntimPython
     autocmd!
-
     autocmd FileType python call IntimPython()
-
     " Only do this once
     autocmd FileType python autocmd! IntimPython
-
 augroup end
+"}}}
 
-" Special LaTeX case: send compilation commands etc
+" Special R autocmd {{{
+function! IntimR()
+
+    " Initiate loops
+    " This is like sending the header line of the loop, followed by immediate
+    " break. Uses * buffer.
+    " TODO: same for *apply
+    call s:declareMap('n', 'InitiateRLoop',
+                \ "l?for<cr>/(<cr>:set nohlsearch<cr>l"
+                \ ."\"*yi):call IntimSend('for ('.@*.') break')<cr>"
+                \ , ",il")
+
+endfunction
+augroup IntimR
+    autocmd!
+    autocmd FileType r call IntimR()
+    " Only do this once
+    autocmd FileType r autocmd! IntimR
+augroup end
+"}}}
+
+" Special LaTeX autocmd {{{
 function IntimLatex()
-
     " "Latex Compile"
     call s:declareMap('n', 'TexCompileFast',
                 \ ":w<cr>:call <SID>CompileTex(['fast'])<cr>",
@@ -1581,19 +1592,13 @@ function IntimLatex()
     call s:declareMap('n', 'OpenPdf',
                 \ ":call <SID>OpenPdf(g:intim_openPdf_command)<cr>",
                 \ ",to")
-
 endfunction
-
 augroup intimLaTeX
     autocmd!
-
     autocmd FileType tex call IntimLatex()
-
     " Only do this once
     autocmd FileType tex autocmd! intimLaTeX
-
 augroup end
-
 "}}}
 
 " Hotkeys:

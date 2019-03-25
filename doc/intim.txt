@@ -351,9 +351,10 @@ These utilities depend on the language you are working with.
 
                                                                   *intim-loop*
 
-In `python` files, you may enter / initiate a loop with >
+In `python` or `R` files, you may enter / initiate a loop with >
 
     nmap ,il <Plug>IntimInitiatePythonLoop
+    nmap ,il <Plug>IntimInitiateRLoop
 
 In this situation for instance:
 
