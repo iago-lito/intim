@@ -1533,12 +1533,19 @@ function! IntimPython()
 
     " Initiate loops
     " This is like sending the header line of the loop, followed by immediate
-    " break. Uses * buffer and <> marks.
-    call s:declareMap('n', 'InitiatePythonLoop',
-                \ "l?for<cr>m</:<cr>m>gv\"*y"
-                \ .":call IntimSend(@* . ' break')<cr>"
-                \ .":call IntimSendEnter()<cr>",
-                \ ",il")
+    " break. Uses * buffer (but restores it) and <> marks
+    let m=''
+    let m=m.'v<esc>'                      " reset change last visual mode for gv
+    let m=m.':let IntimSafe=[@/, @*]<cr>' " not to interfere with user's registers
+    let m=m.'l?^\s*\zs\<for\><cr>m<'      " search/mark start of the loop head
+    let m=m.'/:\s*\(#.*\)\{,1}$<cr>m>'    " search/mark end of the loop head
+    let m=m.'gv"*y'                       " yank loop head to * register
+    let m=m.":call IntimSend(@*.' break')<cr>" " send the broken loop
+    let m=m.":call IntimSendEnter()<cr>"       " python needs this to run it
+    let m=m.':let @/=IntimSafe[0]<cr>'    " restore user's @/
+    let m=m.':let @*=IntimSafe[1]<cr>'    " restore user's @*
+    let m=m.':unlet IntimSafe<cr>'        " cleanup
+    call s:declareMap('n', 'InitiatePythonLoop', m, ",il")
 
 endfunction
 augroup IntimPython
@@ -1554,12 +1561,17 @@ function! IntimR()
 
     " Initiate loops
     " This is like sending the header line of the loop, followed by immediate
-    " break. Uses * buffer.
+    " break. Uses * buffer (but restores it).
     " TODO: same for *apply
-    call s:declareMap('n', 'InitiateRLoop',
-                \ "l?for<cr>/(<cr>:set nohlsearch<cr>l"
-                \ ."\"*yi):call IntimSend('for ('.@*.') break')<cr>"
-                \ , ",il")
+    let m=''
+    let m=m.':let IntimSafe=@*<cr>' " not to interfere with user's registers
+    let m=m.'l?^\s*\<for\><cr>/(<cr>'  " search start of the loop head
+    let m=m.'"*ya)'                    " yank loop head to * register
+    let m=m.":call IntimSend("         " send the loop head..
+    let m=m."'for '.@*.' break')<cr>"  " .. broken.
+    let m=m.':let @*=IntimSafe<cr>'    " restore user's @*
+    let m=m.':unlet IntimSafe<cr>'     " cleanup
+    call s:declareMap('n', 'InitiateRLoop', m, ",il")
 
 endfunction
 augroup IntimR
