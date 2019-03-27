@@ -116,6 +116,7 @@ call s:functionExport('SetLanguage'   , 'IntimSetLanguage', 1)
 call s:functionExport('GetLanguage'   , 'IntimGetLanguage', 0)
 call s:functionExport('CompileTex'    , 'IntimCompileTex', -1)
 call s:functionExport('IsDebugMode'   , 'IntimIsDebugMode', 0)
+call s:functionExport('DebugCommand'  , 'IntimDebugCommand', 1)
 
 " Some "languages" actually quite close, right?
 let s:python_based = ['python',
@@ -893,23 +894,6 @@ function! s:RemoveIndentation(line) "{{{
     return substitute(a:line, '^\s*', '', '')
 endfunction
 "}}}
-" Small special cases to handle.
-function! s:RemovePythonDoctestPrompt(line) "{{{
-    let line = substitute(a:line, '^\s*>>>','', '')
-    let line = substitute(line, '^\s*\.\.\.','', '')
-    return line
-endfunction
-"}}}
-function! s:RemoveRDoctestPrompt(line) "{{{
-  " Roxygen2 signs.
-  let commentSign = "^\\s*#\'"
-  if match(a:line, commentSign) > -1
-      return substitute(a:line, commentSign, '', '')
-  endif
-  return line
-endfunction
-"}}}
-
 " Send the current word to the session.
 function! s:SendWord() "{{{
     call s:Send(expand('<cword>'))
@@ -1081,109 +1065,6 @@ function! s:SendAll() "{{{
     for line in all
         call s:Send(line)
     endfor
-endfunction
-"}}}
-
-" SpecialSenders:
-" Send compilation command to latex
-function! s:CompileTex(args) "{{{
-    " variable number of arguments, passed as a list
-    " option:
-    "   'full'  pdflatex && biber && pdflatex
-    "   'twice' pdflatex && pdflatex
-    "   'fast'  pdflatex
-    "   'lncs' pdflatex && bibtex && pdflatex && pdflatex
-    "   'clean' remove all temporary tex files except produced pdf
-    let option = a:args[0]
-    " first optional argument: filename (no extension).
-    " If not provided, pick current one.
-    let filename = len(a:args) > 1? a:args[1] : expand('%:r')
-    " retrieve filename and send full compilation command
-    " TODO: make the compilation command more customizable, or use a third tool
-    " that guesses the right command. I've heard this exists, right?
-    let pdflatexcmd = "pdflatex -synctex=1 --shell-escape --halt-on-error "
-    " echo colored result
-    let output = " && echo '\\033[32m \ndone.\n\\033[0m' "
-               \ " || echo '\\033[31m \nfailed.\n\\033[0m' "
-    if option == 'full'
-        let cmd = pdflatexcmd . filename . ".tex"
-              \ . " && biber " . filename
-              \ . " && " . pdflatexcmd . filename . ".tex"
-              \ . output
-    elseif option == 'twice'
-        let cmd = pdflatexcmd . filename . ".tex"
-              \ . " && " . pdflatexcmd . filename . ".tex"
-              \ . output
-    elseif option == 'lncs'
-        let cmd = pdflatexcmd . filename . ".tex"
-              \ . " && bibtex " . filename
-              \ . " && " . pdflatexcmd . filename . ".tex"
-              \ . " && " . pdflatexcmd . filename . ".tex"
-              \ . output
-    elseif option == 'fast'
-        let cmd = pdflatexcmd . filename . ".tex"
-              \ . output
-    elseif option == 'clean'
-        " every common latex garbage one may wish to get rid of
-        let cmd = "rm -f " . filename . ".out && "
-              \ . "rm -f " . filename . ".aux && "
-              \ . "rm -f " . filename . ".blg && "
-              \ . "rm -f " . filename . ".log && "
-              \ . "rm -f " . filename . "-blx.bib && "
-              \ . "rm -f " . filename . ".toc && "
-              \ . "rm -f " . filename . ".xml && "
-              \ . "rm -f " . filename . ".bcf && "
-              \ . "rm -f " . filename . ".bbl && "
-              \ . "rm -f " . filename . ".nav && "
-              \ . "rm -f " . filename . ".snm && "
-              \ . "rm -f " . filename . ".run.xml && "
-              \ . "rm -rf figure"
-    else
-        echoe "Intim: CompileTex does not know option '" . option . "'!"
-    endif
-    " after the operation, list files to see what happened
-    let cmd = cmd . " && ls -lah"
-    call s:Send(cmd)
-endfunction
-"}}}
-" Open the file produced with latex
-function! s:OpenPdf(command) "{{{
-    " the 'command' is a system command with user's favorite pdf viewer etc. It
-    " also is a hook for her to trigger any command she likes after having
-    " opened a .pdf file
-    " The command will probably contain a star `*` which will be replaced by the
-    " actual filename.
-    let cmd = a:command
-    if cmd =~ '*'
-        " TODO: handle star escaping '\*' if needed
-        let filename = expand('%:r') . '.pdf'
-        if empty(glob(filename))
-            echoe "no " . filename . " file found"
-            return
-        endif
-        let cmd = substitute(a:command, '*', filename, 'g')
-    endif
-    call s:Send(cmd)
-endfunction
-"}}}
-" Send the current selection as an ipython/sage `%cpaste`
-function! s:SendMagicCpaste() "{{{
-    let raw = s:getVisualSelection()
-    " Workaround ipython/sage autoindent procedure
-    " https://github.com/kassio/neoterm/issues/71
-    " The solution is to:
-    " - use the selection as whole plain text
-    " - invoke ipython's magic `%cpaste` command
-    " - append an explicit end-of-file command
-    " - send it as-is
-    " whole selection
-    let selection = s:HandleEscapes(raw)
-    " append end-of file to tmux command (+ one CR for inlined case)
-    let text = '"' . selection . '" c-d'
-    " invoke ipython's magic command
-    call s:Send('%cpaste')
-    " and send!
-    call s:SendText(text)
 endfunction
 "}}}
 "}}}
@@ -1394,9 +1275,9 @@ augroup end
 "}}}
 
 " Misc:
-" Not sorted yet "{{{
+" Not sorted yet. "{{{
 
-" Wait for something to finish
+" Wait for something to finish.
 function! s:Wait(criterion, timeStep, maxWait) "{{{
     " `criterion` is a string expression to evaluate
     " return 0 when done, 1 if aborted
@@ -1415,7 +1296,7 @@ function! s:Wait(criterion, timeStep, maxWait) "{{{
 endfunction
 "}}}
 
-" go to the next line of script (skip comments and empty lines)
+" Go to the next line of script (skip comments and empty lines).
 function! s:NextScriptLine() "{{{
     " plain regex search
     call search(s:readOption(s:regexNextLine), 'W')
@@ -1427,7 +1308,7 @@ let s:regexNextLine = {'default': "^.\\+$",
                     \  'R':      "^\\(\\s*#\\)\\@!."}
 "}}}
 
-" wrap a selection into an expression (not to depend on vim-surround
+" Wrap a selection into an expression (not to depend on vim-surround.
 " https://github.com/tpope/vim-surround)
 function! s:Wrap(head, delimiters) "{{{
     let starter = a:delimiters[0]
@@ -1445,6 +1326,18 @@ function! s:Wrap(head, delimiters) "{{{
 endfunction
 "}}}
 
+" Debug mode commands.
+function! s:DebugCommand(command) "{{{
+  if !s:IsDebugMode()
+    echo "Intim seems not in debug mode."
+    return
+  endif
+  let text = s:HandleEscapes(a:command)
+  call s:SendText(text)
+  call s:SendEnter()
+endfunction
+"}}}
+
 "}}}
 
 " Maps:
@@ -1456,122 +1349,337 @@ endfunction
 " Convenience macro for declaring and guarding default maps: "{{{
 " Should be called only once per argument set
 function! s:declareMap(type, name, effect, default)
-    " Declare the <Plug> specific map prefixed with Intim-
-    let plug = "<Plug>Intim" . a:name
-    let sid  = "<SID>" . a:name
-    execute a:type . "noremap <unique> <script> " . plug . " " . sid
-    " Explicit its effect:
-    execute a:type . "noremap " . sid . " " . a:effect
-    " Guard and set the default map we are offering (if we intend offering any)
-    if !empty(a:default)
-        " Don't set the default if the user has already a map to this one
-        execute "let userHas = hasmapto('" . plug . " ')"
-        if !userHas
-            " Don't set the default if it somehow overwrites another map
-            execute "let overwrites = !empty(maparg('" . a:default
-                        \ . "', '" . a:type . "'))"
-            if !overwrites
-                execute a:type . "map <unique> " . a:default . " " . plug
-            else
-                " TODO: this is better silent. But what if user doesn't
-                " understand why a mapping is not there? There should be a
-                " special case for hotkeys.
-                " echom "Intim: won't " . a:type . "map " . a:default . " to "
-                        " \ . plug . " because it would overwrite another map."
-            endif
-        endif
+  " Declare the <Plug> specific map prefixed with Intim-
+  let plug = "<Plug>Intim" . a:name
+  let sid  = "<SID>" . a:name
+  execute a:type . "noremap <unique> <script> " . plug . " " . sid
+  " Explicit its effect:
+  execute a:type . "noremap " . sid . " " . a:effect
+  " Guard and set the default map we are offering (if we intend offering any)
+  if !empty(a:default)
+    " Don't set the default if the user has already a map to this one
+    execute "let userHas = hasmapto('" . plug . " ')"
+    if !userHas
+      " Don't set the default if it somehow overwrites another map
+      execute "let overwrites = !empty(maparg('" . a:default
+            \ . "', '" . a:type . "'))"
+      if !overwrites
+        execute a:type . "map <unique> " . a:default . " " . plug
+      else
+        " TODO: this is better silent. But what if user doesn't
+        " understand why a mapping is not there? There should be a
+        " special case for hotkeys.
+        " echom "Intim: won't " . a:type . "map " . a:default . " to "
+        " \ . plug . " because it would overwrite another map."
+      endif
     endif
+  endif
 endfunction
 "}}}
 
 " Launch the tmuxed session
 call s:declareMap('n', 'LaunchSession',
-            \ ":call <SID>LaunchSession()<cr>",
-            \ "<F10>")
+      \ ":call <SID>LaunchSession()<cr>",
+      \ "<F10>")
 " End the tmuxed session
 call s:declareMap('n', 'EndSession',
-            \ ":call <SID>EndSession()<cr>",
-            \ "<F2>")
+      \ ":call <SID>EndSession()<cr>",
+      \ "<F2>")
 " Send keyboard enter to the session
 call s:declareMap('n', 'SendEnter',
-            \ ":call <SID>SendEnter()<cr>",
-            \ "<cr>")
+      \ ":call <SID>SendEnter()<cr>",
+      \ "<cr>")
 " Send keyboard interrupt to the session
 call s:declareMap('n', 'SendInterrupt',
-            \ ":call <SID>SendInterrupt()<cr>",
-            \ "<c-c>")
+      \ ":call <SID>SendInterrupt()<cr>",
+      \ "<c-c>")
 " Send keyboard EOF to the session
 call s:declareMap('n', 'SendEOF',
-            \ ":call <SID>SendEOF()<cr>",
-            \ "<c-e>")
+      \ ":call <SID>SendEOF()<cr>",
+      \ "<c-e>")
 " Send invoke command
 call s:declareMap('n', 'InvokeInterpreter',
-            \ ":call <SID>InvokeInterpreter()<cr>",
-            \ ",ii")
+      \ ":call <SID>InvokeInterpreter()<cr>",
+      \ ",ii")
 " Send exit command
 call s:declareMap('n', 'ExitInterpreter',
-            \ ":call <SID>ExitInterpreter()<cr>",
-            \ ",ex")
+      \ ":call <SID>ExitInterpreter()<cr>",
+      \ ",ex")
 " Send restart commands
 call s:declareMap('n', 'RestartInterpreter',
-            \ ":call <SID>RestartInterpreter()<cr>",
-            \ ",rs")
+      \ ":call <SID>RestartInterpreter()<cr>",
+      \ ",rs")
 " Send line and jump to the next
 call s:declareMap('n', 'SendLine',
-            \ ":call <SID>SendLine()<cr>:call <SID>NextScriptLine()<cr>",
-            \ "<space>")
+      \ ":call <SID>SendLine()<cr>:call <SID>NextScriptLine()<cr>",
+      \ "<space>")
 " Send line static
 call s:declareMap('n', 'StaticSendLine',
-            \ ":call <SID>SendLine()<cr>",
-            \ "c<space>")
+      \ ":call <SID>SendLine()<cr>",
+      \ "c<space>")
 " Send word under cursor
 call s:declareMap('n', 'SendWord',
-            \ ":call <SID>SendWord()<cr>",
-            \ ",<space>")
+      \ ":call <SID>SendWord()<cr>",
+      \ ",<space>")
 " Send selection as multiple lines, without loosing it
 call s:declareMap('v', 'StaticSendSelection',
-            \ "<esc>:call <SID>SendSelection()<cr>gv",
-            \ ",<space>")
+      \ "<esc>:call <SID>SendSelection()<cr>gv",
+      \ ",<space>")
 " (for an obscure reason, the function is called twice from visual mode, hence
 " the <esc> and gv)
 " Send selection as multiple lines then jump to next
 call s:declareMap('v', 'SendSelection',
-            \ "<esc>:call <SID>SendSelection()<cr>"
-            \ . ":call <SID>NextScriptLine()<cr>",
-            \ "c<space>")
+      \ "<esc>:call <SID>SendSelection()<cr>"
+      \ . ":call <SID>NextScriptLine()<cr>",
+      \ "c<space>")
 " Send chunk and keep it
 call s:declareMap('v', 'StaticSendChunk',
-            \ "<esc>:call <SID>SendChunk()<cr>gv",
-            \ ",<space>")
+      \ "<esc>:call <SID>SendChunk()<cr>gv",
+      \ ",<space>")
 " Send chunk and move on
 call s:declareMap('v', 'SendChunk',
-            \ "<esc>:call <SID>SendChunk()<cr>"
-            \ . ":call <SID>NextScriptLine()<cr>",
-            \ "<space>")
+      \ "<esc>:call <SID>SendChunk()<cr>"
+      \ . ":call <SID>NextScriptLine()<cr>",
+      \ "<space>")
 " Send the whole script as a chunk
 call s:declareMap('n', 'SendFile',
-            \ ":call <SID>SendFile()<cr>",
-            \ "a<space><space>")
+      \ ":call <SID>SendFile()<cr>",
+      \ "a<space><space>")
 " Send all lines
 call s:declareMap('n', 'SendAll',
-            \ ":call <SID>SendAll()<cr>",
-            \ "")
+      \ ":call <SID>SendAll()<cr>",
+      \ "")
 
 " Get help about the  word under cursor
 call s:declareMap('n', 'GetHelpWord',
-            \ ":call <SID>GetHelp(expand('<cword>'))<cr>",
-            \ "<F1>")
+      \ ":call <SID>GetHelp(expand('<cword>'))<cr>",
+      \ "<F1>")
 " Get help about the selection
 call s:declareMap('v', 'GetHelpSelection',
-            \ "<esc>:call <SID>GetHelpSelection()<cr>",
-            \ "<F1>")
+      \ "<esc>:call <SID>GetHelpSelection()<cr>",
+      \ "<F1>")
 
 " Update coloring
 call s:declareMap('n', 'UpdateColor',
-            \ ":call <SID>UpdateColor()<cr>",
-            \ ",uc")
+      \ ":call <SID>UpdateColor()<cr>",
+      \ ",uc")
 
-" Special Python autocmd {{{
+" }}}
+
+" Hotkeys:
+" Convenient shortcut to wrap pieces of script inside expressions "{{{
+
+" Convenience macro guard before mapping anything
+function! s:CheckAndDeclare(type, map, effect) "{{{
+  " Compare the effect to the map already in place. If it is ours or empty,
+  " okay, if not, do *not* overwrite it or we may break user's ones. In order
+  " to check whether it is ours, <SID> will have to be expanded into <SNR>X_
+  let already = maparg(a:map, a:type)
+  " adapted from :help SID<cr>
+  let snr = matchstr(expand('<sfile>'), '\zs<SNR>\d\+_\zeCheckAndDeclare$')
+  let actualEffect = substitute(a:effect, '<SID>', snr, 'g')
+  if empty(already)
+    execute a:type . "noremap <unique> <buffer> " . a:map . ' ' . a:effect
+  elseif already != actualEffect
+    " TODO: think better about cases where such a message is wanted.
+    " echom "Intim: "
+    " \ . a:map . " already has a " . a:type . "map, hotkey aborted."
+  endif
+endfunction
+"}}}
+
+" all hotkeys expressions are stored here
+let s:hotkeys_expressions = {}
+
+" Define one hotkey map: send an expression containing either visually selected
+" area or the word under cursor. The expression is written with `*` representing
+" the variable part.
+" TODO: handle actual `*` characters escaping
+function! s:DefineHotKey(shortcut, expression) "{{{
+  " called while reading user's :hotkeys:
+
+  " fill up the dict
+  let s:hotkeys_expressions[a:shortcut] = a:expression
+
+  " final mapping for user
+  let map = s:get_hotkeys_nleader() . a:shortcut
+
+  for mode in ['n', 'v']
+    call s:CheckAndDeclare(mode, map,
+          \ ":call <SID>SendHotkey('" . a:shortcut . "', '" . mode . "')<cr>")
+  endfor
+
+endfunction
+
+" Function actually called when using a hotkey
+" Searches for the right expression to replace with the shortcut as a key
+" Depending on the 'v' or 'n' mode, fill it up with '<cword>' or '@*'
+function! s:SendHotkey(shortcut, mode)
+
+  " retrieve expression
+  let expression = s:hotkeys_expressions[a:shortcut]
+
+  " replace placeholder `*` with either..
+  if a:mode == 'v'
+    " visually selected area
+    let content = s:getVisualSelection()
+  else
+    " or word under cursor
+    let content = expand('<cword>')
+  endif
+  " & needs to be escaped: see :help sub-replace-special
+  let content = substitute(content, '&', '\\\&', 'g')
+  let expression = substitute(expression, '*', content, 'g')
+
+  " and send that :)
+  call s:Send(expression)
+
+endfunction
+
+"}}}
+
+" Here is a special, predefined case expression: headed expressions of the form
+" `head(*)`. The interest is that comes with edition bonuses: these mappings do
+" not send commands to the Intim session, but they allow editing script.
+" TODO: make EditBonuses optional
+function! s:DefineHeadedExpression(shortcut, head) "{{{
+  " called while reading users headed-hotkeys
+
+  " define actual sender mappings
+  call s:DefineHotKey(a:shortcut, a:head . '(*)')
+
+  " EditBonus: one insertion map working as a small snippet
+  let map = s:get_hotkeys_edit_ileader() . a:shortcut
+  let effect = a:head . "()<left>"
+  call s:CheckAndDeclare('i', map, effect)
+
+  " EditBonus: wrap a word in the script in normal mode
+  let map = s:get_hotkeys_edit_nleader() . a:shortcut
+  let effect = "viwv:call <SID>Wrap('" . a:head . "', '()')<cr>"
+  call s:CheckAndDeclare('n', map, effect)
+
+  " EditBonus: wrap a selection in the script in visual mode
+  let map = s:get_hotkeys_edit_vleader() . a:shortcut
+  let effect = "<esc>:call <SID>Wrap('" . a:head . "', '()')<cr>"
+  call s:CheckAndDeclare('v', map, effect)
+
+endfunction
+"}}}
+
+" Here is another special case for LaTeX-style headed expressions `\head{*}`
+function! s:DefineLaTeXExpression(shortcut, head) "{{{
+  " called while reading users headed-hotkeys
+
+  " define actual sender mappings
+  call s:DefineHotKey(a:shortcut, '\' . a:head . '{*}')
+
+  " EditBonus: one insertion map working as a small snippet
+  let map = s:get_hotkeys_edit_ileader() . a:shortcut
+  let effect = '\' . a:head . "{}<left>"
+  call s:CheckAndDeclare('i', map, effect)
+
+  " EditBonus: wrap a word in the script in normal mode
+  let map = s:get_hotkeys_edit_nleader() . a:shortcut
+  let effect = "viwv:call <SID>Wrap('\\" . a:head . "', '{}')<cr>"
+  call s:CheckAndDeclare('n', map, effect)
+
+  " EditBonus: wrap a selection in the script in visual mode
+  let map = s:get_hotkeys_edit_vleader() . a:shortcut
+  let effect = "<esc>:call <SID>Wrap('\\" . a:head . "', '{}')<cr>"
+  call s:CheckAndDeclare('v', map, effect)
+
+endfunction
+"}}}
+
+" Here is another special case for simple prefixed expressions: `prefix*`
+function! s:DefinePrefixedExpression(shortcut, prefix) "{{{
+  " called while reading users headed-hotkeys
+
+  " define actual sender mappings
+  call s:DefineHotKey(a:shortcut, a:prefix . '*')
+
+  " EditBonus: one insertion map working as a small snippet
+  let map = s:get_hotkeys_edit_ileader() . a:shortcut
+  let effect = a:prefix
+  call s:CheckAndDeclare('i', map, effect)
+
+  " EditBonus: prefix a word in the script in normal mode
+  let map = s:get_hotkeys_edit_nleader() . a:shortcut
+  let effect = "viwovi" . a:prefix . '<esc>'
+  call s:CheckAndDeclare('n', map, effect)
+
+  " EditBonus: prefix a selection in the script in visual mode
+  let map = s:get_hotkeys_edit_vleader() . a:shortcut
+  let effect = "<esc>:call setpos('.', getpos(\"'<\"))<cr>i"
+        \ . a:prefix . '<esc>'
+  call s:CheckAndDeclare('v', map, effect)
+
+endfunction
+"}}}
+
+" Here is another special case for constant expression `constant`
+function! s:DefineConstantExpression(shortcut, constant) "{{{
+  " called while reading users headed-hotkeys
+
+  " define actual sender mappings
+  " TODO: this should escape '*'
+  call s:DefineHotKey(a:shortcut, a:constant)
+
+  " EditBonus: one insertion map working as a small snippet
+  let map = s:get_hotkeys_edit_ileader() . a:shortcut
+  let effect = a:constant
+  call s:CheckAndDeclare('i', map, effect)
+
+  " EditBonus: insert constant before a word in the script in normal mode
+  let map = s:get_hotkeys_edit_nleader() . a:shortcut
+  let effect = "viwovi" . a:constant . '<esc>'
+  call s:CheckAndDeclare('n', map, effect)
+
+  " EditBonus: insert constant before a selection in the script in visual mode
+  let map = s:get_hotkeys_edit_vleader() . a:shortcut
+  let effect = "<esc>:call setpos('.', getpos(\"'<\"))<cr>i"
+        \ . a:constant . '<esc>'
+  call s:CheckAndDeclare('v', map, effect)
+
+endfunction
+"}}}
+
+"}}}
+
+" }}}
+
+
+" Specifics:
+" Utilities specifics to one particular language.{{{
+
+" Special Python corner {{{
+" Send the current selection as an ipython/sage `%cpaste`
+function! s:SendMagicCpaste() "{{{
+    let raw = s:getVisualSelection()
+    " Workaround ipython/sage autoindent procedure
+    " https://github.com/kassio/neoterm/issues/71
+    " The solution is to:
+    " - use the selection as whole plain text
+    " - invoke ipython's magic `%cpaste` command
+    " - append an explicit end-of-file command
+    " - send it as-is
+    " whole selection
+    let selection = s:HandleEscapes(raw)
+    " append end-of file to tmux command (+ one CR for inlined case)
+    let text = '"' . selection . '" c-d'
+    " invoke ipython's magic command
+    call s:Send('%cpaste')
+    " and send!
+    call s:SendText(text)
+endfunction
+"}}}
+" Trim doctest prompt.
+function! s:RemovePythonDoctestPrompt(line) "{{{
+    let line = substitute(a:line, '^\s*>>>','', '')
+    let line = substitute(line, '^\s*\.\.\.','', '')
+    return line
+endfunction
+"}}}
 function! IntimPython()
 
     " Initiate loops
@@ -1590,6 +1698,30 @@ function! IntimPython()
     let m=m.':unlet IntimSafe<cr>'        " cleanup
     call s:declareMap('n', 'InitiatePythonLoop', m, ",il")
 
+    " Pdb commands that take no arguments.
+    let commands = [
+          \ 'args',
+          \ 'continue',
+          \ 'down',
+          \ 'help',
+          \ 'list',
+          \ 'next',
+          \ 'quit',
+          \ 'return',
+          \ 'step',
+          \ 'up',
+          \ 'where',
+          \]
+    for cmd in commands
+      let first_letter = toupper(cmd[0])
+      let capitalized = first_letter.cmd[1:]
+      let macro = ""
+            \."call s:declareMap('n', 'Pdb".capitalized."',"
+            \.          "':call IntimDebugCommand(''".cmd."'')<cr>',"
+            \.          "',".first_letter."')"
+      exec macro
+    endfor
+
 endfunction
 augroup IntimPython
     autocmd!
@@ -1599,7 +1731,17 @@ augroup IntimPython
 augroup end
 "}}}
 
-" Special R autocmd {{{
+" Special R corner {{{
+" Trim doctest prompt.
+function! s:RemoveRDoctestPrompt(line) "{{{
+  " Trim roxygen2 signs.
+  let commentSign = "^\\s*#\'"
+  if match(a:line, commentSign) > -1
+      return substitute(a:line, commentSign, '', '')
+  endif
+  return line
+endfunction
+"}}}
 function! IntimR()
 
     " Initiate loops
@@ -1625,7 +1767,89 @@ augroup IntimR
 augroup end
 "}}}
 
-" Special LaTeX autocmd {{{
+" Special LaTeX corner {{{
+" Send compilation command to latex
+function! s:CompileTex(args) "{{{
+    " variable number of arguments, passed as a list
+    " option:
+    "   'full'  pdflatex && biber && pdflatex
+    "   'twice' pdflatex && pdflatex
+    "   'fast'  pdflatex
+    "   'lncs' pdflatex && bibtex && pdflatex && pdflatex
+    "   'clean' remove all temporary tex files except produced pdf
+    let option = a:args[0]
+    " first optional argument: filename (no extension).
+    " If not provided, pick current one.
+    let filename = len(a:args) > 1? a:args[1] : expand('%:r')
+    " retrieve filename and send full compilation command
+    " TODO: make the compilation command more customizable, or use a third tool
+    " that guesses the right command. I've heard this exists, right?
+    let pdflatexcmd = "pdflatex -synctex=1 --shell-escape --halt-on-error "
+    " echo colored result
+    let output = " && echo '\\033[32m \ndone.\n\\033[0m' "
+               \ " || echo '\\033[31m \nfailed.\n\\033[0m' "
+    if option == 'full'
+        let cmd = pdflatexcmd . filename . ".tex"
+              \ . " && biber " . filename
+              \ . " && " . pdflatexcmd . filename . ".tex"
+              \ . output
+    elseif option == 'twice'
+        let cmd = pdflatexcmd . filename . ".tex"
+              \ . " && " . pdflatexcmd . filename . ".tex"
+              \ . output
+    elseif option == 'lncs'
+        let cmd = pdflatexcmd . filename . ".tex"
+              \ . " && bibtex " . filename
+              \ . " && " . pdflatexcmd . filename . ".tex"
+              \ . " && " . pdflatexcmd . filename . ".tex"
+              \ . output
+    elseif option == 'fast'
+        let cmd = pdflatexcmd . filename . ".tex"
+              \ . output
+    elseif option == 'clean'
+        " every common latex garbage one may wish to get rid of
+        let cmd = "rm -f " . filename . ".out && "
+              \ . "rm -f " . filename . ".aux && "
+              \ . "rm -f " . filename . ".blg && "
+              \ . "rm -f " . filename . ".log && "
+              \ . "rm -f " . filename . "-blx.bib && "
+              \ . "rm -f " . filename . ".toc && "
+              \ . "rm -f " . filename . ".xml && "
+              \ . "rm -f " . filename . ".bcf && "
+              \ . "rm -f " . filename . ".bbl && "
+              \ . "rm -f " . filename . ".nav && "
+              \ . "rm -f " . filename . ".snm && "
+              \ . "rm -f " . filename . ".run.xml && "
+              \ . "rm -rf figure"
+    else
+        echoe "Intim: CompileTex does not know option '" . option . "'!"
+    endif
+    " after the operation, list files to see what happened
+    let cmd = cmd . " && ls -lah"
+    call s:Send(cmd)
+endfunction
+"}}}
+" Open the file produced with latex
+function! s:OpenPdf(command) "{{{
+    " the 'command' is a system command with user's favorite pdf viewer etc. It
+    " also is a hook for her to trigger any command she likes after having
+    " opened a .pdf file
+    " The command will probably contain a star `*` which will be replaced by the
+    " actual filename.
+    let cmd = a:command
+    if cmd =~ '*'
+        " TODO: handle star escaping '\*' if needed
+        let filename = expand('%:r') . '.pdf'
+        if empty(glob(filename))
+            echoe "no " . filename . " file found"
+            return
+        endif
+        let cmd = substitute(a:command, '*', filename, 'g')
+    endif
+    call s:Send(cmd)
+endfunction
+"}}}
+
 function IntimLatex()
     " "Latex Compile"
     call s:declareMap('n', 'TexCompileFast',
@@ -1654,186 +1878,6 @@ augroup intimLaTeX
     " Only do this once
     autocmd FileType tex autocmd! intimLaTeX
 augroup end
-"}}}
-
-" Hotkeys:
-" Convenient shortcut to wrap pieces of script inside expressions "{{{
-
-" Convenience macro guard before mapping anything
-function! s:CheckAndDeclare(type, map, effect) "{{{
-    " Compare the effect to the map already in place. If it is ours or empty,
-    " okay, if not, do *not* overwrite it or we may break user's ones. In order
-    " to check whether it is ours, <SID> will have to be expanded into <SNR>X_
-    let already = maparg(a:map, a:type)
-    " adapted from :help SID<cr>
-    let snr = matchstr(expand('<sfile>'), '\zs<SNR>\d\+_\zeCheckAndDeclare$')
-    let actualEffect = substitute(a:effect, '<SID>', snr, 'g')
-    if empty(already)
-        execute a:type . "noremap <unique> <buffer> " . a:map . ' ' . a:effect
-    elseif already != actualEffect
-        " TODO: think better about cases where such a message is wanted.
-        " echom "Intim: "
-            " \ . a:map . " already has a " . a:type . "map, hotkey aborted."
-    endif
-endfunction
-"}}}
-
-" all hotkeys expressions are stored here
-let s:hotkeys_expressions = {}
-
-" Define one hotkey map: send an expression containing either visually selected
-" area or the word under cursor. The expression is written with `*` representing
-" the variable part.
-" TODO: handle actual `*` characters escaping
-function! s:DefineHotKey(shortcut, expression) "{{{
-    " called while reading user's :hotkeys:
-
-    " fill up the dict
-    let s:hotkeys_expressions[a:shortcut] = a:expression
-
-    " final mapping for user
-    let map = s:get_hotkeys_nleader() . a:shortcut
-
-    for mode in ['n', 'v']
-        call s:CheckAndDeclare(mode, map,
-            \ ":call <SID>SendHotkey('" . a:shortcut . "', '" . mode . "')<cr>")
-    endfor
-
-endfunction
-
-" Function actually called when using a hotkey
-" Searches for the right expression to replace with the shortcut as a key
-" Depending on the 'v' or 'n' mode, fill it up with '<cword>' or '@*'
-function! s:SendHotkey(shortcut, mode)
-
-    " retrieve expression
-    let expression = s:hotkeys_expressions[a:shortcut]
-
-    " replace placeholder `*` with either..
-    if a:mode == 'v'
-        " visually selected area
-        let content = s:getVisualSelection()
-    else
-        " or word under cursor
-        let content = expand('<cword>')
-    endif
-    " & needs to be escaped: see :help sub-replace-special
-    let content = substitute(content, '&', '\\\&', 'g')
-    let expression = substitute(expression, '*', content, 'g')
-
-    " and send that :)
-    call s:Send(expression)
-
-endfunction
-
-"}}}
-
-" Here is a special, predefined case expression: headed expressions of the form
-" `head(*)`. The interest is that comes with edition bonuses: these mappings do
-" not send commands to the Intim session, but they allow editing script.
-" TODO: make EditBonuses optional
-function! s:DefineHeadedExpression(shortcut, head) "{{{
-    " called while reading users headed-hotkeys
-
-    " define actual sender mappings
-    call s:DefineHotKey(a:shortcut, a:head . '(*)')
-
-    " EditBonus: one insertion map working as a small snippet
-    let map = s:get_hotkeys_edit_ileader() . a:shortcut
-    let effect = a:head . "()<left>"
-    call s:CheckAndDeclare('i', map, effect)
-
-    " EditBonus: wrap a word in the script in normal mode
-    let map = s:get_hotkeys_edit_nleader() . a:shortcut
-    let effect = "viwv:call <SID>Wrap('" . a:head . "', '()')<cr>"
-    call s:CheckAndDeclare('n', map, effect)
-
-    " EditBonus: wrap a selection in the script in visual mode
-    let map = s:get_hotkeys_edit_vleader() . a:shortcut
-    let effect = "<esc>:call <SID>Wrap('" . a:head . "', '()')<cr>"
-    call s:CheckAndDeclare('v', map, effect)
-
-endfunction
-"}}}
-
-" Here is another special case for LaTeX-style headed expressions `\head{*}`
-function! s:DefineLaTeXExpression(shortcut, head) "{{{
-    " called while reading users headed-hotkeys
-
-    " define actual sender mappings
-    call s:DefineHotKey(a:shortcut, '\' . a:head . '{*}')
-
-    " EditBonus: one insertion map working as a small snippet
-    let map = s:get_hotkeys_edit_ileader() . a:shortcut
-    let effect = '\' . a:head . "{}<left>"
-    call s:CheckAndDeclare('i', map, effect)
-
-    " EditBonus: wrap a word in the script in normal mode
-    let map = s:get_hotkeys_edit_nleader() . a:shortcut
-    let effect = "viwv:call <SID>Wrap('\\" . a:head . "', '{}')<cr>"
-    call s:CheckAndDeclare('n', map, effect)
-
-    " EditBonus: wrap a selection in the script in visual mode
-    let map = s:get_hotkeys_edit_vleader() . a:shortcut
-    let effect = "<esc>:call <SID>Wrap('\\" . a:head . "', '{}')<cr>"
-    call s:CheckAndDeclare('v', map, effect)
-
-endfunction
-"}}}
-
-" Here is another special case for simple prefixed expressions: `prefix*`
-function! s:DefinePrefixedExpression(shortcut, prefix) "{{{
-    " called while reading users headed-hotkeys
-
-    " define actual sender mappings
-    call s:DefineHotKey(a:shortcut, a:prefix . '*')
-
-    " EditBonus: one insertion map working as a small snippet
-    let map = s:get_hotkeys_edit_ileader() . a:shortcut
-    let effect = a:prefix
-    call s:CheckAndDeclare('i', map, effect)
-
-    " EditBonus: prefix a word in the script in normal mode
-    let map = s:get_hotkeys_edit_nleader() . a:shortcut
-    let effect = "viwovi" . a:prefix . '<esc>'
-    call s:CheckAndDeclare('n', map, effect)
-
-    " EditBonus: prefix a selection in the script in visual mode
-    let map = s:get_hotkeys_edit_vleader() . a:shortcut
-    let effect = "<esc>:call setpos('.', getpos(\"'<\"))<cr>i"
-                \ . a:prefix . '<esc>'
-    call s:CheckAndDeclare('v', map, effect)
-
-endfunction
-"}}}
-
-" Here is another special case for constant expression `constant`
-function! s:DefineConstantExpression(shortcut, constant) "{{{
-    " called while reading users headed-hotkeys
-
-    " define actual sender mappings
-    " TODO: this should escape '*'
-    call s:DefineHotKey(a:shortcut, a:constant)
-
-    " EditBonus: one insertion map working as a small snippet
-    let map = s:get_hotkeys_edit_ileader() . a:shortcut
-    let effect = a:constant
-    call s:CheckAndDeclare('i', map, effect)
-
-    " EditBonus: insert constant before a word in the script in normal mode
-    let map = s:get_hotkeys_edit_nleader() . a:shortcut
-    let effect = "viwovi" . a:constant . '<esc>'
-    call s:CheckAndDeclare('n', map, effect)
-
-    " EditBonus: insert constant before a selection in the script in visual mode
-    let map = s:get_hotkeys_edit_vleader() . a:shortcut
-    let effect = "<esc>:call setpos('.', getpos(\"'<\"))<cr>i"
-                \ . a:constant . '<esc>'
-    call s:CheckAndDeclare('v', map, effect)
-
-endfunction
-"}}}
-
 "}}}
 
 "}}}

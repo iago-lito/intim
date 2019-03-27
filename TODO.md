@@ -58,6 +58,10 @@ Feature requests:
     - [ ] this will help making a neater implementation of default LaTeX commands.
 - [ ] tex constant expression hotkeys behaviour should be less word-based
 - [ ] keep "last change" fields up to date with a git hook
+- [ ] style consistency
+ - [ ] Comments with capitals and dots.
+ - [ ] indentation 2 spaces.. hm but I'm still unsure..
+- [ ] Rewrite `plugin/intim.vim` introduction
 
 ### Bigger ones
 

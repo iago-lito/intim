@@ -22,11 +22,12 @@ CONTENT                                                          *intim-content*
           constant ........................... |intim-constant-hotkeys|
           generic ............................ |intim-generic-hotkeys|
           default ............................ |intim-default-hotkeys|
-    10. LaTeX and non-interpreted languages .. |intim-compiled|
-    11. License .............................. |intim-license|
-    12. Bugs ................................. |intim-bugs|
-    13. Contributing ......................... |intim-contribute|
-    14. Credits .............................. |intim-credits|
+    10. Debug mode ........................... |intim-debug-mode|
+    11. LaTeX and non-interpreted languages .. |intim-compiled|
+    12. License .............................. |intim-license|
+    13. Bugs ................................. |intim-bugs|
+    14. Contributing ......................... |intim-contribute|
+    15. Credits .............................. |intim-credits|
 
 ==============================================================================
 1. Introduction                                             *intim-introduction*
@@ -744,7 +745,43 @@ define nothing instead of one default :)
             ct   cargo test
 
 ==============================================================================
-10. LaTeX and non-interpreted languages.                           *intim-latex*
+10. Debug mode                                              *intim-debug-mode*
+
+Intim will make an attempt to understand when it's debugging time, and alter
+it's behaviour so that user will not have to alter theirs.
+
+For now, debug mode is automagically detected in python-related languages and
+gdb-debuggable languages. You may verify it with.. >
+
+    :call IntimIsDebugMode()
+
+.. which should output 1 when you are debugging. Magic actually operates with a
+parsing of your current tmux prompt. Should your interpreter have a non-standard
+prompt, like not `(Pdb)` or `(gdb)`, then debug mode will not be detected.
+Please file an issue then.
+
+There is not much to worry about debug mode. With python, every piece of script
+you'll send will be automatically prefixed by `!` so as to typically avoid
+clashes between your variables names and `pdb` commands like `n`, `s`, `h`, etc.
+
+A bunch of dedicated mappings are also enabled in python debug mode, like: >
+
+    nnoremap ,A :call IntimDebugCommand('args')<cr>
+    nnoremap ,C :call IntimDebugCommand('continue')<cr>
+    nnoremap ,D :call IntimDebugCommand('down')<cr>
+    nnoremap ,H :call IntimDebugCommand('help')<cr>
+    nnoremap ,L :call IntimDebugCommand('list')<cr>
+    nnoremap ,N :call IntimDebugCommand('next')<cr>
+    nnoremap ,Q :call IntimDebugCommand('quit')<cr>
+    nnoremap ,R :call IntimDebugCommand('return')<cr>
+    nnoremap ,S :call IntimDebugCommand('step')<cr>
+    nnoremap ,U :call IntimDebugCommand('up')<cr>
+    nnoremap ,W :call IntimDebugCommand('where')<cr>
+
+.. feel free to define more :)
+
+==============================================================================
+11. LaTeX and non-interpreted languages.                           *intim-latex*
                                                                 *intim-compiled*
 
 Although it is not an actually interpreted language, you may benefit from
@@ -803,13 +840,13 @@ Intim_constantExpression and *IntimSend* functions. Do not hesitate visiting
 the repo and ask for features if you need more.
 
 ==============================================================================
-11. License                                                       *intim-license*
+12. License                                                       *intim-license*
 
     Intim is released under the GPL3.
     See https://www.gnu.org/licenses/gpl-3.0.html
 
 ==============================================================================
-12. Bugs                                                             *intim-bugs*
+13. Bugs                                                             *intim-bugs*
 
     If you experience any bugs or have feature requests, please open an issue
 on GitHub:
@@ -817,7 +854,7 @@ on GitHub:
     https://github.com/iago-lito/intim/issues
 
 ==============================================================================
-13. Contributing                                              *intim-contribute*
+14. Contributing                                              *intim-contribute*
                                                                           *repo*
 
     Fork the source repository on GitHub and send a pull request if you have
@@ -826,7 +863,7 @@ any code improvements. I'll be happy to work with you :)
 Source repository: https://github.com/iago-lito/intim
 
 ==============================================================================
-14. Credits                                                      *intim-credits*
+15. Credits                                                      *intim-credits*
 
 Authors: ~
 
