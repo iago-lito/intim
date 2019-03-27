@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2019-03-14
+" Last Change:	2019-03-27
 " Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 " License:      This file is placed under the GNU PublicLicense 3.
 
@@ -81,21 +81,25 @@ let g:intim_path = s:path
 
 " Macro declaring and guarding user wrappers to methods:
 function! s:functionExport(internalname, name, nargs) "{{{
+    " TODO: support any nargs value.
     if !exists('*' . a:name)
+        " No arguments.
         if a:nargs == 0
             execute "function " . a:name . "()\n"
                 \ . "    return s:" . a:internalname . "()\n"
                 \ . "endfunction"
+        " One argument.
         elseif a:nargs == 1
             execute "function " . a:name . "(arg)\n"
                 \ . "    return s:" . a:internalname . "(a:arg)\n"
                 \ . "endfunction"
-        elseif a:nargs == -1 " variable number of arguments
+        " Variable number of arguments.
+        elseif a:nargs == -1
             execute "function " . a:name . "(...)\n"
                 \ . "    return s:" . a:internalname . "(a:000)\n"
                 \ . "endfunction"
         else
-            echoerr "Cannot export functions with more than 1 arguments yet."
+            echoerr "Cannot export functions with ".a:nargs." arguments yet."
         endif
     else
         echom a:name . "already declared, Intim won't overwrite it."
@@ -111,9 +115,10 @@ call s:functionExport('SendEOF'       , 'IntimSendEOF', 0)
 call s:functionExport('SetLanguage'   , 'IntimSetLanguage', 1)
 call s:functionExport('GetLanguage'   , 'IntimGetLanguage', 0)
 call s:functionExport('CompileTex'    , 'IntimCompileTex', -1)
+call s:functionExport('IsDebugMode'   , 'IntimIsDebugMode', 0)
 
-" Some "languages" actually the same, right?
-let s:python_like = ['python',
+" Some "languages" actually quite close, right?
+let s:python_based = ['python',
                    \ 'python3',
                    \ 'ipython',
                    \ 'ipython3',
@@ -123,9 +128,17 @@ let s:python_like = ['python',
                    \ 'sage',
                    \ ]
 function! s:pythonBased(language)
-    return index(s:python_like, a:language) > -1
+    return index(s:python_based, a:language) > -1
 endfunction
 
+" To detect debug mode:
+let s:gdb_debuggable = ['C',
+                   \ 'C++',
+                   \ 'Rust',
+                   \ ]
+function! s:gdbDebuggable(language)
+    return index(s:gdb_debuggable, a:language) > -1
+endfunction
 "}}}
 
 " Options:
@@ -301,7 +314,7 @@ call s:setDefaultOption_preInvokeCommands('default', [''])
 call s:createLanguageOption('invokeCommand')
 call s:setDefaultOption_invokeCommand('default', '')
 " all python-likes :P
-for pl in s:python_like
+for pl in s:python_based
     call s:setDefaultOption_invokeCommand(pl, pl)
 endfor
 call s:setDefaultOption_invokeCommand('django', 'python manage.py shell')
@@ -623,6 +636,7 @@ endfor
 "}}}
 
 " TmuxSession:
+" Session-related utilities "{{{
 " Open and close the session "{{{
 
 " send a command to the system unless it is empty:
@@ -743,6 +757,28 @@ function! s:EndSession() "{{{
         echom "Intim session seems not launched"
     endif
 endfunction
+"}}}
+
+"}}}
+
+" Check whether debugging is going on "{{{
+function! s:IsDebugMode() "{{{
+  " Do this by parsing current prompt in tmux session :P
+  " Retrieve last tmux line: https://unix.stackexchange.com/a/168384/87656 :)
+  let line = system("tmux capture-pane -pt ".s:sname()." | grep . | tail -n 1")
+  " Test if for common debug prompts :)
+  if s:pythonBased(s:language)
+    return match(line, '(Pdb)') >= 0
+  endif
+  if s:gdbDebuggable(s:language)
+    return match(line, '(gdb)') >= 0
+  endif
+  " By default, we know no debug mode :)
+  return 0
+endfunction
+"}}}
+
+
 "}}}
 
 "}}}
