@@ -787,7 +787,7 @@ endfunction
 " Pass text and commands and signals to the session "{{{
 
 " BasicSending:
-" send plain text to the Tmuxed session unless it is empty
+" Send plain tmux message to the Tmuxed session unless it is empty.
 function! s:SendText(text) "{{{
     if !s:isSessionOpen()
         echom "No Intim session open."
@@ -800,34 +800,34 @@ function! s:SendText(text) "{{{
     endif
 endfunction
 "}}}
-" Convenience for sending an empty line
+" Convenience for sending an empty line.
 function! s:SendEnter() "{{{
     call s:SendText('ENTER')
 endfunction
 "}}}
-" Or a keyboard interrupt
+" Or a keyboard interrupt.
 function! s:SendInterrupt() "{{{
     call s:SendText('c-c')
 endfunction
 "}}}
-" Or an end-of-file signal
+" Or an end-of-file signal.
 function! s:SendEOF() "{{{
     call s:SendText('c-d')
 endfunction
 "}}}
-" Sneaky little escape tricks
+" Sneaky little escape tricks.
 function! s:HandleEscapes(text) "{{{
-    " escape the escape characters
+    " Escape the escape characters.
     let res = substitute(a:text, '\\', '\\\\', 'g')
     " TODO: loop over those.
-    " escape the quotes
+    " Escape the quotes.
     let res = substitute(res, '\"', '\\\"', 'g')
     let res = substitute(res, "\'", "\\\'", 'g')
-    " escape ending semicolons
+    " Escape ending semicolons.
     let res = substitute(res, ';$', '\\\;', 'g')
-    " escape dollar sign
+    " Escape dollar sign.
     let res = substitute(res, '\$', '\\\$', 'g')
-    " escape backticks
+    " Escape backticks.
     let res = substitute(res, '\`', '\\\`', 'g')
     return res
 endfunction
@@ -845,22 +845,19 @@ function! s:Send(command) "{{{
         return
     endif
 
-    let text = a:command
-    if s:language == 'R'
-        " remove roxygen2 comment sign before doctests:
-        " TODO: make this work together with python doctest prompt removal
-        let commentSign = "^\\s*#\'"
-        if match(a:command, commentSign) > -1
-            let text = substitute(a:command, commentSign, '', '')
-        endif
-    endif
-
     " main code for strings:
     " prepare the text for SendText: "command" ENTER
     " " Update from https://unix.stackexchange.com/a/472112/87656 (cheers :)
     " " Send litteral text first, then actual 'ENTER' command, or we had random
     " " commands not working like `up`, `right` or `-3` (interpreted as keywords
     " " or options)
+    let text = a:command
+
+    " Escape if debug mode:
+    if s:pythonBased(s:language) && s:IsDebugMode()
+      let text = '!'.text
+    endif
+
     if !empty(text)
         let text = '-l '''' "' . s:HandleEscapes(text) . '"'
         call s:SendText(text)
@@ -872,23 +869,23 @@ endfunction
 "}}}
 
 " Senders:
-" Send the current script line to the session
+" Send the current script line to the session.
 function! s:SendLine() "{{{
-    let line = getline('.')
-    " if the line is empty, send an empty command
-    if empty(line)
-        call s:SendEnter()
-    else
-        " TODO: gather these preprocessing into one single procedure with
-        " options etc.
-        if s:pythonBased(s:language)
-            let line = s:RemovePythonDoctestPrompt(line)
-            " TODO: make it optional
-            " remove indentation
-            let line = s:RemoveIndentation(line)
-        endif
-        call s:Send(line)
+  let line = getline('.')
+  " if the line is empty, send an empty command
+  if empty(line)
+    call s:SendEnter()
+  else
+    " Remove doctests prompts:
+    " TODO: make it optional
+    if s:pythonBased(s:language)
+      let line = s:RemovePythonDoctestPrompt(line)
+      let line = s:RemoveIndentation(line) " + remove indentation for python
+    elseif s:language == 'R'
+      let text = s:RemoveRDoctestPrompt(text)
     endif
+    call s:Send(line)
+  endif
 endfunction
 "}}}
 " Small preprocessing:
@@ -896,19 +893,29 @@ function! s:RemoveIndentation(line) "{{{
     return substitute(a:line, '^\s*', '', '')
 endfunction
 "}}}
-" A small special case to handle
+" Small special cases to handle.
 function! s:RemovePythonDoctestPrompt(line) "{{{
     let line = substitute(a:line, '^\s*>>>','', '')
     let line = substitute(line, '^\s*\.\.\.','', '')
     return line
 endfunction
 "}}}
-" Send the current word to the session
+function! s:RemoveRDoctestPrompt(line) "{{{
+  " Roxygen2 signs.
+  let commentSign = "^\\s*#\'"
+  if match(a:line, commentSign) > -1
+      return substitute(a:line, commentSign, '', '')
+  endif
+  return line
+endfunction
+"}}}
+
+" Send the current word to the session.
 function! s:SendWord() "{{{
     call s:Send(expand('<cword>'))
 endfunction
 "}}}
-" Retrieve current selection content
+" Retrieve current selection content.
 " https://stackoverflow.com/a/6271254/3719101
 function! s:getVisualSelection() "{{{
     " Why is this not a built-in Vim script function?!
@@ -923,7 +930,7 @@ function! s:getVisualSelection() "{{{
     return join(lines, "\n")
 endfunction
 "}}}
-" Send the current selection as multiple lines
+" Send the current selection as multiple lines.
 function! s:SendSelection() "{{{
     let raw = s:getVisualSelection()
     " The way we'll do this depends on our interpreter/language
@@ -935,7 +942,7 @@ function! s:SendSelection() "{{{
     endif
 endfunction
 "}}}
-" Send the current selection as plain successive lines
+" Send the current selection as plain successive lines.
 function! s:SendLineByLine() "{{{
     let raw = s:getVisualSelection()
     " (this is the `raw` content of the selection)
@@ -959,7 +966,7 @@ function! s:SendLineByLine() "{{{
     endif
 endfunction
 "}}}
-" Send a chunk by sinking it to a temporary file
+" Send a chunk by sinking it to a temporary file.
 function! s:SendChunk() "{{{
 
     let raw = s:getVisualSelection()
@@ -1006,7 +1013,7 @@ function! s:sourceCommand(file) "{{{
 endfunction
 "}}}
 
-" Unindent text at most without loosing relative indentation
+" Unindent text at most without loosing relative indentation.
 " http://vi.stackexchange.com/questions/5549/
 function! s:MinimalIndent(expr) "{{{
     " `expr` is a long multilined expression
@@ -1062,7 +1069,7 @@ endfun
 "}}}
 
 "}}}
-" Send the whole script as saved on the disk
+" Send the whole script as saved on the disk.
 function! s:SendFile() "{{{
     let file = resolve(expand('%:p'))
     call s:Send(s:sourceCommand(file))
