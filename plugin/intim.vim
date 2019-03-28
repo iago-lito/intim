@@ -187,6 +187,10 @@ call s:declareOption('g:intim_tempHelp', "s:path . '/tmp/help'", 's:help')
 call s:declareOption('g:intim_tempSyntax', "s:path . '/tmp/syntax'", 's:vimsyntax')
 call s:declareOption('g:intim_openPdf_command', "'evince * &> /dev/null &'",
                    \ 's:openPdfCommand')
+" What to prefix our sign ids with?
+" TODO: document.
+call s:declareOption('g:intim_breakpointPrefix', "12", 's:bk_prefix')
+
 " Check if tempfiles can be written to or create'em
 function! s:CheckFile(file) "{{{
     if !filewritable(a:file)
@@ -1899,18 +1903,72 @@ augroup end
 " Gdb utilities ?{{{
 " Experimental
 " Add breakpoints without leaving Intim :)
+let s:breakpoints = {} " {'filename:lineno': id}
+let s:bk_highest_id = 0 " like gdb, keep going up forever, don't recycle ids.
 function! s:SetBreakpoint() "{{{
+  if !s:IsDebugMode()
+    echo "Intim seems not in debug mode."
+    return
+  endif
   " Retrieve current line number
-  let n = line('.') - 1
-  " Send breakpoint just before
-  call s:DebugCommand('b '.expand('%:p').':'.n)
+  let n = line('.')
+  let filename = expand('%:p')
+  let key = filename . ':' . n
+  " Stop if already there.. (gdb) supports this (not sure why), not Intim for now.
+  " The reason is that it would sometimes require asking user 'which breakpoint
+  " to delete?' on delete, and this is too much complicated for a weird feature.
+  " .. I think.
+  if has_key(s:breakpoints, key)
+    echo "Breakpoint already here."
+    return
+  endif
+  " Create it.
+  let id = s:bk_highest_id + 1
+  let s:breakpoints[key] = id
+  let s:bk_highest_id = id
+  " Mark it.
+  exec "sign place ".s:bk_prefix().id." line=".n." name=breakpoint file=".filename
+  " And send breakpoint of course.
+  call s:DebugCommand('b ' . filename . ':' . n)
 endfunction
 "}}}
+function! s:DeleteBreakpoint() "{{{
+  if !s:IsDebugMode()
+    echo "Intim seems not in debug mode."
+    return
+  endif
+  " Retrieve current line number
+  let n = line('.')
+  let filename = expand('%:p')
+  let key = filename . ':' . n
+  " Find its id:
+  let id = get(s:breakpoints, key, 'nope')
+  if id == 'nope'
+    echo "No breakpoint found on this line."
+    return
+  endif
+  unlet s:breakpoints[key]
+  " Unmark it.
+  exec "sign unplace ".s:bk_prefix().id." file=".filename
+  " And delete. of course.
+  call s:DebugCommand('delete '.id)
+endfunction
+"}}}
+" HERE: now try to keep (gdb) and Intim in sync:
+"   - if (gdb) is restarted, clear all breakpoints.
+"   - if Intim is restarted, read all breakpoints from tmux? Without asking
+"   user? hm, don't like it.
+"   - maybe run an internal s:SyncBreakPoints() each time `info b` is send,
+"   instead. This is less invasive, and it'll allow easy on-demand hand-sync of
+"   breakpoints.
 function IntimGdb()
+
+    sign define breakpoint text=● texthl=Special
 
     " Gdb commands that take no arguments.
     let commands = [
           \ 'c',
+          \ 'finish',
           \ 'l',
           \ 'n',
           \ 'q',
@@ -1928,9 +1986,17 @@ function IntimGdb()
       exec macro
     endfor
 
+    call s:declareMap('n', 'GdbInfoBreakpoints',
+          \ ':call IntimDebugCommand("info b")<cr>',
+          \ ',ib')
+
     call s:declareMap('n', 'GdbSetBreakpoint',
-          \ ':call <SID>SetBreakpoint()',
+          \ ':call <SID>SetBreakpoint()<cr>',
           \ ',bk')
+
+    call s:declareMap('n', 'GdbDeleteBreakpoint',
+          \ ':call <SID>DeleteBreakpoint()<cr>',
+          \ ',dk')
 
 endfunction
 augroup intimGdb
