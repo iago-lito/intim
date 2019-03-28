@@ -146,9 +146,9 @@ endfunction
 
 " To detect debug mode:
 let s:gdb_debuggable = ['C',
-                   \ 'C++',
-                   \ 'Rust',
-                   \ ]
+                      \ 'C++',
+                      \ 'Rust',
+                      \ ]
 function! s:gdbDebuggable(language)
     return index(s:gdb_debuggable, a:language) > -1
 endfunction
@@ -867,8 +867,12 @@ function! s:Send(command) "{{{
     let text = a:command
 
     " Escape if debug mode:
-    if s:pythonBased(s:language) && s:IsDebugMode()
-      let text = '!'.text
+    if s:IsDebugMode()
+      if s:pythonBased(s:language)
+        let text = '!'.text
+      elseif s:gdbDebuggable(s:language)
+        let text = 'p '.text
+      endif
     endif
 
     if !empty(text)
@@ -1345,10 +1349,10 @@ function! s:DebugCommand(command) "{{{
     return
   endif
   let text = s:HandleEscapes(a:command)
-  call s:SendText(text)
+  call s:SendText('"'.text.'"')
   call s:SendEnter()
 endfunction
-"}}}
+" }}}
 
 "}}}
 
@@ -1658,7 +1662,7 @@ endfunction
 
 "}}}
 
-" }}}
+"}}}
 
 
 " Specifics:
@@ -1889,6 +1893,51 @@ augroup intimLaTeX
     autocmd FileType tex call IntimLatex()
     " Only do this once
     autocmd FileType tex autocmd! intimLaTeX
+augroup end
+"}}}
+
+" Gdb utilities ?{{{
+" Experimental
+" Add breakpoints without leaving Intim :)
+function! s:SetBreakpoint() "{{{
+  " Retrieve current line number
+  let n = line('.') - 1
+  " Send breakpoint just before
+  call s:DebugCommand('b '.expand('%:p').':'.n)
+endfunction
+"}}}
+function IntimGdb()
+
+    " Gdb commands that take no arguments.
+    let commands = [
+          \ 'c',
+          \ 'l',
+          \ 'n',
+          \ 'q',
+          \ 'r',
+          \ 's',
+          \ 'where',
+          \]
+    for cmd in commands
+      let first_letter = toupper(cmd[0])
+      let capitalized = first_letter.cmd[1:]
+      let macro = ""
+            \."call s:declareMap('n', 'Gdb".capitalized."',"
+            \.          "':call IntimDebugCommand(''".cmd."'')<cr>',"
+            \.          "',".first_letter."')"
+      exec macro
+    endfor
+
+    call s:declareMap('n', 'GdbSetBreakpoint',
+          \ ':call <SID>SetBreakpoint()',
+          \ ',bk')
+
+endfunction
+augroup intimGdb
+    autocmd!
+    autocmd FileType rust,cpp,hpp,c,h call IntimGdb()
+    " Only do this once
+    autocmd FileType rust,cpp,hpp,c,h autocmd! intimGdb
 augroup end
 "}}}
 
