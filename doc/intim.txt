@@ -1,4 +1,4 @@
-*intim.txt*                       Version 1.0            Last change: 2018-01-29
+*intim.txt*                       Version 1.0            Last change: 2019-03-28
 
                                     Intim
 
@@ -32,37 +32,23 @@ CONTENT                                                          *intim-content*
 ==============================================================================
 1. Introduction                                             *intim-introduction*
 
-    This plugin makes you open an interactive interpreter in another terminal
-from Vim, like a shell, `python` or `R`. You will feed input to this terminal
-via predefined or custom Vim mappings: sending commands, interrupting,
-restarting, analyzing variables etc.
+This plugin makes you open, from within Vim, an interactive interpreter in
+another terminal. This interpreter may be a shell, `python`, `R` or anything you
+want. You feed input to this terminal via predefined or custom Vim mappings:
+like sending commands, interrupting, restarting, analyzing variables etc.
 
-    It is mostly inspired from vim-R plugin, a great plugin to do this with R.
-        https://github.com/jcfaria/Vim-R-plugin
-    Its plain intent is just to extend to any interpreter and to be more
-    customizable.
+This plugin is mostly inspired from vim-R plugin
+(https://github.com/jcfaria/Vim-R-plugin), a great plugin dedicated do
+this with R. The intent is to extend the idea to any interpreter and to offer
+more configuration options.
 
-    Just like vim-R, Intim uses `tmux` to open a multiplexed interactive shell
-session, then uses it to launch and communicate with the interpreter.
+All mappings and options described in this document are only default mappings
+and options or example mappings and options. They will not be set by Intim if
+you already had them mapped to something else. Do not hesitate to change them
+so it is the most comfortable for you.
 
-    Among common features like command passing and hotkeys, Intim also offers:
-
-    - updatable syntax coloring to get your script variables colored as they
-      get declared in the interpreter.
-    - utility edition mappings dedicated to each supported scripting language
-    - hooks allowing user to trigger various personal commands when opening,
-      closing the interpreter etc.
-    - many configurable options
-    - extension points to encourage nice developers to support more scripting
-      languages.
-
-    All mappings and options described in this documentation are only default
-mappings and options or example mappings and options. They will not be set by
-Intim if you already had them mapped to something else. Do not hesitate to
-change them so it is the most comfortable for you.
-
-    Of course, this is an open project licenced under GNU3. Feel free to get
-into the code, share, provide feedback, fork or contribute ;)
+Of course, this is an open project licenced under GNU3. Feel free to get into
+the code, share, provide feedback, fork or contribute ;)
 
     Enjoy!
 
@@ -77,13 +63,12 @@ Once your script file is opened in Vim, use >
 to launch a new `tmux` session and invoke your interpreter inside.
 
                                                                    *intim-end*
-
 To terminate the session, use >
 
     nmap <F2> <Plug>IntimEndSession
 
 If you close Vim without terminating the session, it will just stay open and
-you may communicate with it again the next time you open Vim.
+you may communicate with it again the next time you start Vim.
 
                                                               *intim-terminal*
 
@@ -95,7 +80,7 @@ Note: If you wish to explicitly state the terminal invocation command, you may
 use the <tmux> placeholder to define position of the `tmux` launch command.
 In a nutshell, <tmux> represents the first command sent to your terminal. The
 one that serves opening the `tmux` session that Intim relies on.
-For instance, `"gnome-terminal"` is automatically interpreted as >
+For instance, `"gnome-terminal"` is automatically reinterpreted as >
 
     let g:intim_terminal = "gnome-terminal -- <tmux>"
 
@@ -104,8 +89,9 @@ and `"xterm"` as: >
     let g:intim_terminal = "xterm"
     let g:intim_terminal = "eval \"nohup xterm -e '<tmux>' &\" > /dev/null 2>&1"
 
-For other terminal emulators, you may have to build the command yourself.
-Typically, `myterminal -e '<tmux>'` or `myterminal -c '<tmux>'` will do.
+For other terminal emulators, you may have to build the command yourself, or
+ask for help on Intim repo.
+Typically, `myfavoriteterminal -e '<tmux>'` or `myfvterminal -c '<tmux>'` will do.
 
                                                                   *intim-tmux*
 
@@ -133,20 +119,19 @@ Intim can be configured in your `.vimrc` via three channels:
 
         let g:intim_terminal = "xterm"
 <
-        if you don't like default gnome-terminal or cannot use it.
+        if you don't like default `gnome-terminal` or cannot use it.
 
-    Third: call Intim functions like >
+    Third: use Intim configuration functions like >
 
         call Intim_invokeCommand('python', 'ipython3')
 <
-        (see intim-invoke or search this file for `call` to read other examples).
+        (see |intim-invoke| or search this file for `call` to read other examples)
 
-        In this channel, options can be read with the following `IntimGet`
-        functions, like: >
+        While working with this language channel, options can be read with the
+        following `IntimGet` functions, like: >
 
         :echo IntimGetInvokeCommand()
 <
-
         Note: For now (but any contribution is welcome), Intim function are
         only guaranteed to be defined after vim has started. So, in order to
         avoid `E117 undefined function` errors on vim start, you are encouraged
@@ -190,7 +175,8 @@ so it is easy to tweak it aftewards and shape it just like you prefer.
                                                            *intim-postlaunch*
 
 Here is a hook for you: these commands will be executed by your system right
-after `tmux` session has been launched, and before invoking your interpreter.
+after `tmux` session has been launched, and before invokation of your
+interpreter.
 Use it, for example, to navigate to your favorite scripting directory, to
 temporarily edit your `$PATH`, or to tile the newly opened terminal so you get
 it comfy on your screen. >
@@ -205,7 +191,7 @@ Choose the interpreter you would like to invoke once `tmux` session has been
 launched: >
 
     call Intim_invokeCommand('default', '')
-    call Intim_invokeCommand('python', 'python3')
+    call Intim_invokeCommand('python', 'ipython')
     call Intim_invokeCommand('R', 'R --no-save --no-restore')
     call Intim_invokeCommand('bash', 'bash')
     call Intim_invokeCommand('LaTeX', '')
@@ -263,7 +249,7 @@ And here are direct shortcuts to invoke, exit or restart your interpreter: >
 ==============================================================================
 5. Passing commands                                              *intim-passing*
 
-The main feature of Intim is command passing to the tmuxed terminal session.
+The main feature of Intim is passing command to the tmuxed terminal session.
 Use the default mappings: >
 
     nmap <space>  <Plug>IntimSendLine
@@ -296,11 +282,17 @@ interpreter, well you may >
 <
                                                              *intim-send-file*
 
-Or you can send your whole file as a chunk, as currently written on the disk
-(be aware that no unsaved change will be sent this way) >
+Or you can send your whole file as a chunk, as currently written on the disk >
 
     nmap a<space><space> <Plug>IntimSendFile
 <
+Be aware that no unsaved change will be sent this way, unless you remap it to
+something like >
+
+    nmap a<space><space> :w<cr><Plug>IntimSendFile
+
+or anything you prefer.
+
                                                              *intim-send-enter*
 
 If you just need to send an empty line, or an enter/return signal to your
@@ -343,7 +335,7 @@ Note: Special case for `ipython` and `sage` users:
 <    This option should have been set automagically for you if Intim detects
     `ipython` or `sage` in your intim-invoke command.
 
-    However, you may need to set it manually in some cases.
+    However, you may have to set it manually if your case is special.
 
 ==============================================================================
 6. Language-specific features                        *intim-language-specific*
@@ -357,7 +349,7 @@ In `python` or `R` files, you may enter / initiate a loop with >
     nmap ,il <Plug>IntimInitiatePythonLoop
     nmap ,il <Plug>IntimInitiateRLoop
 
-In this situation for instance:
+In this situation for instance: >
 
     for i in range(10):
         # ^ cursor here
@@ -365,12 +357,12 @@ In this situation for instance:
 
 This works by launching the loop and immediately stopping it.
 Sending `for i in range(10): break` is enough.
-After this action, the variable `i` will be initialized.
+After this action, the variable `i` shall be initialized.
 
 ==============================================================================
 7. Getting help                                                   *intim-help*
 
-Intim can try to fetch help files from your interpreter, and open them in a
+Intim tries to fetch help files from your interpreter, and open them in a
 unnammed buffer. Put your Vim cursor on the symbol you need help about, or
 visually select the area you need help about, then use >
 
@@ -388,7 +380,7 @@ Help information is temporarily buffered into an intim file: >
 ==============================================================================
 8. Coloring                                                       *intim-colors*
 
-Intim can try analysing your current interpreter session to dig out all
+Intim tries analysing your current interpreter session to dig out all
 declared currently declared symbols and their types. It will then use this
 information to paint your script in various colors depending on which you like
 most. Use >
@@ -402,7 +394,7 @@ down to Intim repo and provide support for your favorite interpreter.
 Note: In order not to make vim coloring procedure sluggish, Intim parses your
 scripts so that only the symbols used in your files need to be colored.
 Syntactic information about it can be found in Intim's temp files
-*g:intim_tempSyntax* found in the plugin folder by default.
+*g:intim_tempSyntax* located in the plugin folder by default.
 
 Should you like appending custom syntax coloring rules after this automatic
 coloring, then you can write your own post-coloring syntax function, and tell
@@ -418,13 +410,14 @@ Intim you'd like to run it after each refresh: >
 ==============================================================================
 9. Hotkeys                                                       *intim-hotkeys*
 
-While you are developping your script, you often want to ask small things to
+While you are developping your script, you often need to ask small things to
 your interpreter, such as the `len()` of one variable in `python` or the
 `summary()` of a `data.frame` in `R`. However, you don't really need to add
-those to your file, and it may be tedious to write them again and again.
-Instead, you may use Intim hotkeys to send dynamic quick, repetitive requests
-about your symbols. By default in `python`, for instance, with your cursor
-positionned here ----|
+those commands to your file, and it may be tedious to write them again and
+again.
+Instead, you may use Intim hotkeys to send dynamic quick, repetitive
+requests about your symbols. By default in `python`, for instance, with your
+cursor positionned here ----|
 
     my_list = [1, 5, 8, 9]
     my_list.append(12)
@@ -507,7 +500,7 @@ Hotkeys fall into various categories:
 1) Headed hotkeys: - - - - - - - - - - - - - - - - - - *Intim_headedExpression*
                                                        *intim-headed-hotkeys*
 
-    Useful for sending expression of the form `head(inside)`. Just move your
+Useful for sending expression of the form `head(inside)`. Just move your
 cursor to the `inside` part in your script and type your hotkey code right
 after your leader key. See the three above example for instance.
 
@@ -562,7 +555,7 @@ mappings. For instance, once you have called: >
     call Intim_prefixedExpression('python', 'sf', 'self = ')
     call Intim_prefixedExpression('python', 'cl', 'cls = ')
 
-, you may type in normal mode
+, you may type in normal mode >
 
     ,sf
 
@@ -577,8 +570,8 @@ insert mode.
 3) LaTeX-style hotkeys: - - - - - - - - - - - - - - - - *Intim_latexExpression*
                                                         *intim-latex-hotkeys*
 
-    These hotkeys are only useful as edit bonuses while writing LaTeX
-scripting. They transform any `text` into an expression like `\head{text}`. Use
+These hotkeys are only useful as edit bonuses while writing LaTeX code.
+They transform any `text` into an expression like `\head{text}`. Use
 these calls to define your own heads and hotkeys: >
 
     call Intim_latexExpression('LaTeX', 'pr', 'pageref')
@@ -638,7 +631,7 @@ Furthermore, if you had anything else mapped to these before you installed
 Intim, Intim will not override you personal, existing mappings, and will
 define nothing instead of one default :)
 
-    intim-headed-hotkeys
+    |intim-headed-hotkeys|
 
     for `R`:
             al    as.logical
@@ -687,14 +680,14 @@ define nothing instead of one default :)
             pr    prit
             ty    type
 
-    intim-prefixed-hotkeys
+    |intim-prefixed-hotkeys|
 
     for `python`:
 
             sf    self =
             cl    cls =
 
-    intim-latex-hotkeys
+    |intim-latex-hotkeys|
 
     for `LateX`:
 
@@ -722,7 +715,7 @@ define nothing instead of one default :)
             tx   text
             up   usepackage
 
-    intim-constant-hotkeys
+    |intim-constant-hotkeys|
 
     for `R`:
             go   graphics.off()
@@ -750,15 +743,15 @@ define nothing instead of one default :)
 Intim will make an attempt to understand when it's debugging time, and alter
 it's behaviour so that user will not have to alter theirs.
 
-For now, debug mode is automagically detected in python-related languages and
-gdb-debuggable languages. You may verify it with.. >
+For now, debug mode is automagically detected in `python`-related languages and
+`gdb`-debuggable languages. You may verify it with.. >
 
     :call IntimIsDebugMode()
 
-.. which should output 1 when you are debugging. Magic actually operates with a
-parsing of your current tmux prompt. Should your interpreter have a non-standard
-prompt, like not `(Pdb)` or `(gdb)`, then debug mode will not be detected.
-Please file an issue then.
+.. which should output 1 when you are debugging. Magic actually operates with
+a parsing of your current tmux prompt. Should your interpreter have a
+non-standard prompt, like not `(Pdb)` or `(gdb)`, then debug mode will not be
+detected :\ Please file an issue to Intim repo then.
 
 There is not much to worry about debug mode. With python, every piece of script
 you'll send will be automatically prefixed by `!` so as to typically avoid
@@ -785,9 +778,9 @@ A bunch of dedicated mappings are also enabled in python debug mode, like: >
                                                                 *intim-compiled*
 
 Although it is not an actually interpreted language, you may benefit from
-Intim even while using LaTeX. Because it often is useful to send compilation
-commands on-the-fly or to navigate to produced documents.. even edit bonuses
-and Intim_latexExpression may be useful. Use >
+Intim even while using `Rust` or `LaTeX`. Because it often is useful to send
+compilation commands on-the-fly or to navigate to produced documents.. even
+edit bonuses and |Intim_latexExpression| may be useful. Use >
 
     nmap ,lc <Plug>IntimTexCompileFast
 
@@ -836,20 +829,20 @@ Available options are:
 
 Note: as the time of writing, these options are not much customizable. Your
 may create your own from scratch by making a good use of
-Intim_constantExpression and *IntimSend* functions. Do not hesitate visiting
+|Intim_constantExpression| and |IntimSend| functions. Do not hesitate visiting
 the repo and ask for features if you need more.
 
 ==============================================================================
-12. License                                                       *intim-license*
+12. License                                                      *intim-license*
 
     Intim is released under the GPL3.
     See https://www.gnu.org/licenses/gpl-3.0.html
 
 ==============================================================================
-13. Bugs                                                             *intim-bugs*
+13. Bugs                                                            *intim-bugs*
 
     If you experience any bugs or have feature requests, please open an issue
-on GitHub:
+on Intim repo:
 
     https://github.com/iago-lito/intim/issues
 
@@ -857,8 +850,8 @@ on GitHub:
 14. Contributing                                              *intim-contribute*
                                                                           *repo*
 
-    Fork the source repository on GitHub and send a pull request if you have
-any code improvements. I'll be happy to work with you :)
+    Fork the source repository and send a pull request if you have any script
+improvements. I'll be happy to work with you :)
 
 Source repository: https://github.com/iago-lito/intim
 
