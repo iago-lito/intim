@@ -7,7 +7,7 @@
 This plugin makes you open, from within Vim, an interactive interpreter in
 another terminal.
 This interpreter may be a shell, `python`, `R` or anything you want.
-You may feed input to this terminal via predefined or custom Vim mappings:
+You feed input to this terminal via predefined or custom Vim mappings:
 like sending commands, interrupting, restarting, analyzing variables *etc.*
 
 This plugin is mostly inspired from [vim-R
@@ -28,6 +28,8 @@ Major features, as for today:
 - Bonus hotkeys __edit__ your very script with these specific expressions.
 - Access and read the interpreter __help__ from within a vim buffer.
 - Detect and handle __debug__ modes.
+- Enter __loops__ to get into their execution contexts.
+- Quit and __restart__ Vim without exiting the session.
 - Easy __configuration__.
 - Easy __extension__ to other languages.
   - Full-support yet for:

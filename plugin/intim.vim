@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2019-03-27
+" Last Change:	2019-03-28
 " Maintainer:   Iago-lito <iago.bonnici@gmail.com>
 " License:      This file is placed under the GNU PublicLicense 3.
 
@@ -13,46 +13,57 @@ endif
 let g:loaded_intim = 1
 "}}}
 
-" In this script, I'll start gathering every bizarre, convenient stuff I use to
-" interface Vim with command-line interpreters.
-" Mostly inspired from vim-R plugin: https://github.com/jcfaria/Vim-R-plugin,
-" started because I couldn't find such a thing for Python, continued because I
-" could also use it for bash and LaTeX.. then R again.
+" All of Intim logic, configuration, defaults, utilities.. is implemented here.
 " The main idea is to use Tmux: https://tmux.github.io/ from Vim's terminal to
-" launch any interpreter within an interactive multiplexed session. Convenient
-" utility functions will then help the user passing script from Vim to the
-" interpreter, or retrieving information from it.
-" MainFeatures: I expect to offer:
-"   - easy passing of pieces of script to the interpreter without leaving Vim
-"   - convenient wrapping of passed script into custom functions: delete a
-"     variable, get lenght of a structure, analyse and plot a vector, open and
-"     close graphical windows without leaving Vim
-"   - a few convenience edition trick consistent with the latter ones, refered
-"     to as `EditBonus` in this script
-"   - if possible and implemented (R, Python), use interpreter's introspection
-"     for dynamic syntax highlighting within Vim (change variable colors
-"     depending on whether they are declared or not, depending on their type..)
-"   - if possible and implemented (R, Python), easy access to help pages within
-"     Vim
-"   - if possible and implemented (R, Python), easy entering loops for debugging
-"   - send all term signals supported by Tmux, in particular <c-c> and <c-d>
-"   - quit and restart vim without terminating the session
+" launch any interpreter within an interactive multiplexed session.
+" Convenience utility functions will then help the user passing script from Vim
+" to the interpreter, or retrieving information from it.
+"
+" MainFeatures: (feel free to extend them)
+"   - Pass of pieces of script to the interpreter without leaving Vim. This is
+"   refered to as "Sending".
+"
+"   - Wrap script items into custom functions: eg. delete a variable, get lenght
+"     of a structure, analyse and plot a vector, open and close graphical
+"     windows without leaving Vim. These shortcuts are refered to as "Hotkeys".
+"
+"   - Edition trick consistent with hotkeys, refered to as "EditBonus".
+"
+"   - If possible and implemented, use interpreter's introspection
+"     for dynamic syntax highlighting within Vim. I.e. script items color will
+"     change depending on whether they are declared or not, and depending on
+"     their type. Seek "Syntax" to understand this logic.
+"     Currently implemented for R and python.
+"
+"   - If possible and implemented, access to "Help" pages within a Vim buffer.
+"     Currently implemented for R and python.
+"
+"   - If possible and implemented, enter "Loops" for debugging.
+"     Currently implemented for R and python.
+"
+"   - Send all term signals supported by Tmux, in particular "Interruption"
+"   <c-c> and "EndOfFile" <c-d>.
+"
+"   - Quit and restart Vim without terminating the session.
+"
 " Difficulties:
-"   - everything is mixed up for now because I also use a lot of custom scripts
-"     to handle my windows, integrate my own vim tricks, etc. I'll try to sort
-"     that out. Of course, I'll also try to keep enough flexibility for this
-"     intimate coupling with my odd habits always to remain possible. In this
-"     way, I expect that users will easily adapt intim into their own weird
-"     fetishes.
+"
 "   - I only know one environment well (mine), so it might be difficult to adapt
-"     to others in a first time.
-"     Make it explicit: this plugin will be first elaborated within:
+"     others in a first time.
+"     Make it explicit: this plugin has first been elaborated within:
 "       - Debian 9, Stretch
 "       - Gnome 3.22.1
 "       - Vim 8.0 in a gnome-terminal
-"     Should it need liftings in order to adapt to other environments, I'll need
-"     help from users in those environments and invoke social coding. Feel free
-"     to contribute :)
+"     It happens to be continued now (and still work) within:
+"       - ArchLinux
+"       - Gnome 3.32
+"       - Neovim 0.3.4 in a gnome-terminal
+"
+"     Should it need liftings in order to adapt to other environments, I'll
+"     maybe need help from users in those environments and invoke social coding.
+"
+"     Feel free to contribute, of course :)
+"
 " InstallationCorner: Stack here dependencies, maybe provide a way to check for
 " them or get them automatically?
 "   - tmux
@@ -68,7 +79,8 @@ let g:loaded_intim = 1
 
 " Here we go.
 
-" For now, everything is designed for only ONE tmux session at a time
+" For now, everything is designed for only ONE tmux session at a time.
+" TODO: extend this to `n` sessions maybe?
 
 " Absolute path to this plugin: http://stackoverflow.com/a/18734557/3719101
 let s:path = fnamemodify(resolve(expand('<sfile>:p')), ':h:h')
