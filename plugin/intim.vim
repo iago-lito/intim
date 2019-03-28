@@ -895,7 +895,7 @@ function! s:SendLine() "{{{
       let line = s:RemovePythonDoctestPrompt(line)
       let line = s:RemoveIndentation(line) " + remove indentation for python
     elseif s:language == 'R'
-      let text = s:RemoveRDoctestPrompt(text)
+      let text = s:RemoveRDoctestPrompt(line)
     endif
     call s:Send(line)
   endif
