@@ -896,17 +896,17 @@ function! s:SendLine() "{{{
   " if the line is empty, send an empty command
   if empty(line)
     call s:SendEnter()
-  else
-    " Remove doctests prompts:
-    " TODO: make it optional
-    if s:pythonBased(s:language)
-      let line = s:RemovePythonDoctestPrompt(line)
-      let line = s:RemoveIndentation(line) " + remove indentation for python
-    elseif s:language == 'R'
-      let text = s:RemoveRDoctestPrompt(line)
-    endif
-    call s:Send(line)
+    return
   endif
+  " Remove doctests prompts:
+  " TODO: make it optional
+  if s:pythonBased(s:language)
+    let line = s:RemovePythonDoctestPrompt(line)
+    let line = s:RemoveIndentation(line) " + remove indentation for python
+  elseif s:language == 'R'
+    let line = s:RemoveRDoctestPrompt(line)
+  endif
+  call s:Send(line)
 endfunction
 "}}}
 " Small preprocessing:
@@ -1759,7 +1759,7 @@ function! s:RemoveRDoctestPrompt(line) "{{{
   if match(a:line, commentSign) > -1
       return substitute(a:line, commentSign, '', '')
   endif
-  return line
+  return a:line
 endfunction
 "}}}
 function! IntimR()
