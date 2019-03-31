@@ -778,11 +778,35 @@ endfunction
 
 "}}}
 
+" Read data from the session.
+" Capture last n lines in the output:
+function! s:CapturePane(max, ...) "{{{
+  " Get tmux pane height:
+  let height=system("tmux display -p -t " . s:sname() . "'#{pane_width}'")
+  " Get into scrolled-off lines if height is not enough.
+  " TODO: handle empty lines when the terminal is not full X\
+  let cmd="tmux capture-pane -t " . s:sname() . " -p"
+  " NOTE: due to line-wrapping, this max be more scrolled-off than needed.
+  " Never mind, as long as enough lines are captured.
+  if height < a:max
+    let cmd=cmd . "S -" . (a:max - height)
+  endif
+  " Here are the last `max` lines printed in this pane.
+  let cmd = cmd . " | tail -n " . a:max
+  " If pipe commands are provided, append them to the command
+  for pipe in a:000
+    let cmd = cmd . " | " . pipe
+  endfor
+  return system(cmd)
+endfunction
+"}}}
+
+
 " Check whether debugging is going on "{{{
 function! s:IsDebugMode() "{{{
   " Do this by parsing current prompt in tmux session :P
   " Retrieve last tmux line: https://unix.stackexchange.com/a/168384/87656 :)
-  let line = system("tmux capture-pane -pt ".s:sname()." | grep . | tail -n 1")
+  let line = s:CapturePane(1)
   " Test if for common debug prompts :)
   if s:pythonBased(s:language)
     return match(line, '(Pdb)') >= 0
@@ -794,7 +818,6 @@ function! s:IsDebugMode() "{{{
   return 0
 endfunction
 "}}}
-
 
 "}}}
 
@@ -1905,62 +1928,196 @@ augroup end
 " Add breakpoints without leaving Intim :)
 let s:breakpoints = {} " {'filename:lineno': id}
 let s:bk_highest_id = 0 " like gdb, keep going up forever, don't recycle ids.
-function! s:SetBreakpoint() "{{{
+
+function! s:SetBreakpoint(...) "{{{
   if !s:IsDebugMode()
     echo "Intim seems not in debug mode."
     return
   endif
-  " Retrieve current line number
-  let n = line('.')
-  let filename = expand('%:p')
+  " If no args provided, get them from current cursor position:
+  if a:0
+    " Easy case, they are given.
+    let [filename, n, id, send] = a:000
+    " Filename: file to set the breakpoint in.
+    " n: line number
+    " id: breakpoint id
+    " send: whether to ask (gdb) for breakpoint creation or not.
+  else
+    " Or, fetch them ourselves..
+    " Current line number
+    let n = line('.')
+    " Current filename
+    let filename = expand('%:p')
+    " Create new id.
+    let id = s:bk_highest_id + 1
+    let s:bk_highest_id = id
+    " .. then recursive call with the arguments. Do create in this case.
+    call s:SetBreakpoint(filename, n, id, 1)
+    return
+  endif
   let key = filename . ':' . n
-  " Stop if already there.. (gdb) supports this (not sure why), not Intim for now.
-  " The reason is that it would sometimes require asking user 'which breakpoint
-  " to delete?' on delete, and this is too much complicated for a weird feature.
-  " .. I think.
+  " Stop if breakpoint already there.. (gdb) supports this (not sure why), not
+  " Intim for now. The reason is that it would sometimes require asking user
+  " 'which breakpoint to delete?' on delete, and this is too much complicated
+  " for a weird feature. .. I think.
   if has_key(s:breakpoints, key)
     echo "Breakpoint already here."
     return
   endif
-  " Create it.
-  let id = s:bk_highest_id + 1
+  " Record it.
   let s:breakpoints[key] = id
-  let s:bk_highest_id = id
   " Mark it.
   exec "sign place ".s:bk_prefix().id." line=".n." name=breakpoint file=".filename
-  " And send breakpoint of course.
-  call s:DebugCommand('b ' . filename . ':' . n)
+  " And actually create in (gdb) if asked.
+  if send
+    call s:DebugCommand('b ' . filename . ':' . n)
+  endif
 endfunction
 "}}}
-function! s:DeleteBreakpoint() "{{{
+
+function! s:DeleteBreakpoint(...) "{{{
+  " TODO: factorize this with a macro.
   if !s:IsDebugMode()
     echo "Intim seems not in debug mode."
     return
   endif
-  " Retrieve current line number
-  let n = line('.')
-  let filename = expand('%:p')
-  let key = filename . ':' . n
-  " Find its id:
-  let id = get(s:breakpoints, key, 'nope')
-  if id == 'nope'
-    echo "No breakpoint found on this line."
+  " Arg processing logic, mostly duplicated from s:SetBreakpoint()
+  if a:0
+    let [filename, n, id, send] = a:000
+    let key = filename . ':' . n
+  else
+    let n = line('.')
+    let filename = expand('%:p')
+    " Find its id:
+    let key = filename . ':' . n
+    let id = get(s:breakpoints, key, 'nope')
+    if id == 'nope'
+      echo "No breakpoint found on this line."
+      return
+    endif
+    call s:DeleteBreakpoint(filename, n, id, 1)
     return
   endif
+  " Unrecord it.
   unlet s:breakpoints[key]
   " Unmark it.
   exec "sign unplace ".s:bk_prefix().id." file=".filename
-  " And delete. of course.
-  call s:DebugCommand('delete '.id)
+  " And actually delete from (gdb) it asked.
+  if send
+    call s:DebugCommand('delete '.id)
+  endif
 endfunction
 "}}}
-" HERE: now try to keep (gdb) and Intim in sync:
-"   - if (gdb) is restarted, clear all breakpoints.
-"   - if Intim is restarted, read all breakpoints from tmux? Without asking
-"   user? hm, don't like it.
-"   - maybe run an internal s:SyncBreakPoints() each time `info b` is send,
-"   instead. This is less invasive, and it'll allow easy on-demand hand-sync of
-"   breakpoints.
+
+" Now try to keep (gdb) and Intim in sync:
+"   The idea, in order not to invade user with unwanted commands sent to (gdb),
+"   is to an internal sync of breakpoints each time `info b` is sent by user.
+
+function! s:ResetBreakpoints(info) "{{{
+  " Parse the output of `(gdb) info b` output to reset all breakpoints.
+  " First, clear all.
+  for [k, id] in items(s:breakpoints)
+    let [filename, lineno] = split(k, ':')
+    " But don't ask for actual (gdb) deletion.
+    call s:DeleteBreakpoint(filename, lineno, id, 0)
+  endfor
+  " Then, reset all. And don't forget to also reset the max id.
+  let s:bk_highest_id = 0
+  for [id, filename, lineno] in a:info
+    " But don't ask for actual (gdb) creation.
+    if id > s:bk_highest_id
+      let s:bk_highest_id = 0
+    endif
+    call s:SetBreakpoint(filename, lineno, id, 0)
+  endfor
+endfunction
+"}}}
+
+function! s:GdbInfoBreakpoints() "{{{
+  " Send `info b` to gdb, then retrieve the output to refresh all breakpoints.
+  call IntimDebugCommand('info b')
+  sleep 100m " wait a little for the command to finish.
+  " Ask for much lines, and raise an error if the start line is not found.
+  " Make this number large because (gdb) output lines may be wrapped if the pane
+  " width is small. This makes the number of required lines climb up.
+  let ceiling = 256 " User wouldn't use this many breakpoints, would they?
+
+  " Perl-parse captured lines to detect the last interesting bit containing
+  " breakpoint informations.
+  " Build the regex. Watch the unknown line wrapping!
+  let header = ['Num', 'Type', 'Disp', 'Enb', 'Address', 'What']
+  let r1 = []
+  for h in header
+    " Each character *may* be followed by a newline because of wrapping.
+    call add(r1, join(split(h, '\zs'), '\n?'))
+  endfor
+  let r1 = 's/.*\n' . join(r1, '\s+') . '\n(.*\n)\(gdb\)/\1/gs'
+
+  " Now perl-parse these lines to extract the interesting id/file/line
+  " information we need. Watch the wrapping! (basically insert `\n?` everywhere)
+  " ASSUMPTION: the pane width at least large enough so the breakpoint id and
+  " the line number are not wrapped.
+  " If they ever turn out to be, then the parsing would be impossible, because
+  " a line ends with a line number while the next line starts with a breakpoint
+  " id, so it is not possible to decide which digits belong to the line number
+  " and which ones belong to the breakpoint id in general :\
+  " Should this ever happen, either find a way to resize your tmux pane (for it
+  " either means that it's really small or you have really big line
+  " numbers/breakpoint ids), OR change this whole refresh information source.
+  let r2=''
+  let r2=r2.'s/(\d+)\s+(.*?\s+){3}' " Breakpoint id and 3 other pieces of data.
+  let r2=r2.'0\n?x[\da-z\n]+\s+'    " Address location.
+  let r2=r2.'i\n?n\s+.*?\s+'        " `in` + namespace path to function
+  let r2=r2.'a\n?t\s+(.*?):(\d+)'   " `at` + filename:lineno
+  let ignore='breakpoint already hit times' " This is sometimes added: ignore.
+  let ig = [] " Prepare unwrapping all those words.
+  for w in split(ignore)
+    call add(ig, join(split(w, '\zs'), '\n?'))
+  endfor
+  let ig = join(ig[0:2], '\s+') . '\s+\d+\s+' . ig[3] " Insert number of times.
+  let r2=r2.'(\n\s+'.ig.'?)?' " Ignore all this line (+optional s at `times`).
+  " Replace with only relevant info, with a split marker likely not to be found
+  " in any user filename.
+  let r2=r2.'/\1 :intimSplit: \3 :intimSplit: \4\n/gs'
+  " Retrieve lines and parse!
+  let info = s:CapturePane(ceiling, "perl -0pe '" . r1 . "'"
+                                \ , "perl -0pe '" . r2 . "'")
+  " The info is here, it just needs splitting.
+  let res = []
+  for i in split(info, '\n')
+    if i != ''
+      let [id, filename, lineno] = split(i, ' :intimSplit: ')
+      " Try to find full path for this filename.
+      " ASSUMPTION: source root is src, and the last src/ in current path is
+      " this very folder.
+      " TODO: relax.
+      let end_path = []
+      while filename != '.'
+        let tail = fnamemodify(filename, ':t')
+        if tail == 'src'
+          break
+        endif
+        call add(end_path, tail)
+        let filename = fnamemodify(filename, ':h')
+      endwhile
+      " Now rebuild the whole filename based on current absolute path to src/
+      let start_path = expand('%:p:h')
+      while start_path != '.'
+        let tail = fnamemodify(start_path, ':t')
+        if tail == 'src'
+          break
+        endif
+        let start_path = fnamemodify(start_path, ':h')
+      endwhile
+      let filename = start_path . '/' . join(reverse(end_path), '/')
+      call add(res, [id, filename, lineno])
+    endif
+  endfor
+  call s:ResetBreakpoints(res)
+
+endfunction
+"}}}
+
 function IntimGdb()
 
     sign define breakpoint text=● texthl=Special
@@ -1975,6 +2132,7 @@ function IntimGdb()
           \ 'r',
           \ 's',
           \ 'where',
+          \ 'y',
           \]
     for cmd in commands
       let first_letter = toupper(cmd[0])
@@ -1987,7 +2145,7 @@ function IntimGdb()
     endfor
 
     call s:declareMap('n', 'GdbInfoBreakpoints',
-          \ ':call IntimDebugCommand("info b")<cr>',
+          \ ':call <SID>GdbInfoBreakpoints()<cr>',
           \ ',ib')
 
     call s:declareMap('n', 'GdbSetBreakpoint',
