@@ -1851,19 +1851,20 @@ function! s:CompileTex(args) "{{{
               \ . output
     elseif option == 'clean'
         " every common latex garbage one may wish to get rid of
-        let cmd = "rm -f " . filename . ".out && "
-              \ . "rm -f " . filename . ".aux && "
-              \ . "rm -f " . filename . ".blg && "
-              \ . "rm -f " . filename . ".log && "
-              \ . "rm -f " . filename . "-blx.bib && "
-              \ . "rm -f " . filename . ".toc && "
-              \ . "rm -f " . filename . ".xml && "
-              \ . "rm -f " . filename . ".bcf && "
-              \ . "rm -f " . filename . ".bbl && "
-              \ . "rm -f " . filename . ".nav && "
-              \ . "rm -f " . filename . ".snm && "
-              \ . "rm -f " . filename . ".run.xml && "
-              \ . "rm -rf figure"
+        let cmd = 'rm -f ' . filename . '.out && '
+              \ . 'rm -f ' . filename . '.aux && '
+              \ . 'rm -f ' . filename . '.blg && '
+              \ . 'rm -f ' . filename . '.log && '
+              \ . 'rm -f ' . filename . '-blx.bib && '
+              \ . 'rm -f ' . filename . '.toc && '
+              \ . 'rm -f ' . filename . '.xml && '
+              \ . 'rm -f ' . filename . '.bcf && '
+              \ . 'rm -f ' . filename . '.bbl && '
+              \ . 'rm -f ' . filename . '.nav && '
+              \ . 'rm -f ' . filename . '.snm && '
+              \ . 'rm -f ' . filename . '.run.xml && '
+              \ . 'rm -f ' . filename . '.synctex\(busy\) && '
+              \ . 'rm -rf figure'
     else
         echoe "Intim: CompileTex does not know option '" . option . "'!"
     endif
