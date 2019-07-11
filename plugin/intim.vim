@@ -1831,23 +1831,29 @@ function! s:CompileTex(args) "{{{
     " echo colored result
     let output = " && echo '\\033[32m \ndone.\n\\033[0m' "
                \ " || echo '\\033[31m \nfailed.\n\\033[0m' "
+    " after the operation, list files to see what happened
+    let ls = " && ls -lah"
     if option == 'full'
         let cmd = pdflatexcmd . filename . ".tex"
               \ . " && biber " . filename
               \ . " && " . pdflatexcmd . filename . ".tex"
+              \ . ls
               \ . output
     elseif option == 'twice'
         let cmd = pdflatexcmd . filename . ".tex"
               \ . " && " . pdflatexcmd . filename . ".tex"
+              \ . ls
               \ . output
     elseif option == 'lncs'
         let cmd = pdflatexcmd . filename . ".tex"
               \ . " && bibtex " . filename
               \ . " && " . pdflatexcmd . filename . ".tex"
               \ . " && " . pdflatexcmd . filename . ".tex"
+              \ . ls
               \ . output
     elseif option == 'fast'
         let cmd = pdflatexcmd . filename . ".tex"
+              \ . ls
               \ . output
     elseif option == 'clean'
         " every common latex garbage one may wish to get rid of
@@ -1865,11 +1871,10 @@ function! s:CompileTex(args) "{{{
               \ . 'rm -f ' . filename . '.run.xml && '
               \ . 'rm -f ' . filename . '.synctex\(busy\) && '
               \ . 'rm -rf figure'
+              \ . ls
     else
         echoe "Intim: CompileTex does not know option '" . option . "'!"
     endif
-    " after the operation, list files to see what happened
-    let cmd = cmd . " && ls -lah"
     call s:Send(cmd)
 endfunction
 "}}}
