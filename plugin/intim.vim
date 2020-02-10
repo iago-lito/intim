@@ -1870,6 +1870,7 @@ function! s:CompileTex(args) "{{{
               \ . 'rm -f ' . filename . '.snm && '
               \ . 'rm -f ' . filename . '.run.xml && '
               \ . 'rm -f ' . filename . '.synctex\(busy\) && '
+              \ . 'rm -f ' . filename . '.synctex.gz && '
               \ . 'rm -rf figure'
               \ . ls
     else
