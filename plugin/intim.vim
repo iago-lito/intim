@@ -700,6 +700,7 @@ function! s:LaunchTmux() "{{{
     let tmuxCommand = substitute(s:tmux(), "<sessionName>", s:sname(), "g")
     " Replace the <tmux> placeholder with actual tmux command.
     let launchCommand = substitute(term, "<tmux>", tmuxCommand, "g")
+    echom launchCommand
     " send the command
     call s:System(launchCommand)
 endfunction
@@ -939,7 +940,23 @@ endfunction
 "}}}
 " Send the current word to the session.
 function! s:SendWord() "{{{
+  if !s:pythonBased(s:language)
     call s:Send(expand('<cword>'))
+  else
+    " In the python case, go fetch back a little for the whole dotted path.
+    " (does not work accross line ends or method calls)
+    let original_pos = getpos('.')
+    let word_length = len(expand('<cword>'))
+    execute "normal! viw\<esc>"
+    let path_end = getpos('.')
+    execute "normal! l?\\w\\+\\(\\s*\\.\\s*\\w\\+\\s*\\)*\<cr>"
+    let path_start = getpos('.')
+    execute "normal! v"
+    call setpos('.', path_end)
+    execute 'normal! "*y'
+    call setpos('.', original_pos)
+    call s:Send(@*)
+  endif
 endfunction
 "}}}
 " Retrieve current selection content.
