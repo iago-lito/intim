@@ -940,8 +940,13 @@ endfunction
 "}}}
 " Send the current word to the session.
 function! s:SendWord() "{{{
+    call s:Send(s:CleverWord())
+endfunction
+function! s:CleverWord()
+  " Retrieve the word under cursor.. or better depending on the language.
+  " Only python featured for now.
   if !s:pythonBased(s:language)
-    call s:Send(expand('<cword>'))
+    return expand('<cword>')
   else
     " In the python case, go fetch back a little for the whole dotted path.
     " (does not work accross line ends or method calls)
@@ -955,7 +960,7 @@ function! s:SendWord() "{{{
     call setpos('.', path_end)
     execute 'normal! "*y'
     call setpos('.', original_pos)
-    call s:Send(@*)
+    return @*
   endif
 endfunction
 "}}}
@@ -1512,7 +1517,7 @@ call s:declareMap('n', 'SendAll',
 
 " Get help about the  word under cursor
 call s:declareMap('n', 'GetHelpWord',
-      \ ":call <SID>GetHelp(expand('<cword>'))<cr>",
+      \ ":call <SID>GetHelp(<SID>CleverWord())<cr>",
       \ "<F1>")
 " Get help about the selection
 call s:declareMap('v', 'GetHelpSelection',
