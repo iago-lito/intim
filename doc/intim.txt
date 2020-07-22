@@ -1,4 +1,4 @@
-*intim.txt*                       Version 1.0            Last change: 2019-03-28
+*intim.txt*                       Version 1.0            Last change: 2020-07-22
 
                                     Intim
 
@@ -831,6 +831,13 @@ Note: as the time of writing, these options are not much customizable. Your
 may create your own from scratch by making a good use of
 |Intim_constantExpression| and |IntimSend| functions. Do not hesitate visiting
 the repo and ask for features if you need more.
+
+You may want something special to happen depending on the success of TeX
+compilation. For this, use the following two options. By default, intim just
+prints out a colored message. >
+
+    let g:intim_texSuccessCommand = "echo '\\033[32m \ndone.\n\\033[0m'"
+    let g:intim_texFailureCommand = "echo '\\033[31m \nfailed.\n\\033[0m'"
 
 ==============================================================================
 12. License                                                      *intim-license*

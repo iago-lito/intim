@@ -191,6 +191,13 @@ call s:declareOption('g:intim_openPdf_command', "'evince * &> /dev/null &'",
 " TODO: document.
 call s:declareOption('g:intim_breakpointPrefix', "12", 's:bk_prefix')
 
+" Something to execute depending on the success of LaTeX compilation command.
+" (declare default command strings in separated variables to avoid complicated escapes)
+let s:texPrintDone = "echo '\\033[32m \ndone.\n\\033[0m'"
+let s:texPrintFailed = "echo '\\033[31m \nfailed.\n\\033[0m'"
+call s:declareOption('g:intim_texSuccessCommand', "s:texPrintDone", 's:texSuccessCommand')
+call s:declareOption('g:intim_texFailureCommand', "s:texPrintFailed", 's:texFailureCommand')
+
 " Check if tempfiles can be written to or create'em
 function! s:CheckFile(file) "{{{
     if !filewritable(a:file)
@@ -1850,9 +1857,8 @@ function! s:CompileTex(args) "{{{
     " TODO: make the compilation command more customizable, or use a third tool
     " that guesses the right command. I've heard this exists, right?
     let pdflatexcmd = "pdflatex -synctex=1 --shell-escape --halt-on-error "
-    " echo colored result
-    let output = " && echo '\\033[32m \ndone.\n\\033[0m' "
-               \ " || echo '\\033[31m \nfailed.\n\\033[0m' "
+    " Do something user-defined depending on compilation success.
+    let output = " && (" . s:texSuccessCommand() . ") || (" . s:texFailureCommand() . ") "
     " after the operation, list files to see what happened
     let ls = " && ls -lah"
     if option == 'full'
