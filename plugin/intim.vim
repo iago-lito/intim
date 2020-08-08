@@ -1551,6 +1551,7 @@ function! s:CheckAndDeclare(type, map, effect) "{{{
   let snr = matchstr(expand('<sfile>'), '\zs<SNR>\d\+_\zeCheckAndDeclare$')
   let actualEffect = substitute(a:effect, '<SID>', snr, 'g')
   if empty(already)
+    echom a:type . "noremap <unique> <buffer> " . a:map . ' ' . a:effect
     execute a:type . "noremap <unique> <buffer> " . a:map . ' ' . a:effect
   elseif already != actualEffect
     " TODO: think better about cases where such a message is wanted.
@@ -1620,19 +1621,22 @@ function! s:DefineHeadedExpression(shortcut, head) "{{{
   " define actual sender mappings
   call s:DefineHotKey(a:shortcut, a:head . '(*)')
 
+  " Escape pipes before edit bonuses so they are not interpreted as vimscript.
+  let escaped = substitute(a:head, "|", "\\\\|", 'g')
+
   " EditBonus: one insertion map working as a small snippet
   let map = s:get_hotkeys_edit_ileader() . a:shortcut
-  let effect = a:head . "()<left>"
+  let effect = escaped . "()<left>"
   call s:CheckAndDeclare('i', map, effect)
 
   " EditBonus: wrap a word in the script in normal mode
   let map = s:get_hotkeys_edit_nleader() . a:shortcut
-  let effect = "viwv:call <SID>Wrap('" . a:head . "', '()')<cr>"
+  let effect = "viwv:call <SID>Wrap('" . escaped . "', '()')<cr>"
   call s:CheckAndDeclare('n', map, effect)
 
   " EditBonus: wrap a selection in the script in visual mode
   let map = s:get_hotkeys_edit_vleader() . a:shortcut
-  let effect = "<esc>:call <SID>Wrap('" . a:head . "', '()')<cr>"
+  let effect = "<esc>:call <SID>Wrap('" . escaped . "', '()')<cr>"
   call s:CheckAndDeclare('v', map, effect)
 
 endfunction
@@ -1645,19 +1649,22 @@ function! s:DefineLaTeXExpression(shortcut, head) "{{{
   " define actual sender mappings
   call s:DefineHotKey(a:shortcut, '\' . a:head . '{*}')
 
+  " Escape pipes before edit bonuses so they are not interpreted as vimscript.
+  let escaped = substitute(a:head, "|", "\\\\|", 'g')
+
   " EditBonus: one insertion map working as a small snippet
   let map = s:get_hotkeys_edit_ileader() . a:shortcut
-  let effect = '\' . a:head . "{}<left>"
+  let effect = '\' . escaped . "{}<left>"
   call s:CheckAndDeclare('i', map, effect)
 
   " EditBonus: wrap a word in the script in normal mode
   let map = s:get_hotkeys_edit_nleader() . a:shortcut
-  let effect = "viwv:call <SID>Wrap('\\" . a:head . "', '{}')<cr>"
+  let effect = "viwv:call <SID>Wrap('\\" . escaped . "', '{}')<cr>"
   call s:CheckAndDeclare('n', map, effect)
 
   " EditBonus: wrap a selection in the script in visual mode
   let map = s:get_hotkeys_edit_vleader() . a:shortcut
-  let effect = "<esc>:call <SID>Wrap('\\" . a:head . "', '{}')<cr>"
+  let effect = "<esc>:call <SID>Wrap('\\" . escaped . "', '{}')<cr>"
   call s:CheckAndDeclare('v', map, effect)
 
 endfunction
@@ -1670,20 +1677,23 @@ function! s:DefinePrefixedExpression(shortcut, prefix) "{{{
   " define actual sender mappings
   call s:DefineHotKey(a:shortcut, a:prefix . '*')
 
+  " Escape pipes before edit bonuses so they are not interpreted as vimscript.
+  let escaped = substitute(a:prefix, "|", "\\\\|", 'g')
+
   " EditBonus: one insertion map working as a small snippet
   let map = s:get_hotkeys_edit_ileader() . a:shortcut
-  let effect = a:prefix
+  let effect = escaped
   call s:CheckAndDeclare('i', map, effect)
 
   " EditBonus: prefix a word in the script in normal mode
   let map = s:get_hotkeys_edit_nleader() . a:shortcut
-  let effect = "viwovi" . a:prefix . '<esc>'
+  let effect = "viwovi" . escaped . '<esc>'
   call s:CheckAndDeclare('n', map, effect)
 
   " EditBonus: prefix a selection in the script in visual mode
   let map = s:get_hotkeys_edit_vleader() . a:shortcut
   let effect = "<esc>:call setpos('.', getpos(\"'<\"))<cr>i"
-        \ . a:prefix . '<esc>'
+        \ . escaped . '<esc>'
   call s:CheckAndDeclare('v', map, effect)
 
 endfunction
@@ -1697,20 +1707,23 @@ function! s:DefineConstantExpression(shortcut, constant) "{{{
   " TODO: this should escape '*'
   call s:DefineHotKey(a:shortcut, a:constant)
 
+  " Escape pipes before edit bonuses so they are not interpreted as vimscript.
+  let escaped = substitute(a:constant, "|", "\\\\|", 'g')
+
   " EditBonus: one insertion map working as a small snippet
   let map = s:get_hotkeys_edit_ileader() . a:shortcut
-  let effect = a:constant
+  let effect = escaped
   call s:CheckAndDeclare('i', map, effect)
 
   " EditBonus: insert constant before a word in the script in normal mode
   let map = s:get_hotkeys_edit_nleader() . a:shortcut
-  let effect = "viwovi" . a:constant . '<esc>'
+  let effect = "viwovi" . escaped . '<esc>'
   call s:CheckAndDeclare('n', map, effect)
 
   " EditBonus: insert constant before a selection in the script in visual mode
   let map = s:get_hotkeys_edit_vleader() . a:shortcut
   let effect = "<esc>:call setpos('.', getpos(\"'<\"))<cr>i"
-        \ . a:constant . '<esc>'
+        \ . escaped . '<esc>'
   call s:CheckAndDeclare('v', map, effect)
 
 endfunction
