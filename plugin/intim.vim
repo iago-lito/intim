@@ -1551,7 +1551,6 @@ function! s:CheckAndDeclare(type, map, effect) "{{{
   let snr = matchstr(expand('<sfile>'), '\zs<SNR>\d\+_\zeCheckAndDeclare$')
   let actualEffect = substitute(a:effect, '<SID>', snr, 'g')
   if empty(already)
-    echom a:type . "noremap <unique> <buffer> " . a:map . ' ' . a:effect
     execute a:type . "noremap <unique> <buffer> " . a:map . ' ' . a:effect
   elseif already != actualEffect
     " TODO: think better about cases where such a message is wanted.
