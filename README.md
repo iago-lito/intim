@@ -126,5 +126,5 @@ features, help in development, anything's good :)
 ## License
 
 This package is licensed under the [GPL v3
-license](http://www.gnu.org/copyleft/gpl.html). &copy; 2017 Intim contributors
+license](http://www.gnu.org/copyleft/gpl.html). &copy; 2020 Intim contributors
 
