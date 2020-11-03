@@ -120,6 +120,8 @@ endfunction
 "}}}
 
 " Prefix them all with Intim-
+call s:functionExport('LaunchSession' , 'IntimLaunchSession', 0)
+call s:functionExport('EndSession'    , 'IntimEndSession', 0)
 call s:functionExport('Send'          , 'IntimSend', 1)
 call s:functionExport('SendEnter'     , 'IntimSendEnter', 0)
 call s:functionExport('SendInterrupt' , 'IntimSendInterrupt', 0)

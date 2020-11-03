@@ -56,16 +56,18 @@ the code, share, provide feedback, fork or contribute ;)
 2. Starting Intim                                               *intim-starting*
                                                                 *intim-launch*
 
-Once your script file is opened in Vim, use >
+Once your script file is opened in Vim, use either >
 
     nmap <F10> <Plug>IntimLaunchSession
+    :call IntimLaunchSession()
 
 to launch a new `tmux` session and invoke your interpreter inside.
 
                                                                    *intim-end*
-To terminate the session, use >
+To terminate the session, use either >
 
     nmap <F2> <Plug>IntimEndSession
+    :call IntimEndSession()
 
 If you close Vim without terminating the session, it will just stay open and
 you may communicate with it again the next time you start Vim.
