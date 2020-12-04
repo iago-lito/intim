@@ -1,6 +1,6 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2019-03-28
-" Maintainer:   Iago-lito <iago.bonnici@gmail.com>
+" Last Change:	2020-12-04
+" Maintainer:   Iago-lito <iago-lito@etak>
 " License:      This file is placed under the GNU PublicLicense 3.
 
 " lines for handling line continuation, according to :help write-plugin<CR> "{{{
