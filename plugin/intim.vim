@@ -1902,6 +1902,8 @@ function! s:CompileTex(args) "{{{
         let cmd = 'rm -f ' . filename . '.out && '
               \ . 'rm -f ' . filename . '.aux && '
               \ . 'rm -f ' . filename . '.blg && '
+              \ . 'rm -f ' . filename . '.lot && '
+              \ . 'rm -f ' . filename . '.lof && '
               \ . 'rm -f ' . filename . '.log && '
               \ . 'rm -f ' . filename . '-blx.bib && '
               \ . 'rm -f ' . filename . '.toc && '
