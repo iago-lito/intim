@@ -1065,6 +1065,8 @@ function! s:sourceCommand(file) "{{{
         return "base::source('" . a:file . "')"
     elseif lang == 'psql'
         return "\\include '" . a:file . "';"
+    elseif lang == 'julia'
+        return 'include("' . a:file . '")'
     endif
     echoerr "Intim chunking does not support " . lang . " language yet."
     return ""
@@ -1603,7 +1605,11 @@ function! s:SendHotkey(shortcut, mode)
   endif
   " & needs to be escaped: see :help sub-replace-special
   let content = substitute(content, '&', '\\\&', 'g')
+  " naive/basic escaping of '\*'
+  let temp_sub = "<INTIM_ESCAPED_STAR>" " unlikely to conflict, right?.. right?
+  let expression = substitute(expression, '\\\*', temp_sub, 'g')
   let expression = substitute(expression, '*', content, 'g')
+  let expression = substitute(expression, temp_sub, '*', 'g')
 
   " and send that :)
   call s:Send(expression)
