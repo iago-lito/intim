@@ -317,10 +317,12 @@ Should you like to create your own sending mappings. Intims provides vim
 functions for that, feel free to use >
 
     call IntimSend('my command')
+    call IntimSendJust('my text without pressing enter')
     call IntimSendEnter()
+    call IntimSendSpace()
     call IntimSendInterrupt()
     call IntimSendEOF()
-    call IntimSendRaw('raw text ⚠ unescaped for tmux')
+    call IntimSendTmux('send raw tmux input')
 
 in any of your custom recipes.
                                                             *intim-autoindent*

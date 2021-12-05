@@ -123,8 +123,10 @@ endfunction
 call s:functionExport('LaunchSession' , 'IntimLaunchSession', 0)
 call s:functionExport('EndSession'    , 'IntimEndSession', 0)
 call s:functionExport('Send'          , 'IntimSend', 1)
-call s:functionExport('SendText'      , 'IntimSendRaw', 1)
+call s:functionExport('SendText'      , 'IntimSendTmux', 1)
+call s:functionExport('SendJust'      , 'IntimSendJust', 1)
 call s:functionExport('SendEnter'     , 'IntimSendEnter', 0)
+call s:functionExport('SendSpace'     , 'IntimSendSpace', 0)
 call s:functionExport('SendInterrupt' , 'IntimSendInterrupt', 0)
 call s:functionExport('SendEOF'       , 'IntimSendEOF', 0)
 call s:functionExport('SetLanguage'   , 'IntimSetLanguage', 1)
@@ -866,6 +868,11 @@ function! s:SendEOF() "{{{
     call s:SendText('c-d')
 endfunction
 "}}}
+" Or a simple space.
+function! s:SendSpace() "{{{
+    call s:SendText('SPACE')
+endfunction
+"}}}
 " Sneaky little escape tricks.
 function! s:HandleEscapes(text) "{{{
     " Escape the escape characters.
@@ -886,7 +893,7 @@ endfunction
 " send a neat command to the Tmuxed session. `command` is either:
 "   - a string, sent as a command, silent if empty
 "   - a list of strings, sent as successive commands, silent if empty
-function! s:Send(command) "{{{
+function! s:SendCommand(command, enter) "{{{
 
     " Recursive call for lists:
     if type(a:command) == type([])
@@ -917,11 +924,22 @@ function! s:Send(command) "{{{
         let text = '-l '''' "' . s:HandleEscapes(text) . '"'
         call s:SendText(text)
         " then "press ENTER"
-        call s:SendEnter()
+        if a:enter
+          call s:SendEnter()
+        endif
     endif
 
 endfunction
 "}}}
+
+" With enter at the end..
+function! s:Send(command)
+  call s:SendCommand(a:command, 1)
+endfunction
+" .. or without.
+function! s:SendJust(command)
+  call s:SendCommand(a:command, 0)
+endfunction
 
 " Senders:
 " Send the current script line to the session.
