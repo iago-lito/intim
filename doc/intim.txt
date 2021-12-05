@@ -320,6 +320,7 @@ functions for that, feel free to use >
     call IntimSendEnter()
     call IntimSendInterrupt()
     call IntimSendEOF()
+    call IntimSendRaw('raw text ⚠ unescaped for tmux')
 
 in any of your custom recipes.
                                                             *intim-autoindent*

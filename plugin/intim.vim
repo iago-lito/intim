@@ -123,6 +123,7 @@ endfunction
 call s:functionExport('LaunchSession' , 'IntimLaunchSession', 0)
 call s:functionExport('EndSession'    , 'IntimEndSession', 0)
 call s:functionExport('Send'          , 'IntimSend', 1)
+call s:functionExport('SendText'      , 'IntimSendRaw', 1)
 call s:functionExport('SendEnter'     , 'IntimSendEnter', 0)
 call s:functionExport('SendInterrupt' , 'IntimSendInterrupt', 0)
 call s:functionExport('SendEOF'       , 'IntimSendEOF', 0)
