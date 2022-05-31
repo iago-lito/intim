@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2020-12-04
+" Last Change:	2022-05-31
 " Maintainer:   Iago-lito <iago-lito@etak>
 " License:      This file is placed under the GNU PublicLicense 3.
 
@@ -702,6 +702,9 @@ function! s:LaunchTmux() "{{{
         " This is more difficult because xterm calls are blocking
         " the following solution is the best I have found so far :\
         let term = 'eval "nohup xterm -e ''<tmux>'' &" > /dev/null 2>&1'
+    elseif term == "alacritty"
+        " Also avoid blocking with alacritty.
+        let term = 'alacritty -e <tmux> &'
     elseif term !~ "<tmux>"
         " Then it must be the plain invocation name of the terminal, wild guess:
         let term = term . " -e '<tmux>'"
