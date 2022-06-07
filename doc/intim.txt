@@ -86,9 +86,12 @@ For instance, `"gnome-terminal"` is automatically reinterpreted as >
 
     let g:intim_terminal = "gnome-terminal -- <tmux>"
 
+`"alacritty"` as: >
+
+    let g:intim_terminal = "alacritty -e <tmux> &"
+
 and `"xterm"` as: >
 
-    let g:intim_terminal = "xterm"
     let g:intim_terminal = "eval \"nohup xterm -e '<tmux>' &\" > /dev/null 2>&1"
 
 For other terminal emulators, you may have to build the command yourself, or
