@@ -958,6 +958,8 @@ function! s:SendLine() "{{{
   if s:pythonBased(s:language)
     let line = s:RemovePythonDoctestPrompt(line)
     let line = s:RemoveIndentation(line) " + remove indentation for python
+  elseif s:language == 'julia'
+    let line = s:RemoveJuliaDoctestPrompt(line)
   elseif s:language == 'R'
     let line = s:RemoveRDoctestPrompt(line)
   endif
@@ -1104,8 +1106,15 @@ function! s:MinimalIndent(expr) "{{{
     " of the lines hasn't changed.
     let lines = split(a:expr, '\n')
     " First, if this is python and there are some, remove the doctest prompts!
+    let remove_doctest = 0
     if s:pythonBased(s:language)
         let pattern = '^\s*\(>>>\|\.\.\.\)'
+        let remove_doctest = 1
+    elseif s:language == 'julia'
+        let pattern = '^\s*\(julia>\)'
+        let remove_doctest = 1
+    end
+    if remove_doctest
         " Check for doctest prompt presence
         let doctest = 0
         for line in lines
@@ -1843,6 +1852,15 @@ augroup IntimPython
     " Only do this once
     autocmd FileType python autocmd! IntimPython
 augroup end
+"}}}
+
+" Special Julia corner {{{
+" Trim doctest prompt.
+function! s:RemoveJuliaDoctestPrompt(line) "{{{
+    let line = substitute(a:line, '^\s*julia>','', '')
+    return line
+endfunction
+"}}}
 "}}}
 
 " Special R corner {{{
