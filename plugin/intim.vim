@@ -1,5 +1,5 @@
 " Vim global plugin for interactive interface with interpreters: intim
-" Last Change:	2022-05-31
+" Last Change:	2022-09-28
 " Maintainer:   Iago-lito <iago-lito@etak>
 " License:      This file is placed under the GNU PublicLicense 3.
 
@@ -403,12 +403,20 @@ function! s:DefaultPythonSyntaxFunction()
     syntax match Special "[()\[\]{}\-\*+\/]"
 endfunction
 
-" Help highlighting
-" TODO: make sure those syntax file are neat and available
-call s:createLanguageOption('helpSyntax')
-call s:setDefaultOption_helpSyntax('default', "")
-call s:setDefaultOption_helpSyntax('python', "pydoc")
-call s:setDefaultOption_helpSyntax('R', "rdoc")
+" Temporary file to read help pages in.
+" Make it a language option so that e.g.
+" all user 'markdown' config triggers up when opening julia help.
+call s:createLanguageOption('tempHelpFile')
+let s:base_helpfile = s:path . '/tmp/help'
+call s:setDefaultOption_tempHelpFile('default', s:base_helpfile)
+call s:setDefaultOption_tempHelpFile('julia', s:base_helpfile . ".md")
+" In case nothing triggers or there is no common 'file extension' for help pages,
+" fallback to activating vim's filetype with the following option.
+call s:createLanguageOption('helpFileType')
+call s:setDefaultOption_helpFileType('default', "")
+call s:setDefaultOption_helpFileType('python', "pydoc")
+call s:setDefaultOption_helpFileType('R', "rdoc")
+call s:setDefaultOption_helpFileType('julia', "markdown")
 
 " Leaders for hotkeys "{{{
 " `,` for sending commands to interpreter, `;` to actually edit the script
@@ -506,7 +514,7 @@ let groups = [
             \ ['IntimPyBuiltin'   , 'Underlined'],
             \ ['IntimPyClass'     , 'Type'],
             \ ['IntimPyEnumType'  , 'Type'],
-            \ ['IntimPyEnumValue'  , 'Constant'],
+            \ ['IntimPyEnumValue' , 'Constant'],
             \ ['IntimPyFloat'     , 'Constant'],
             \ ['IntimPyFunction'  , 'Underlined'],
             \ ['IntimPyInstance'  , 'Identifier'],
@@ -1189,7 +1197,7 @@ function! s:GetHelp(topic) "{{{
     endif
 
     " security
-    let file = s:help()
+    let file = s:get_tempHelpFile()
     call s:CheckFile(file)
 
     " sink interpreter help page to the help file.. somehow
@@ -1218,7 +1226,7 @@ function! s:GetHelp(topic) "{{{
     " decorate it
     set buftype=nofile
     set readonly
-    execute "setlocal syntax=" . s:get_helpSyntax()
+    execute "setlocal filetype=" . s:get_helpFileType()
     " there usually are snippets in man pages, which it would be a shame not to
     " be able to use as yet another script:
     call s:SetLanguage(s:language)
@@ -1249,6 +1257,12 @@ function! s:SinkHelp(topic, file) "{{{
           \ "tools:::Rd2txt(utils:::.getHelpFile(as.character(help_file)))",
           \ "sink()",
           \ ""]
+    elseif s:language == 'julia'
+        let script = [
+            \ 'open("' . help . '", "w") do f ' .
+            \ '    write(f, string(@doc ' . a:topic . ')) ' .
+            \ 'end;',
+            \ '']
     else
         echoerr "Intim does not support " . s:language . " help yet."
     endif
