@@ -377,13 +377,20 @@ visually select the area you need help about, then use >
   nmap <F1> <Plug>GetHelpWord
   vmap <F1> <Plug>GetHelpSelection
 
-to get help. For now, this is only supported for `R` and `python` languages.
-Feel free to send presents to random developers so they get down to Intim repo
-and provide support for your favorite interpreter.
+to get help. For now, this is only supported for `R`, `python` and `julia`
+languages. Feel free to send presents to random developers so they get down to
+Intim repo and provide support for your favorite interpreter.
 
 Help information is temporarily buffered into an intim file: >
 
     let g:intim_tempHelp = '~/.vim/intim/tmp/help'
+
+To tweak the help filetype based on the language, use the following option.
+Default values are: >
+
+    call Intim_helpFileType("R", "rdoc")
+    call Intim_helpFileType("python", "pydoc")
+    call Intim_helpFileType("julia", "markdown")
 
 ==============================================================================
 8. Coloring                                                       *intim-colors*

@@ -403,15 +403,8 @@ function! s:DefaultPythonSyntaxFunction()
     syntax match Special "[()\[\]{}\-\*+\/]"
 endfunction
 
-" Temporary file to read help pages in.
-" Make it a language option so that e.g.
-" all user 'markdown' config triggers up when opening julia help.
-call s:createLanguageOption('tempHelpFile')
-let s:base_helpfile = s:path . '/tmp/help'
-call s:setDefaultOption_tempHelpFile('default', s:base_helpfile)
-call s:setDefaultOption_tempHelpFile('julia', s:base_helpfile . ".md")
-" In case nothing triggers or there is no common 'file extension' for help pages,
-" fallback to activating vim's filetype with the following option.
+" To get user features like syntax coloration activating on help pages,
+" activate vim's filetype with the following option.
 call s:createLanguageOption('helpFileType')
 call s:setDefaultOption_helpFileType('default', "")
 call s:setDefaultOption_helpFileType('python', "pydoc")
@@ -1197,7 +1190,7 @@ function! s:GetHelp(topic) "{{{
     endif
 
     " security
-    let file = s:get_tempHelpFile()
+    let file = s:help()
     call s:CheckFile(file)
 
     " sink interpreter help page to the help file.. somehow
