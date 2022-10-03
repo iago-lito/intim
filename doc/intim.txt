@@ -250,6 +250,13 @@ And here are direct shortcuts to invoke, exit or restart your interpreter: >
     nmap ,ii <Plug>IntimInvokeInterpreter
     nmap ,ex <Plug>IntimExitInterpreter
     nmap ,rs <Plug>IntimRestartInterpreter
+<
+
+Corresponding, respective functions calls: >
+
+    call IntimInvokeInterpreter()
+    call IntimExitInterpreter()
+    call IntimRestartInterpreter()
 
 ==============================================================================
 5. Passing commands                                              *intim-passing*
@@ -277,6 +284,13 @@ To send commands without navigating next, use >
     nmap c<space> <Plug>IntimStaticSendLine
     vmap ,<space> <Plug>IntimStaticSendChunk
     vmap ,<space> <Plug>IntimStaticSendSelection
+<
+
+Alternately, to navigate to the next line "by hand",
+using Intim's best guess for where the next line is: >
+
+    nmap <s-space> <Plug>IntimNextScriptLine
+
 <
                                                               *intim-send-all*
 
@@ -326,6 +340,12 @@ functions for that, feel free to use >
     call IntimSendInterrupt()
     call IntimSendEOF()
     call IntimSendTmux('send raw tmux input')
+    call IntimStaticSendLine() " Current line.
+    call IntimSendAll() " All lines one by one.
+    call IntimSendFile() " All file as one chunk.
+    call IntimStaticSendSelection() " All selected lines one by one.
+    call IntimStaticSendChunk() " Current selection as one chunk.
+    call IntimNextScriptLine() " Navigate to next executable line.
 
 in any of your custom recipes.
                                                             *intim-autoindent*

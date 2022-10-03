@@ -114,26 +114,35 @@ function! s:functionExport(internalname, name, nargs) "{{{
             echoerr "Cannot export functions with ".a:nargs." arguments yet."
         endif
     else
-        echom a:name . "already declared, Intim won't overwrite it."
+        echom a:name . " already declared, Intim won't overwrite it."
     endif
 endfunction
 "}}}
 
 " Prefix them all with Intim-
-call s:functionExport('LaunchSession' , 'IntimLaunchSession', 0)
-call s:functionExport('EndSession'    , 'IntimEndSession', 0)
-call s:functionExport('Send'          , 'IntimSend', 1)
-call s:functionExport('SendText'      , 'IntimSendTmux', 1)
-call s:functionExport('SendJust'      , 'IntimSendJust', 1)
-call s:functionExport('SendEnter'     , 'IntimSendEnter', 0)
-call s:functionExport('SendSpace'     , 'IntimSendSpace', 0)
-call s:functionExport('SendInterrupt' , 'IntimSendInterrupt', 0)
-call s:functionExport('SendEOF'       , 'IntimSendEOF', 0)
-call s:functionExport('SetLanguage'   , 'IntimSetLanguage', 1)
-call s:functionExport('GetLanguage'   , 'IntimGetLanguage', 0)
-call s:functionExport('CompileTex'    , 'IntimCompileTex', -1)
-call s:functionExport('IsDebugMode'   , 'IntimIsDebugMode', 0)
-call s:functionExport('DebugCommand'  , 'IntimDebugCommand', 1)
+call s:functionExport('CompileTex'         , 'IntimCompileTex'          , -1)
+call s:functionExport('DebugCommand'       , 'IntimDebugCommand'        , 1)
+call s:functionExport('EndSession'         , 'IntimEndSession'          , 0)
+call s:functionExport('ExitInterpreter'    , 'IntimExitInterpreter'     , 0)
+call s:functionExport('GetLanguage'        , 'IntimGetLanguage'         , 0)
+call s:functionExport('InvokeInterpreter'  , 'IntimInvokeInterpreter'   , 0)
+call s:functionExport('IsDebugMode'        , 'IntimIsDebugMode'         , 0)
+call s:functionExport('LaunchSession'      , 'IntimLaunchSession'       , 0)
+call s:functionExport('NextScriptLine'     , 'IntimNextScriptLine'      , 0)
+call s:functionExport('RestartInterpreter' , 'IntimRestartInterpreter'  , 0)
+call s:functionExport('Send'               , 'IntimSend'                , 1)
+call s:functionExport('SendAll'            , 'IntimSendAll'             , 0)
+call s:functionExport('SendChunk'          , 'IntimStaticSendChunk'     , 0)
+call s:functionExport('SendEOF'            , 'IntimSendEOF'             , 0)
+call s:functionExport('SendEnter'          , 'IntimSendEnter'           , 0)
+call s:functionExport('SendFile'           , 'IntimSendFile'            , 0)
+call s:functionExport('SendInterrupt'      , 'IntimSendInterrupt'       , 0)
+call s:functionExport('SendJust'           , 'IntimSendJust'            , 1)
+call s:functionExport('SendLine'           , 'IntimStaticSendLine'      , 0)
+call s:functionExport('SendSelection'      , 'IntimStaticSendSelection' , 0)
+call s:functionExport('SendSpace'          , 'IntimSendSpace'           , 0)
+call s:functionExport('SendText'           , 'IntimSendTmux'            , 1)
+call s:functionExport('SetLanguage'        , 'IntimSetLanguage'         , 1)
 
 " Some "languages" actually quite close, right?
 let s:python_based = ['python',
@@ -1527,6 +1536,10 @@ call s:declareMap('n', 'RestartInterpreter',
 call s:declareMap('n', 'SendLine',
       \ ":call <SID>SendLine()<cr>:call <SID>NextScriptLine()<cr>",
       \ "<space>")
+" Just jump.
+call s:declareMap('n', 'NextScriptLine',
+      \ ":call <SID>NextScriptLine()<cr>",
+      \ "<s-space>")
 " Send line static
 call s:declareMap('n', 'StaticSendLine',
       \ ":call <SID>SendLine()<cr>",
