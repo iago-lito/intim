@@ -1101,6 +1101,8 @@ function! s:sourceCommand(file) "{{{
         return "\\include '" . a:file . "';"
     elseif lang == 'julia'
         return 'include("' . a:file . '")'
+    elseif index(['zsh', 'bash'], s:language) >= 0
+        return 'source ' . shellescape(a:file)
     endif
     echoerr "Intim chunking does not support " . lang . " language yet."
     return ""
@@ -1936,7 +1938,7 @@ function! s:CompileTex(args) "{{{
     " retrieve filename and send full compilation command
     " TODO: make the compilation command more customizable, or use a third tool
     " that guesses the right command. I've heard this exists, right?
-    let pdflatexcmd = "pdflatex -synctex=1 --shell-escape --halt-on-error "
+    let pdflatexcmd = "lualatex -synctex=1 --shell-escape --halt-on-error "
     " Do something user-defined depending on compilation success.
     let output = " && (" . s:texSuccessCommand() . ") || (" . s:texFailureCommand() . ") "
     " after the operation, list files to see what happened
