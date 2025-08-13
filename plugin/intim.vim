@@ -1102,7 +1102,7 @@ function! s:sourceCommand(file) "{{{
     elseif lang == 'julia'
         return 'include("' . a:file . '")'
     elseif index(['zsh', 'bash'], s:language) >= 0
-        return 'source ' . shellescape(a:file)
+        return '( source ' . shellescape(a:file) . ' )'
     endif
     echoerr "Intim chunking does not support " . lang . " language yet."
     return ""
