@@ -3,15 +3,28 @@ local P = {}
 M.P = P -- Expose internals to ease debugging.
 
 --------------------------------------------------------------------------------
--- Internal mutable state. Configurable as "options".
+-- Internal mutable state, whose initialization is configurable as "options".
 
 M.state = {
   -- Where to store the data.
   data = vim.fs.joinpath(vim.fn.stdpath("data"), "intim"),
   tmux = {
-    terminal = nil,
+    -- The tmux session name to communicate within it.
     session = "Intim",
-    cmd = function(session) return "tmux -2 new -s " .. session end,
+    terminal = nil,
+    --- The system command to run tmux with the session name.
+    ---@type fun(session_name: string): string[]
+    start = function(name)
+      error(
+        "Missing tmux.cmd function "
+          .. "to explain how to obtain a tmux session with name "
+          .. vim.inspect(name)
+          .. "."
+      )
+    end,
+    --- The system command to kill the given tmux session.
+    ---@type fun(session_name: string): string[]
+    kill = function(name) return { "tmux", "kill-session", "-t", name } end,
   },
 }
 
@@ -22,6 +35,15 @@ function M.setup(o)
     if key == "data" then P.validate_or_create_dir("data", value) end
     return value
   end)
+end
+
+for _, verb in ipairs({ "start", "kill" }) do
+  M[verb] = function(session)
+    local tm = M.state.tmux
+    session = session or tm.session
+    local cmd = tm[verb](session)
+    vim.system(cmd)
+  end
 end
 
 --------------------------------------------------------------------------------
