@@ -7,28 +7,6 @@ M.P = P -- Expose internals to ease debugging.
 
 ---@alias Cmd string[]
 
-M.state = {
-  -- Where to store the data.
-  data = vim.fs.joinpath(vim.fn.stdpath("data"), "intim"),
-  tmux = {
-    -- The tmux session name to communicate within it.
-    session = "Intim",
-    --- The system command to run tmux with the session name.
-    ---@type fun(session_name: string): Cmd
-    start = function(name)
-      error(
-        "Missing tmux.cmd function "
-          .. "to explain how to obtain a tmux session with name "
-          .. vim.inspect(name)
-          .. "."
-      )
-    end,
-    --- The system command to kill the given tmux session.
-    ---@type fun(session_name: string): Cmd
-    kill = function(name) return { "tmux", "kill-session", "-t", name } end,
-  },
-}
-
 function M.setup(o)
   M.state = P.merge_tables(M.state, o, function(key, default, user)
     if not default then error("Unexpected option: " .. vim.inspect(key)) end
@@ -75,8 +53,83 @@ function M.send_command(cmd, session)
   M.send_enter(session)
 end
 
+--- Send line under cursor.
+---@type fun(session: string?)
+function M.send_line(session)
+  local line = vim.api.nvim_get_current_line()
+  local lang = P.get_current_lang()
+  local pr = M.state.line_preprocess
+  for _, passes in ipairs({ pr._before, pr[lang], pr._after }) do
+    if passes then
+      for _, pass in ipairs(passes) do
+        line = pass(line)
+      end
+    end
+  end
+  M.send_command(line, session)
+end
+
+--- Remove input leading whitespace.
+---@type fun(input: string): string
+function M.dedent(input) return input:match("^%s+(.*)") or input end
+
+-- Helper functions to remove doctest prompts.
+for ft, prefix in pairs({
+  python = { ">>>", "..." },
+  julia = "julia>",
+  r = "#'",
+}) do
+  local fn_name = "strip_" .. ft .. "_doctest_prompt"
+  if type(prefix) == "string" then
+    M[fn_name] = function(line) return P.remove_prefix(prefix, line) end
+  else
+    -- With several possible prefixes, attempt to remove until one matches.
+    M[fn_name] = function(line)
+      for _, p in ipairs(prefix) do
+        local stripped = P.remove_prefix(p, line)
+        if stripped ~= line then return stripped end
+      end
+      return line
+    end
+  end
+end
+
 --------------------------------------------------------------------------------
--- Utils.
+--- Init/default state.
+
+M.state = {
+  -- Where to store the data.
+  data = vim.fs.joinpath(vim.fn.stdpath("data"), "intim"),
+  tmux = {
+    -- The tmux session name to communicate within it.
+    session = "Intim",
+    --- The system command to run tmux with the session name.
+    ---@type fun(session_name: string): Cmd
+    start = function(name)
+      error(
+        "Missing tmux.cmd function "
+          .. "to explain how to obtain a tmux session with name "
+          .. vim.inspect(name)
+          .. "."
+      )
+    end,
+    --- The system command to kill the given tmux session.
+    ---@type fun(session_name: string): Cmd
+    kill = function(name) return { "tmux", "kill-session", "-t", name } end,
+  },
+  --- Functions applied to lines under cursor prior to them being sent by intim.
+  --- Grouped by filetype. Applied in order.
+  line_preprocess = {
+    _before = { M.dedent },
+    python = { M.strip_python_doctest_prompt },
+    julia = { M.strip_julia_doctest_prompt },
+    r = { M.strip_r_doctest_prompt },
+    _after = { M.dedent },
+  },
+}
+
+--------------------------------------------------------------------------------
+-- Private utils.
 
 ---@param name string
 ---@param path string
@@ -154,6 +207,24 @@ function P.is_dict(table)
     break
   end
   return not has_indices
+end
+
+--- Remove fixed prefix from string if present.
+---@type fun(prefix: string, input: string): string
+function P.remove_prefix(expected, input)
+  local n = #expected
+  local actual = input:sub(1, n)
+  return (actual == expected) and input:sub(n + 1, #input) or input
+end
+
+--- Obtain languages under cursor.
+-- https://github.com/nvim-treesitter/nvim-treesitter/discussions/6643#discussioncomment-9892537
+function P.get_current_lang()
+  local curline = vim.fn.line(".")
+  return vim.treesitter
+    .get_parser()
+    :language_for_range({ curline, 0, curline, 0 })
+    :lang()
 end
 
 return M
