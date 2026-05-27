@@ -5,15 +5,16 @@ M.P = P -- Expose internals to ease debugging.
 --------------------------------------------------------------------------------
 -- Internal mutable state, whose initialization is configurable as "options".
 
+---@alias Cmd string[]
+
 M.state = {
   -- Where to store the data.
   data = vim.fs.joinpath(vim.fn.stdpath("data"), "intim"),
   tmux = {
     -- The tmux session name to communicate within it.
     session = "Intim",
-    terminal = nil,
     --- The system command to run tmux with the session name.
-    ---@type fun(session_name: string): string[]
+    ---@type fun(session_name: string): Cmd
     start = function(name)
       error(
         "Missing tmux.cmd function "
@@ -23,7 +24,7 @@ M.state = {
       )
     end,
     --- The system command to kill the given tmux session.
-    ---@type fun(session_name: string): string[]
+    ---@type fun(session_name: string): Cmd
     kill = function(name) return { "tmux", "kill-session", "-t", name } end,
   },
 }
@@ -41,9 +42,37 @@ for _, verb in ipairs({ "start", "kill" }) do
   M[verb] = function(session)
     local tm = M.state.tmux
     session = session or tm.session
-    local cmd = tm[verb](session)
+    local cmd = tm[verb](session) ---@cast cmd Cmd
     vim.system(cmd)
   end
+end
+
+--- Escape and send text to the given (or current) tmux session.
+---@type fun(input: string, session: string?)
+function M.send(input, session)
+  local tm = M.state.tmux
+  session = session or tm.session
+  local cmd = { "tmux", "send", "-t", session, input }
+  vim.system(cmd)
+end
+
+--- Send special tmux codes.
+for verb, code in pairs({
+  enter = "ENTER",
+  space = "SPACE",
+  interrupt = "c-c",
+  eof = "c-d",
+  clear = "c-u",
+}) do
+  local fn_name = "send_" .. verb
+  M[fn_name] = function(session) M.send(code, session) end
+end
+
+--- Send then 'press enter'.
+---@type fun(input: string, session: string?)
+function M.send_command(cmd, session)
+  M.send(cmd, session)
+  M.send_enter(session)
 end
 
 --------------------------------------------------------------------------------
