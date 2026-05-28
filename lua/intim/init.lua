@@ -53,7 +53,7 @@ function M.send_command(cmd, session)
   M.send_enter(session)
 end
 
---- Send line under cursor.
+--- Send line under cursor (lexical).
 ---@type fun(session: string?)
 function M.send_line(session)
   local line = vim.api.nvim_get_current_line()
@@ -94,6 +94,60 @@ for ft, prefix in pairs({
   end
 end
 
+--- Send statement under cursor (semantic, using treesitter).
+---@type fun(session: string?)
+function M.send_statement(session)
+  local lang = P.get_current_lang()
+  local find_statement = M.state.ts_statement[lang]
+  if not find_statement then
+    P.err(
+      "No function provided to find TS statement for lang "
+        .. vim.inspect(lang)
+        .. "."
+    )
+    return
+  end
+  local node = find_statement()
+  if not node then return end -- Assume the funtion has already explained why.
+  -- Careful: the node starts *after* possible indentation on its first line.
+  local srow, scol, erow, ecol = node:range()
+  -- Extract anything before the node on the same line.
+  local prefix = vim.api.nvim_buf_get_text(0, srow, 0, srow, scol, {})[1]
+  local text
+  if prefix:match("^%s+$") then
+    -- If the prefix is indentation, dedent subsequent lines by the same amount.
+    local lines = vim.api.nvim_buf_get_text(0, srow, scol, erow, ecol, {})
+    for _, line in ipairs(lines) do
+      text = (text and text .. "\n" or "") .. P.remove_prefix(prefix, line)
+    end
+  else
+    -- Otherwise just use the node text as-is.
+    text = vim.treesitter.get_node_text(node, 0)
+  end
+  M.send_command(text, session)
+end
+
+--- Implement for lua.
+---@type fun():TSNode?
+function M.lua_statement()
+  -- Any node directly descending from 'block' or 'chunk'.
+  local node = vim.treesitter.get_node()
+  if not node then
+    P.err("No TSNode found at given location.")
+    return
+  end
+  while true do
+    local parent = node:parent()
+    if not parent then
+      P.err("Root reached without finding a statement.")
+      return
+    end
+    local t = parent:type()
+    if t == "block" or t == "chunk" then return node end
+    node = parent
+  end
+end
+
 --------------------------------------------------------------------------------
 --- Init/default state.
 
@@ -125,6 +179,10 @@ M.state = {
     julia = { M.strip_julia_doctest_prompt },
     r = { M.strip_r_doctest_prompt },
     _after = { M.dedent },
+  },
+  --- Use to find tree-sitter statements/instructions to be passed to intim.
+  ts_statement = {
+    lua = M.lua_statement,
   },
 }
 
@@ -226,5 +284,8 @@ function P.get_current_lang()
     :language_for_range({ curline, 0, curline, 0 })
     :lang()
 end
+
+-- Display error message, usually prior to early returning.
+function P.err(mess) vim.api.nvim_echo({ { mess } }, false, { err = true }) end
 
 return M
