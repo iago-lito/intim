@@ -25,12 +25,25 @@ for _, verb in ipairs({ "start", "kill" }) do
   end
 end
 
---- Escape and send text to the given (or current) tmux session.
+--- Send text to the given (or current) tmux session.
 ---@type fun(input: string, session: string?)
 function M.send(input, session)
   local tm = M.state.tmux
   session = session or tm.session
   local cmd = { "tmux", "send", "-t", session, input }
+  vim.system(cmd)
+end
+
+--- Paste text to the given (or current) tmux session.
+--- (better handle of line breaks with paste-brackets inserted)
+---@type fun(input: string, session: string?, buffer: string?)
+function M.paste(input, session, buffer)
+  local tm = M.state.tmux
+  session = session or tm.session
+  buffer = buffer or tm.buffer
+  local cmd = { "tmux", "set-buffer", "-t", session, "-b", buffer, input }
+  vim.system(cmd)
+  cmd = { "tmux", "paste-buffer", "-t", session, "-b", buffer, "-dp" }
   vim.system(cmd)
 end
 
@@ -49,7 +62,7 @@ end
 --- Send then 'press enter'.
 ---@type fun(input: string, session: string?)
 function M.send_command(cmd, session)
-  M.send(cmd, session)
+  M.paste(cmd, session)
   M.send_enter(session)
 end
 
@@ -110,27 +123,60 @@ function M.send_statement(session)
   local node = find_statement()
   if not node then return end -- Assume the funtion has already explained why.
   -- Careful: the node starts *after* possible indentation on its first line.
+  -- Remove that indentation from successive lines.
   local srow, scol, erow, ecol = node:range()
-  -- Extract anything before the node on the same line.
   local prefix = vim.api.nvim_buf_get_text(0, srow, 0, srow, scol, {})[1]
+  local _, _, indent = prefix:find("^(%s*)")
+  local lines = vim.api.nvim_buf_get_text(0, srow, scol, erow, ecol, {})
   local text
-  if prefix:match("^%s+$") then
-    -- If the prefix is indentation, dedent subsequent lines by the same amount.
-    local lines = vim.api.nvim_buf_get_text(0, srow, scol, erow, ecol, {})
-    for _, line in ipairs(lines) do
-      text = (text and text .. "\n" or "") .. P.remove_prefix(prefix, line)
-    end
-  else
-    -- Otherwise just use the node text as-is.
-    text = vim.treesitter.get_node_text(node, 0)
+  for _, line in ipairs(lines) do
+    text = (text and text .. "\n" or "") .. P.remove_prefix(indent, line)
   end
   M.send_command(text, session)
 end
 
---- Implement for lua.
----@type fun():TSNode?
-function M.lua_statement()
-  -- Any node directly descending from 'block' or 'chunk'.
+--- Finding 'statement' nodes work the same for lua or python:
+--- start from current node and climb up
+--- until a 'block' or toplevel node is reached,
+--- or until the node is field-named 'body:' etc.
+for lang, stop in pairs({
+  julia = { { "block", "source_file" }, {} },
+  lua = { { "block", "chunk" }, {} },
+  python = { { "block", "module" }, {} },
+  r = { { "program" }, { "body" } },
+}) do
+  local types, fields = unpack(stop)
+  M["find_" .. lang .. "_statement"] = function()
+    -- Any node directly descending from 'block' or 'chunk'.
+    vim.treesitter.get_parser(0):parse()
+    local node = vim.treesitter.get_node()
+    if not node then
+      P.err("No TSNode found at given location.")
+      return
+    end
+    while true do
+      local parent = node:parent()
+      if not parent then
+        P.err("Root reached without finding a statement.")
+        return
+      end
+      local type = parent:type()
+      for _, body in ipairs(types) do
+        if type == body then return node end
+      end
+      for _, field in ipairs(fields) do
+        for _, body in ipairs(parent:field(field)) do
+          if body:equal(node) then return node end
+        end
+      end
+      node = parent
+    end
+  end
+end
+
+-- For R, the statement is either a child of 'program' or a 'body:' child.
+function M.find_r_statement()
+  vim.treesitter.get_parser(0):parse()
   local node = vim.treesitter.get_node()
   if not node then
     P.err("No TSNode found at given location.")
@@ -142,8 +188,11 @@ function M.lua_statement()
       P.err("Root reached without finding a statement.")
       return
     end
-    local t = parent:type()
-    if t == "block" or t == "chunk" then return node end
+    local type = parent:type()
+    if type == "program" then return node end
+    for _, body in ipairs(parent:field("body")) do
+      if body:equal(node) then return node end
+    end
     node = parent
   end
 end
@@ -157,6 +206,8 @@ M.state = {
   tmux = {
     -- The tmux session name to communicate within it.
     session = "Intim",
+    -- The buffer used to pass/paste text.
+    buffer = "Intim",
     --- The system command to run tmux with the session name.
     ---@type fun(session_name: string): Cmd
     start = function(name)
@@ -182,7 +233,10 @@ M.state = {
   },
   --- Use to find tree-sitter statements/instructions to be passed to intim.
   ts_statement = {
-    lua = M.lua_statement,
+    lua = M.find_lua_statement,
+    python = M.find_python_statement,
+    r = M.find_r_statement,
+    julia = M.find_julia_statement,
   },
 }
 
