@@ -34,6 +34,14 @@ M.state = {
     ---@type fun(session_name: string): Cmd
     kill = function(name) return { "tmux", "kill-session", "-t", name } end,
   },
+  -- Command to invoke the interpreter right after the tmux session is launched.
+  -- Can also be a function, evaluated on invokation.
+  invoke = {
+    lua = "lua",
+    python = "python",
+    julia = "julia --project=.",
+    r = "R --no-save",
+  },
   --- Functions applied to lines under cursor prior to them being sent by intim.
   --- Grouped by filetype. Applied in order.
   line_preprocess = {
@@ -59,5 +67,11 @@ M.state = {
     },
   },
 }
+--------------------------------------------------------------------------------
+---Private.
+
+-- Display error message, usually prior to early returning,
+-- to avoid polluting user with a whole stacktrace.
+function P.err(mess) vim.api.nvim_echo({ { mess } }, false, { err = true }) end
 
 return M

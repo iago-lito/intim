@@ -97,12 +97,13 @@ return function(M, P)
   end
 
   --- Obtain languages under cursor.
-  -- https://github.com/nvim-treesitter/nvim-treesitter/discussions/6643#discussioncomment-9892537
+  --- https://github.com/nvim-treesitter/nvim-treesitter/discussions/6643#discussioncomment-9892537
+  --- Or fallback to filetype, or nothing.
+  ---@type fun(): string
   function P.get_current_lang()
     local curline = vim.fn.line(".")
-    return vim.treesitter
-      .get_parser()
-      :language_for_range({ curline, 0, curline, 0 })
-      :lang()
+    local parser = vim.treesitter.get_parser()
+    if not parser then return vim.o.ft end
+    return parser:language_for_range({ curline, 0, curline, 0 }):lang()
   end
 end

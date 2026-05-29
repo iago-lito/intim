@@ -4,6 +4,7 @@ return function(M, P)
   ------------------------------------------------------------------------------
   --- Public.
 
+  --- Merge user parameters into state starting point.
   function M.setup(o)
     M.state = P.merge_tables(M.state, o, function(key, default, user)
       if not default then error("Unexpected option: " .. vim.inspect(key)) end
@@ -13,13 +14,67 @@ return function(M, P)
     end)
   end
 
-  for _, verb in ipairs({ "start", "kill" }) do
-    M[verb] = function(session)
-      local tm = M.state.tmux
-      session = session or tm.session
-      local cmd = tm[verb](session) ---@cast cmd Cmd
-      vim.system(cmd)
+  --- Spawn tmux session.
+  ---@type fun(session: string?)
+  function M.start(session)
+    local tm = M.state.tmux
+    session = session or tm.session
+    if P.is_session_open(session) then
+      P.err("Tmux session " .. vim.inspect(session) .. " already open.")
+      return
     end
+    -- Request tmux session.
+    local start = tm["start"](session)
+    vim.system(start)
+    -- Wait until it's ready.
+    local wait = 500 -- ms.
+    local max = 5000 -- ms.
+    local acc = 0
+    while not P.is_session_open(session) do
+      vim.wait(wait)
+      acc = acc + wait
+      if acc >= max then
+        P.err(
+          "Could not spawn tmux session "
+            .. vim.inspect(session)
+            .. " before "
+            .. max
+            .. "ms were elapsed?"
+        )
+        return
+      end
+    end
+    M.invoke(session)
+  end
+
+  --- Spawn interpreter.
+  ---@type fun(session: string?)
+  function M.invoke(session)
+    local lang = P.get_current_lang()
+    if not lang then
+      P.err("No lang set to pick interpreter?")
+      return
+    end
+    local invoke = M.state.invoke[lang]
+    invoke = type(invoke) == "function" and invoke() or invoke
+    if not invoke then
+      P.err(
+        "No interpreter invocation command set for lang "
+          .. vim.inspect(lang)
+          .. "?"
+      )
+      return
+    end
+    M.send_command(invoke, session)
+  end
+
+  --- Terminate tmux session.
+  ---@type fun(session: string?)
+  function M.kill(session)
+    local tm = M.state.tmux
+    session = session or tm.session
+    local kill = tm["kill"](session)
+    vim.system(kill)
   end
 
   ------------------------------------------------------------------------------
@@ -100,5 +155,10 @@ return function(M, P)
       break
     end
     return not has_indices
+  end
+
+  ---@param session string
+  function P.is_session_open(session)
+    return vim.system({ "tmux", "has-session", "-t", session }):wait().code == 0
   end
 end
