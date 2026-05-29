@@ -22,7 +22,7 @@ M.state = {
     buffer = "Intim",
     --- The system command to run tmux with the session name.
     ---@type fun(session_name: string): Cmd
-    start = function(name)
+    spawn = function(name)
       error(
         "Missing tmux.cmd function "
           .. "to explain how to obtain a tmux session with name "
@@ -72,6 +72,6 @@ M.state = {
 
 -- Display error message, usually prior to early returning,
 -- to avoid polluting user with a whole stacktrace.
-function P.err(mess) vim.api.nvim_echo({ { mess } }, false, { err = true }) end
+function P.err(mess) vim.api.nvim_echo({ { mess } }, true, { err = true }) end
 
 return M

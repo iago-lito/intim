@@ -6,8 +6,7 @@ return function(M, P)
   --- Send text to the given (or current) tmux session.
   ---@type fun(input: string, session: string?)
   function M.send(input, session)
-    local tm = M.state.tmux
-    session = session or tm.session
+    session = P.requested_session(session)
     local cmd = { "tmux", "send", "-t", session, input }
     vim.system(cmd)
   end
@@ -16,9 +15,8 @@ return function(M, P)
   --- (better handle of line breaks with paste-brackets inserted)
   ---@type fun(input: string, session: string?, buffer: string?)
   function M.paste(input, session, buffer)
-    local tm = M.state.tmux
-    session = session or tm.session
-    buffer = buffer or tm.buffer
+    session = P.requested_session(session)
+    buffer = buffer or M.state.tmux.buffer
     local cmd = { "tmux", "set-buffer", "-t", session, "-b", buffer, input }
     vim.system(cmd)
     cmd = { "tmux", "paste-buffer", "-t", session, "-b", buffer, "-dp" }

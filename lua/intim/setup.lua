@@ -14,18 +14,17 @@ return function(M, P)
     end)
   end
 
-  --- Spawn tmux session.
+  --- Start tmux session.
   ---@type fun(session: string?)
-  function M.start(session)
-    local tm = M.state.tmux
-    session = session or tm.session
+  function M.spawn(session)
+    session = P.requested_session(session)
     if P.is_session_open(session) then
       P.err("Tmux session " .. vim.inspect(session) .. " already open.")
       return
     end
     -- Request tmux session.
-    local start = tm["start"](session)
-    vim.system(start)
+    local spawn = M.state.tmux["spawn"](session)
+    local p = vim.system(spawn)
     -- Wait until it's ready.
     local wait = 500 -- ms.
     local max = 5000 -- ms.
@@ -40,6 +39,15 @@ return function(M, P)
             .. " before "
             .. max
             .. "ms were elapsed?"
+        )
+        local r = p:wait()
+        P.err(
+          "retcode: "
+            .. r.code
+            .. "\nstdout: "
+            .. r.stdout
+            .. "\nstderr: "
+            .. r.stderr
         )
         return
       end
@@ -68,13 +76,30 @@ return function(M, P)
     M.send_command(invoke, session)
   end
 
+  --- Exit interpreter.
+  ---@type fun(session: string?)
+  function M.revoke(session) M.send_eof(session) end
+
+  --- Restart interpreter.
+  ---@type fun(session: string?)
+  function M.reinvoke(session)
+    M.revoke(session)
+    M.invoke(session)
+  end
+
   --- Terminate tmux session.
   ---@type fun(session: string?)
   function M.kill(session)
-    local tm = M.state.tmux
-    session = session or tm.session
-    local kill = tm["kill"](session)
+    session = P.requested_session(session)
+    local kill = M.state.tmux["kill"](session)
     vim.system(kill)
+  end
+
+  --- Restart intim.
+  ---@type fun(session: string?)
+  function M.respawn(session)
+    M.kill(session)
+    M.spawn(session)
   end
 
   ------------------------------------------------------------------------------
@@ -155,6 +180,15 @@ return function(M, P)
       break
     end
     return not has_indices
+  end
+
+  ---@type fun(session: string?): string
+  function P.requested_session(session)
+    if session then
+      return session
+    else
+      return M.state.tmux.session
+    end
   end
 
   ---@param session string
