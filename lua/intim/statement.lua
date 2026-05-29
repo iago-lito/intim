@@ -4,21 +4,24 @@ return function(M, P)
   ------------------------------------------------------------------------------
   --- Public.
 
+  local root_error = "Root reached without finding a statement."
+
   --- Send statement under cursor (semantic, using treesitter).
   ---@type fun(session: string?)
   function M.send_statement(session)
     local lang = P.get_current_lang()
-    local find_statement = M.state.ts_statement[lang]
+    local find_statement = M.state.ts_statement.find[lang]
     if not find_statement then
-      P.err(
+      error(
         "No function provided to find TS statement for lang "
           .. vim.inspect(lang)
           .. "."
       )
-      return
     end
-    local node = find_statement()
-    if not node then return end -- Assume the funtion has already explained why.
+    vim.treesitter.get_parser(0):parse()
+    local node = vim.treesitter.get_node()
+    if not node then error("No TSNode found at given location.") end
+    node = find_statement(node)
     -- Careful: the node starts *after* possible indentation on its first line.
     -- Remove that indentation from successive lines.
     local srow, scol, erow, ecol = node:range()
@@ -30,9 +33,19 @@ return function(M, P)
       text = (text and text .. "\n" or "") .. P.remove_prefix(indent, line)
     end
     M.send_command(text, session)
+    local next_statement = M.state.ts_statement.next[lang]
+    if not next_statement then return end
+    local st, res = pcall(next_statement, node)
+    if not st then
+      if res == root_error then return end -- Discard root error.
+      error(res)
+    end
+    node = res
+    srow, scol, _, _ = node:range()
+    vim.api.nvim_win_set_cursor(0, { srow + 1, scol })
   end
 
-  --- Finding 'statement' nodes work the same for lua or python:
+  --- Finding 'statement' nodes work the same for these languages:
   --- start from current node and climb up
   --- until a 'block' or toplevel node is reached,
   --- or until the node is field-named 'body:' etc.
@@ -43,20 +56,13 @@ return function(M, P)
     r = { { "program" }, { "body" } },
   }) do
     local types, fields = unpack(stop)
-    M["find_" .. lang .. "_statement"] = function()
-      -- Any node directly descending from 'block' or 'chunk'.
-      vim.treesitter.get_parser(0):parse()
-      local node = vim.treesitter.get_node()
-      if not node then
-        P.err("No TSNode found at given location.")
-        return
-      end
+
+    --- Given a focal node, climb up to find a statement node.
+    ---@type fun(node: TSNode): TSNode
+    local function find(node)
       while true do
         local parent = node:parent()
-        if not parent then
-          P.err("Root reached without finding a statement.")
-          return
-        end
+        if not parent then error(root_error) end
         local type = parent:type()
         for _, body in ipairs(types) do
           if type == body then return node end
@@ -69,5 +75,27 @@ return function(M, P)
         node = parent
       end
     end
+
+    -- Given a statement node, skip to the next statement node,
+    -- skipping over 'comment' nodes and climbing up if necessary.
+    -- find the next statement node.
+    ---@type fun(node: TSNode): TSNode?
+    local function next(node)
+      while true do
+        local sib = node:next_sibling()
+        if sib then
+          if sib:type() ~= "comment" then return sib end
+          node = sib
+        else
+          -- Climb up, throwing back to caller.
+          node = node:parent()
+          if not node then error(root_error) end
+          node = find(node)
+        end
+      end
+    end
+
+    M["find_" .. lang .. "_statement"] = find
+    M["next_" .. lang .. "_statement"] = next
   end
 end

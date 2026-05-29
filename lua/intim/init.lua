@@ -45,17 +45,19 @@ M.state = {
   },
   --- Use to find treesitter statements/instructions to be passed to intim.
   ts_statement = {
-    lua = M.find_lua_statement,
-    python = M.find_python_statement,
-    r = M.find_r_statement,
-    julia = M.find_julia_statement,
+    find = {
+      lua = M.find_lua_statement,
+      python = M.find_python_statement,
+      r = M.find_r_statement,
+      julia = M.find_julia_statement,
+    },
+    next = {
+      lua = M.next_lua_statement,
+      python = M.next_python_statement,
+      r = M.next_r_statement,
+      julia = M.next_julia_statement,
+    },
   },
 }
-
---------------------------------------------------------------------------------
--- Private utils.
-
--- Display error message, usually prior to early returning.
-function P.err(mess) vim.api.nvim_echo({ { mess } }, false, { err = true }) end
 
 return M
