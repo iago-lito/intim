@@ -5,7 +5,7 @@ M.P = P -- Expose internals to ease debugging.
 ---@alias Cmd string[]
 
 -- Every file fills these modules up.
-for _, mod in ipairs({ "setup", "pass", "statement" }) do
+for _, mod in ipairs({ "setup", "pass", "statement", "loop" }) do
   require("intim." .. mod)(M, P)
 end
 
@@ -42,6 +42,11 @@ M.state = {
     julia = "julia --project=.",
     r = "R --no-save",
   },
+  -- Lang-specific settings.
+  lua = {
+    -- Raise if persistent locals are supported within the interpreter.
+    use_locals = false,
+  },
   --- Functions applied to lines under cursor prior to them being sent by intim.
   --- Grouped by filetype. Applied in order.
   line_preprocess = {
@@ -51,22 +56,29 @@ M.state = {
     r = { M.strip_r_doctest_prompt },
     _after = { M.dedent },
   },
-  --- Use to find treesitter statements/instructions to be passed to intim.
-  ts_statement = {
-    find = {
-      lua = M.find_lua_statement,
-      python = M.find_python_statement,
-      r = M.find_r_statement,
-      julia = M.find_julia_statement,
-    },
-    next = {
-      lua = M.next_lua_statement,
-      python = M.next_python_statement,
-      r = M.next_r_statement,
-      julia = M.next_julia_statement,
-    },
-  },
 }
+
+local function lang_table(langs, name)
+  local res = {}
+  for _, lang in ipairs(langs) do
+    res[lang] = M[name:format(lang)]
+  end
+  return res
+end
+local langs = { "lua", "python", "r", "julia" }
+local st = M.state
+st.ts_statement = {
+  find = lang_table(langs, "find_%s_statement"),
+  next = lang_table(langs, "next_%s_statement"),
+}
+
+st.ts_loop = {
+  find = lang_table(langs, "find_%s_loop"),
+  parse = lang_table(langs, "parse_%s_loop"),
+  infiltrate = lang_table(langs, "infiltrate_%s_loop"),
+  step = lang_table(langs, "step_%s_loop"),
+}
+
 --------------------------------------------------------------------------------
 ---Private.
 

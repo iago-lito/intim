@@ -4,12 +4,12 @@ return function(M, P)
   ------------------------------------------------------------------------------
   --- Public.
 
-  local root_error = "Root reached without finding a statement."
+  P.root_error = "Root reached without finding a statement."
 
   --- Send statement under cursor (semantic, using treesitter).
   ---@type fun(session: string?)
   function M.send_statement(session)
-    local lang = P.get_current_lang()
+    local node, lang = P.current_node_lang()
     local find_statement = M.state.ts_statement.find[lang]
     if not find_statement then
       error(
@@ -18,9 +18,6 @@ return function(M, P)
           .. "."
       )
     end
-    vim.treesitter.get_parser(0):parse()
-    local node = vim.treesitter.get_node()
-    if not node then error("No TSNode found at given location.") end
     node = find_statement(node)
     -- Careful: the node starts *after* possible indentation on its first line.
     -- Remove that indentation from successive lines.
@@ -37,7 +34,7 @@ return function(M, P)
     if not next_statement then return end
     local st, res = pcall(next_statement, node)
     if not st then
-      if res == root_error then return end -- Discard root error.
+      if P.endswith(res, P.root_error) then return end -- Discard root error.
       error(res)
     end
     node = res
@@ -62,7 +59,7 @@ return function(M, P)
     local function find(node)
       while true do
         local parent = node:parent()
-        if not parent then error(root_error) end
+        if not parent then error(P.root_error) end
         local type = parent:type()
         for _, body in ipairs(types) do
           if type == body then return node end
@@ -89,7 +86,7 @@ return function(M, P)
         else
           -- Climb up, throwing back to caller.
           node = node:parent()
-          if not node then error(root_error) end
+          if not node then error(P.root_error) end
           node = find(node)
         end
       end
@@ -98,4 +95,18 @@ return function(M, P)
     M["find_" .. lang .. "_statement"] = find
     M["next_" .. lang .. "_statement"] = next
   end
+
+  ------------------------------------------------------------------------------
+  --- Private.
+  ---@type fun(): TSNode, string
+  function P.current_node_lang()
+    local lang = P.get_current_lang()
+    vim.treesitter.get_parser(0):parse()
+    local node = vim.treesitter.get_node()
+    if not node then error("No TSNode found at given location.") end
+    return node, lang
+  end
+
+  -- https://stackoverflow.com/a/72921992/3719101
+  function P.endswith(string, suffix) return string:sub(-#suffix) == suffix end
 end
