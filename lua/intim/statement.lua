@@ -1,5 +1,7 @@
 --- Passing statements to intim, semantic approach.
 
+-- HERE: import fresh logic from loops.
+
 return function(M, P)
   ------------------------------------------------------------------------------
   --- Public.
@@ -102,6 +104,10 @@ return function(M, P)
   function P.current_node_lang()
     local lang = P.get_current_lang()
     vim.treesitter.get_parser(0):parse()
+    if vim.fn.col("$") <= vim.fn.col(".") then
+      -- Return back to actual content if the cursor lies past EOL.
+      vim.cmd.normal("$")
+    end
     local node = vim.treesitter.get_node()
     if not node then error("No TSNode found at given location.") end
     return node, lang

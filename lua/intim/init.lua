@@ -17,7 +17,7 @@ M.state = {
   data = vim.fs.joinpath(vim.fn.stdpath("data"), "intim"),
   tmux = {
     --- The tmux session name to communicate within it.
-    session = "Intim",
+    session = "Intim", -- TODO: consider 1 session per vim session and drop argument.
     --- The buffer used to pass/paste text.
     buffer = "Intim",
     --- The system command to run tmux with the session name.
@@ -56,27 +56,7 @@ M.state = {
     r = { M.strip_r_doctest_prompt },
     _after = { M.dedent },
   },
-}
-
-local function lang_table(langs, name)
-  local res = {}
-  for _, lang in ipairs(langs) do
-    res[lang] = M[name:format(lang)]
-  end
-  return res
-end
-local langs = { "lua", "python", "r", "julia" }
-local st = M.state
-st.ts_statement = {
-  find = lang_table(langs, "find_%s_statement"),
-  next = lang_table(langs, "next_%s_statement"),
-}
-
-st.ts_loop = {
-  find = lang_table(langs, "find_%s_loop"),
-  parse = lang_table(langs, "parse_%s_loop"),
-  infiltrate = lang_table(langs, "infiltrate_%s_loop"),
-  step = lang_table(langs, "step_%s_loop"),
+  loops = M.loops,
 }
 
 --------------------------------------------------------------------------------

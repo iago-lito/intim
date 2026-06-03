@@ -7,7 +7,7 @@ return function(M, P)
   --- Merge user parameters into state starting point.
   function M.setup(o)
     M.state = P.merge_tables(M.state, o, function(key, default, user)
-      if not default then error("Unexpected option: " .. vim.inspect(key)) end
+      if default == nil then error("Unexpected option: " .. vim.inspect(key)) end
       local value = user or default
       if key == "data" then P.validate_or_create_dir("data", value) end
       return value
