@@ -1,8 +1,6 @@
 --- Use treesitter + lang-specific tricks
 --- to infiltrate `for` loops and step them.
 
----@alias lang string
-
 ---@type table<lang, boolean>
 local supported = {}
 
@@ -22,8 +20,8 @@ local function new_loops() return { next_id = 0, index = {} } end
 ---  @field data L extra data depending on the language.
 
 -- Find loops by climbing up the tree until a special `for` node is reached.
----@alias Find string (nodename)
----@type table<lang, Find>
+---@alias LoopFind string (nodename)
+---@type table<lang, LoopFind>
 local find = {}
 
 --- One query per lang to obtain the relevant loop parts from a loop node.

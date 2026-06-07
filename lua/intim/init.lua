@@ -2,6 +2,7 @@ local M = {} -- Public interface module.
 local P = {} -- Private.
 M.P = P -- Expose internals to ease debugging.
 
+---@alias lang string
 ---@alias Cmd string[]
 
 -- Every file fills these modules up.
