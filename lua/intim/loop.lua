@@ -206,8 +206,8 @@ if not intim_loop_status then error("Intim iteration ended for loop %i.") end
     return loop
   end
 
-  ---@type fun(verbs: Verb[], session: string?)
-  function P.loop_actions(verbs, session)
+  ---@type fun(verbs: Verb[])
+  function P.loop_actions(verbs)
     local focal, lang = P.current_node_lang() ---@type TSNode, string
     if not supported[lang] then
       P.err(
@@ -227,12 +227,11 @@ if not intim_loop_status then error("Intim iteration ended for loop %i.") end
         local row, col = unpack(loop.body)
         vim.api.nvim_win_set_cursor(0, { row + 1, col })
       end
-      M.send_command(code, session)
+      M.send_command(code)
     end
   end
 
-  function M.infiltrate_loop(session)
-    P.loop_actions({ infiltrate, step }, session)
-  end
-  function M.step_loop(session) P.loop_actions({ step }, session) end
+  --- Exposed loop primitives.
+  function M.infiltrate_loop() P.loop_actions({ infiltrate, step }) end
+  function M.step_loop() P.loop_actions({ step }) end
 end

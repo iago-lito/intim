@@ -4,22 +4,22 @@ return function(M, P)
   -- Public.
 
   --- Send text to the given (or current) tmux session.
-  ---@type fun(input: string, session: string?)
-  function M.send(input, session)
-    session = P.requested_session(session)
-    local cmd = { "tmux", "send", "-t", session, input }
+  ---@type fun(input: string)
+  function M.send(input)
+    local sess = P.session()
+    local cmd = { "tmux", "send", "-t", sess, input }
     vim.system(cmd)
   end
 
   --- Paste text to the given (or current) tmux session.
   --- (better handle of line breaks with paste-brackets inserted)
-  ---@type fun(input: string, session: string?, buffer: string?)
-  function M.paste(input, session, buffer)
-    session = P.requested_session(session)
+  ---@type fun(input: string, buffer: string?)
+  function M.paste(input, buffer)
+    local sess = P.session()
     buffer = buffer or M.state.tmux.buffer
-    local cmd = { "tmux", "set-buffer", "-t", session, "-b", buffer, input }
+    local cmd = { "tmux", "set-buffer", "-t", sess, "-b", buffer, input }
     vim.system(cmd)
-    cmd = { "tmux", "paste-buffer", "-t", session, "-b", buffer, "-dp" }
+    cmd = { "tmux", "paste-buffer", "-t", sess, "-b", buffer, "-dp" }
     vim.system(cmd)
   end
 
@@ -32,19 +32,18 @@ return function(M, P)
     clear = "c-u",
   }) do
     local fn_name = "send_" .. verb
-    M[fn_name] = function(session) M.send(code, session) end
+    M[fn_name] = function() M.send(code) end
   end
 
   --- Send then 'press enter'.
-  ---@type fun(input: string, session: string?)
-  function M.send_command(cmd, session)
-    M.paste(cmd, session)
-    M.send_enter(session)
+  ---@type fun(input: string)
+  function M.send_command(cmd)
+    M.paste(cmd)
+    M.send_enter()
   end
 
   --- Send line under cursor (lexical).
-  ---@type fun(session: string?)
-  function M.send_line(session)
+  function M.send_line()
     local line = vim.api.nvim_get_current_line()
     local lang = P.get_current_lang()
     local pr = M.state.line_preprocess
@@ -55,7 +54,7 @@ return function(M, P)
         end
       end
     end
-    M.send_command(line, session)
+    M.send_command(line)
   end
 
   --- Remove input leading whitespace.

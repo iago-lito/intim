@@ -7,7 +7,9 @@ return function(M, P)
   --- Merge user parameters into state starting point.
   function M.setup(o)
     M.state = P.merge_tables(M.state, o, function(key, default, user)
-      if default == nil then error("Unexpected option: " .. vim.inspect(key)) end
+      if default == nil then
+        error("Unexpected option: " .. vim.inspect(key))
+      end
       local value = user or default
       if key == "data" then P.validate_or_create_dir("data", value) end
       return value
@@ -15,27 +17,26 @@ return function(M, P)
   end
 
   --- Start tmux session.
-  ---@type fun(session: string?)
-  function M.spawn(session)
-    session = P.requested_session(session)
-    if P.is_session_open(session) then
-      P.err("Tmux session " .. vim.inspect(session) .. " already open.")
+  function M.spawn()
+    local sess = P.session()
+    if P.is_session_open() then
+      P.err("Tmux session " .. vim.inspect(sess) .. " already open.")
       return
     end
     -- Request tmux session.
-    local spawn = M.state.tmux["spawn"](session)
+    local spawn = M.state.tmux["spawn"](sess)
     local p = vim.system(spawn)
     -- Wait until it's ready.
     local wait = 500 -- ms.
     local max = 5000 -- ms.
     local acc = 0
-    while not P.is_session_open(session) do
+    while not P.is_session_open() do
       vim.wait(wait)
       acc = acc + wait
       if acc >= max then
         P.err(
           "Could not spawn tmux session "
-            .. vim.inspect(session)
+            .. vim.inspect(sess)
             .. " before "
             .. max
             .. "ms were elapsed?"
@@ -52,12 +53,12 @@ return function(M, P)
         return
       end
     end
-    M.invoke(session)
+    M.invoke()
   end
 
   --- Spawn interpreter.
-  ---@type fun(session: string?)
-  function M.invoke(session)
+  ---@type fun()
+  function M.invoke()
     local lang = P.get_current_lang()
     if not lang then
       P.err("No lang set to pick interpreter?")
@@ -73,33 +74,28 @@ return function(M, P)
       )
       return
     end
-    M.send_command(invoke, session)
+    M.send_command(invoke)
   end
 
   --- Exit interpreter.
-  ---@type fun(session: string?)
-  function M.revoke(session) M.send_eof(session) end
+  function M.revoke() M.send_eof() end
 
   --- Restart interpreter.
-  ---@type fun(session: string?)
-  function M.reinvoke(session)
-    M.revoke(session)
-    M.invoke(session)
+  function M.reinvoke()
+    M.revoke()
+    M.invoke()
   end
 
   --- Terminate tmux session.
-  ---@type fun(session: string?)
-  function M.kill(session)
-    session = P.requested_session(session)
-    local kill = M.state.tmux["kill"](session)
+  function M.kill()
+    local kill = M.state.tmux["kill"](P.session())
     vim.system(kill)
   end
 
   --- Restart intim.
-  ---@type fun(session: string?)
-  function M.respawn(session)
-    M.kill(session)
-    M.spawn(session)
+  function M.respawn()
+    M.kill()
+    M.spawn()
   end
 
   ------------------------------------------------------------------------------
@@ -182,17 +178,9 @@ return function(M, P)
     return not has_indices
   end
 
-  ---@type fun(session: string?): string
-  function P.requested_session(session)
-    if session then
-      return session
-    else
-      return M.state.tmux.session
-    end
-  end
-
-  ---@param session string
-  function P.is_session_open(session)
-    return vim.system({ "tmux", "has-session", "-t", session }):wait().code == 0
+  ---@type fun():boolean
+  function P.is_session_open()
+    return vim.system({ "tmux", "has-session", "-t", P.session() }):wait().code
+      == 0
   end
 end

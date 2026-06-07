@@ -17,7 +17,7 @@ M.state = {
   data = vim.fs.joinpath(vim.fn.stdpath("data"), "intim"),
   tmux = {
     --- The tmux session name to communicate within it.
-    session = "Intim", -- TODO: consider 1 session per vim session and drop argument.
+    session = "Intim",
     --- The buffer used to pass/paste text.
     buffer = "Intim",
     --- The system command to run tmux with the session name.
@@ -61,6 +61,10 @@ M.state = {
 
 --------------------------------------------------------------------------------
 ---Private.
+
+--- Obtain current session name.
+---@type fun(): string
+function P.session() return M.state.tmux.session end
 
 -- Display error message, usually prior to early returning,
 -- to avoid polluting user with a whole stacktrace.

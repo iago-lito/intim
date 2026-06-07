@@ -9,8 +9,7 @@ return function(M, P)
   P.root_error = "Root reached without finding a statement."
 
   --- Send statement under cursor (semantic, using treesitter).
-  ---@type fun(session: string?)
-  function M.send_statement(session)
+  function M.send_statement()
     local node, lang = P.current_node_lang()
     local find_statement = M.state.ts_statement.find[lang]
     if not find_statement then
@@ -31,7 +30,7 @@ return function(M, P)
     for _, line in ipairs(lines) do
       text = (text and text .. "\n" or "") .. P.remove_prefix(indent, line)
     end
-    M.send_command(text, session)
+    M.send_command(text)
     local next_statement = M.state.ts_statement.next[lang]
     if not next_statement then return end
     local st, res = pcall(next_statement, node)
