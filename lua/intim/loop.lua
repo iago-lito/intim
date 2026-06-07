@@ -29,7 +29,8 @@ local find = {}
 local query = {}
 
 --- Given captures from the query above, return a name and loop data.
----@alias Parse<L> fun(text: fun():string): loop_name, L
+--- Return an identifier for the loop, the lang-specific data and the body node.
+---@alias Parse<L> fun(node: fun():TSNode): loop_name, L, TSNode
 ---@type table<lang, Parse>
 local parse = {}
 
@@ -74,13 +75,13 @@ return function(M, P)
 
   ---@type Parse<Lua>
   function parse.lua(capt)
-    local clause = capt()
-    local vars = capt()
+    local clause = P.nodetext(capt())
+    local vars = P.nodetext(capt())
     local name = "for " .. clause .. " do"
     return name, {
       clause = clause,
       vars = vars,
-    }
+    }, capt()
   end
 
   ---@type Action<Lua>
@@ -139,13 +140,13 @@ if not intim_loop_status then error("Intim iteration ended for loop %i.") end
 
   ---@type Parse<Python>
   function parse.python(capt)
-    local vars = capt()
-    local iter = capt()
+    local vars = P.nodetext(capt())
+    local iter = P.nodetext(capt())
     local name = "for " .. vars .. " in " .. iter .. ":"
     return name, {
       vars = vars,
       iter = iter,
-    }
+    }, capt()
   end
 
   ---@type Action<Python>
@@ -156,6 +157,79 @@ if not intim_loop_status then error("Intim iteration ended for loop %i.") end
   ---@type Action<Python>
   function step.python(l)
     return string.format([[%s = next(intim_loop_%i)]], l.data.vars, l.id)
+  end
+
+  ------------------------------------------------------------------------------
+  --- Julia.
+
+  supported.julia = true
+
+  ---@type Loops<Julia>
+  M.loops.julia = new_loops()
+  find.julia = "for_statement"
+
+  ---@class Julia Loops may be multiple (cartesian products).
+  ---@field vars string[]
+  ---@field iters string[]
+
+  query.julia = vim.treesitter.query.parse(
+    "julia",
+    [[
+    (for_statement
+      (for_binding
+        (_) @vars
+        (operator)
+        (_) @iters
+      )
+      (block) @body
+    )
+    ]]
+  )
+
+  ---@type Parse<Julia>
+  function parse.julia(capt)
+    local vars = {}
+    local iters = {}
+    local name = "for "
+    local n ---@type TSNode
+    while true do
+      n = capt()
+      if n:type() ~= "block" then
+        local v = P.nodetext(n)
+        local i = P.nodetext(capt())
+        name = name .. v .. " in " .. i .. ", "
+        vars[#vars + 1] = v
+        iters[#iters + 1] = i
+      else
+        break
+      end
+    end
+    return name, {
+      vars = vars,
+      iters = iters,
+    }, n
+  end
+
+  ---@type Action<Julia>
+  function infiltrate.julia(l)
+    local iters = ""
+    for _, iter in ipairs(l.data.iters) do
+      iters = iters .. iter .. ","
+    end
+    return string.format(
+      [[intim_loop_%i = Iterators.Stateful(zip(%s))]],
+      l.id,
+      iters
+    )
+  end
+
+  ---@type Action<Julia>
+  function step.julia(l)
+    local vars = ""
+    for _, var in ipairs(l.data.vars) do
+      vars = vars .. var .. ", "
+    end
+    return string.format([[%s = popfirst!(intim_loop_%i)]], vars, l.id)
   end
 
   ------------------------------------------------------------------------------
@@ -182,12 +256,7 @@ if not intim_loop_status then error("Intim iteration ended for loop %i.") end
       local _, n, _ = capts()
       return n
     end
-    local function get_text()
-      local n = get_node()
-      return vim.treesitter.get_node_text(n, 0, {})
-    end
-    local name, data = from_captures(get_text)
-    local body = get_node()
+    local name, data, body = from_captures(get_node)
     local row, col, _ = body:start()
     local loop = loops.index[name]
     if not loop then
@@ -203,6 +272,10 @@ if not intim_loop_status then error("Intim iteration ended for loop %i.") end
     end
     return loop
   end
+
+  --- Obtain current node text.
+  ---@type fun(node: TSNode):string
+  function P.nodetext(node) return vim.treesitter.get_node_text(node, 0, {}) end
 
   ---@type fun(verbs: Verb[])
   function P.loop_actions(verbs)
