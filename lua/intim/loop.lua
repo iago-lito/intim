@@ -30,7 +30,8 @@ local query = {}
 
 --- Given captures from the query above, return a name and loop data.
 --- Return an identifier for the loop, the lang-specific data and the body node.
----@alias Parse<L> fun(node: fun():TSNode): loop_name, L, TSNode
+---@alias NextCapture fun():TSNode
+---@alias Parse<L> fun(node: NextCapture): loop_name, L, TSNode
 ---@type table<lang, Parse>
 local parse = {}
 
@@ -78,10 +79,11 @@ return function(M, P)
     local clause = P.nodetext(capt())
     local vars = P.nodetext(capt())
     local name = "for " .. clause .. " do"
+    local body = capt()
     return name, {
       clause = clause,
       vars = vars,
-    }, capt()
+    }, body
   end
 
   ---@type Action<Lua>
@@ -143,10 +145,11 @@ if not intim_loop_status then error("Intim iteration ended for loop %i.") end
     local vars = P.nodetext(capt())
     local iter = P.nodetext(capt())
     local name = "for " .. vars .. " in " .. iter .. ":"
+    local body = capt()
     return name, {
       vars = vars,
       iter = iter,
-    }, capt()
+    }, body
   end
 
   ---@type Action<Python>
@@ -233,6 +236,70 @@ if not intim_loop_status then error("Intim iteration ended for loop %i.") end
   end
 
   ------------------------------------------------------------------------------
+  --- R.
+
+  supported.r = true
+
+  ---@type Loops<R>
+  M.loops.r = new_loops()
+  find.r = "for_statement"
+
+  ---@class R
+  ---@field var string
+  ---@field iter string
+
+  query.r = vim.treesitter.query.parse(
+    "r",
+    [[
+    (for_statement
+      variable: (_) @var
+      sequence: (_) @iter
+      body: (_) @body
+    )
+    ]]
+  )
+
+  --- Need additional query to skip comments in braced loops.
+  query.r_braced_body =
+    vim.treesitter.query.parse("r", [[ (braced_expression body: (_) @braced) ]])
+
+  ---@type Parse<R>
+  function parse.r(capt)
+    local var = P.nodetext(capt())
+    local iter = P.nodetext(capt())
+    local body = capt()
+    -- Skip comments further in case the body is a braced expression.
+    if body:type() == "braced_expression" then
+      _, body, _ = query.r_braced_body:iter_captures(body, 0)()
+    end
+    local name = "for (" .. var .. " in " .. iter .. ")"
+    return name, {
+      var = var,
+      iter = iter,
+    }, body
+  end
+
+  ---@type Action<R>
+  function infiltrate.r(l)
+    return string.format(
+      [=[
+intim_loop_%s <- base::as.environment(base::list(coll = %s, i = 0, step = function() {
+  e <- intim_loop_%s; if (e$i < base::length(e$coll)) { e$i <- e$i + 1; e$coll[[e$i]] }
+  else { stop("Iteration ended.") }
+}))
+      ]=],
+      l.id,
+      l.data.iter,
+      l.id
+    )
+  end
+
+  ---@type Action<R>
+  function step.r(l)
+    return string.format([[%s <- intim_loop_%s$step()]], l.data.var, l.id)
+  end
+
+  ------------------------------------------------------------------------------
   --- Bring this all together.
 
   ---@type fun(lang: lang, node: TSNode):TSNode?
@@ -251,7 +318,8 @@ if not intim_loop_status then error("Intim iteration ended for loop %i.") end
   local function do_parse(lang, node)
     local loops = M.loops[lang]
     local from_captures = parse[lang]
-    local capts = query[lang]:iter_captures(node, 0)
+    local q = query[lang]
+    local capts = q:iter_captures(node, 0)
     local function get_node()
       local _, n, _ = capts()
       return n
