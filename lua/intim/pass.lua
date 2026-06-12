@@ -82,6 +82,48 @@ return function(M, P)
     end
   end
 
+  --- Send visually selected text.
+  function M.send_selected()
+    local start = vim.fn.getpos("v")
+    local stop = vim.fn.getpos(".")
+    local mode = vim.api.nvim_get_mode().mode
+    local text
+    if mode == "v" then
+      -- Simple visual mode: send selected text.
+      text = vim.fn.getregion(start, stop)
+    else
+      -- Full line visual mode: send all selected lines.
+      local _, srow, scol = unpack(start)
+      local _, erow, ecol = unpack(stop)
+      if erow < srow then
+        erow, srow = srow, erow
+      end
+      text = vim.api.nvim_buf_get_lines(0, srow - 1, erow, true)
+      if mode == "V" then -- Not much to add.
+      elseif mode == "\22" then
+        -- Block visual mode: truncate selected lines.
+        if ecol < scol then
+          ecol, scol = scol, ecol
+        end
+        for i, line in ipairs(text) do
+          text[i] = line:sub(scol, ecol)
+        end
+      else
+        P.err(
+          "Intim: This action should be performed in visual mode, not "
+            .. vim.inspect(mode)
+            .. "."
+        )
+        return
+      end
+    end
+    local cmd
+    for _, line in ipairs(text) do
+      cmd = cmd and (cmd .. "\n" .. line) or line
+    end
+    M.send_command(cmd)
+  end
+
   ------------------------------------------------------------------------------
   -- Private.
 
