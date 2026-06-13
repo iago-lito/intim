@@ -7,11 +7,14 @@
 ---@type table<lang, StatementFind>
 local find = {}
 
+find.lua = { kinds = { "block", "source_file" } }
+find.lua = { kinds = { "block", "chunk" } }
+find.python = { kinds = { "block", "module" } }
+find.r = { kinds = { "program" }, fields = { "body" } }
+
 return function(M, P)
-  find.lua = { kinds = { "block", "source_file" } }
-  find.lua = { kinds = { "block", "chunk" } }
-  find.python = { kinds = { "block", "module" } }
-  find.r = { kinds = { "program" }, fields = { "body" } }
+  -- Expose so it may be configured further by user.
+  M.state.find_statement = find
 
   ---@type fun(lang: lang):boolean
   function P.supported(lang) return find[lang] ~= nil end

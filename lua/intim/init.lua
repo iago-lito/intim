@@ -5,11 +5,6 @@ M.P = P -- Expose internals to ease debugging.
 ---@alias lang string
 ---@alias Cmd string[]
 
--- Every file fills these modules up.
-for _, mod in ipairs({ "setup", "pass", "statement", "loop" }) do
-  require("intim." .. mod)(M, P)
-end
-
 --------------------------------------------------------------------------------
 -- Internal mutable state, whose initialization is configurable as "options".
 
@@ -59,6 +54,11 @@ M.state = {
   },
   loops = M.loops,
 }
+
+-- More 'state' may be added in subsequent modules adding functionality.
+for _, mod in ipairs({ "setup", "pass", "chunk", "statement", "loop" }) do
+  require("intim." .. mod)(M, P)
+end
 
 --------------------------------------------------------------------------------
 ---Private.

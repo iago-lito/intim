@@ -80,8 +80,9 @@ return function(M, P)
     end
   end
 
-  --- Send visually selected text.
-  function M.send_selected()
+  --- Extract visually selected text.
+  ---@type fun():string
+  function P.extract_selected()
     local start = vim.fn.getpos("v")
     local stop = vim.fn.getpos(".")
     local mode = vim.api.nvim_get_mode().mode
@@ -115,15 +116,20 @@ return function(M, P)
         return
       end
     end
-    local cmd
+    local res
     for _, line in ipairs(text) do
-      cmd = cmd and (cmd .. "\n" .. line) or line
+      res = res and (res .. "\n" .. line) or line
     end
-    M.send_command(cmd)
+    return res
   end
 
   ------------------------------------------------------------------------------
   --- High-level mappings.
+
+  function M.send_selected()
+    local sel = P.extract_selected()
+    M.send_command(sel)
+  end
 
   local n = function(input)
     vim.cmd.normal(vim.api.nvim_replace_termcodes(input, true, true, true))

@@ -48,8 +48,10 @@ local infiltrate = {}
 local step = {}
 
 return function(M, P)
+  -- Expose so it may be configured further by user.
   ---@type table<lang, Loops>
-  M.loops = {}
+  loops = {}
+  M.state.loops = loops
 
   ------------------------------------------------------------------------------
   --- Lua loops.
@@ -57,7 +59,7 @@ return function(M, P)
   supported.lua = true
 
   ---@type Loops<Lua>
-  M.loops.lua = new_loops()
+  loops.lua = new_loops()
   find.lua = "for_statement"
 
   ---@class Lua
@@ -122,7 +124,7 @@ if not intim_loop_status then error("Intim iteration ended for loop %i.") end
   supported.python = true
 
   ---@type Loops<Python>
-  M.loops.python = new_loops()
+  loops.python = new_loops()
   find.python = "for_statement"
 
   ---@class Python
@@ -168,7 +170,7 @@ if not intim_loop_status then error("Intim iteration ended for loop %i.") end
   supported.julia = true
 
   ---@type Loops<Julia>
-  M.loops.julia = new_loops()
+  loops.julia = new_loops()
   find.julia = "for_statement"
 
   ---@class Julia Loops may be multiple (cartesian products).
@@ -241,7 +243,7 @@ if not intim_loop_status then error("Intim iteration ended for loop %i.") end
   supported.r = true
 
   ---@type Loops<R>
-  M.loops.r = new_loops()
+  loops.r = new_loops()
   find.r = "for_statement"
 
   ---@class R
@@ -316,7 +318,7 @@ intim_loop_%s <- base::as.environment(base::list(coll = %s, i = 0, step = functi
   -- Assuming the input is a loop, parse it into the elements we need.
   ---@type fun(lang: lang, node: TSNode): Loop
   local function do_parse(lang, node)
-    local loops = M.loops[lang]
+    local loops = M.state.loops[lang]
     local from_captures = parse[lang]
     local q = query[lang]
     local capts = q:iter_captures(node, 0)
