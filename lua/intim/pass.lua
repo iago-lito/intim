@@ -1,8 +1,6 @@
 --- Passing text to intim, lexical approach.
-return function(M, P)
-  ------------------------------------------------------------------------------
-  -- Public.
 
+return function(M, P)
   --- Send text to the given (or current) tmux session.
   ---@type fun(input: string)
   function M.send(input)
@@ -125,7 +123,27 @@ return function(M, P)
   end
 
   ------------------------------------------------------------------------------
-  -- Private.
+  --- High-level mappings.
+
+  local n = function(input)
+    vim.cmd.normal(vim.api.nvim_replace_termcodes(input, true, true, true))
+  end
+
+  --- Send word under cursor.
+  function M.send_word()
+    n("viw")
+    M.send_selected()
+    n("<esc>")
+  end
+
+  function M.send_Word()
+    n("viW")
+    M.send_selected()
+    n("<esc>")
+  end
+
+  ------------------------------------------------------------------------------
+  -- Misc utils.
 
   --- Remove fixed prefix from string if present.
   ---@type fun(prefix: string, input: string): string
