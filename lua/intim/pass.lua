@@ -81,31 +81,31 @@ return function(M, P)
   end
 
   --- Extract visually selected text.
-  ---@type fun():string
+  ---@type fun():string[], [integer, integer, integer, integer] (content (lines), span)
   function P.extract_selected()
+    local mode = vim.api.nvim_get_mode().mode
     local start = vim.fn.getpos("v")
     local stop = vim.fn.getpos(".")
-    local mode = vim.api.nvim_get_mode().mode
-    local text
+    local _, srow, scol = unpack(start)
+    local _, erow, ecol = unpack(stop)
+    if erow < srow then
+      erow, srow = srow, erow
+    end
+    if ecol < scol then
+      ecol, scol = scol, ecol
+    end
+    local lines
     if mode == "v" then
       -- Simple visual mode: send selected text.
-      text = vim.fn.getregion(start, stop)
+      lines = vim.fn.getregion(start, stop)
     else
       -- Full line visual mode: send all selected lines.
-      local _, srow, scol = unpack(start)
-      local _, erow, ecol = unpack(stop)
-      if erow < srow then
-        erow, srow = srow, erow
-      end
-      text = vim.api.nvim_buf_get_lines(0, srow - 1, erow, true)
+      lines = vim.api.nvim_buf_get_lines(0, srow - 1, erow, true)
       if mode == "V" then -- Not much to add.
       elseif mode == "\22" then
         -- Block visual mode: truncate selected lines.
-        if ecol < scol then
-          ecol, scol = scol, ecol
-        end
-        for i, line in ipairs(text) do
-          text[i] = line:sub(scol, ecol)
+        for i, line in ipairs(lines) do
+          lines[i] = line:sub(scol, ecol)
         end
       else
         error(
@@ -115,11 +115,7 @@ return function(M, P)
         )
       end
     end
-    local res
-    for _, line in ipairs(text) do
-      res = res and (res .. "\n" .. line) or line
-    end
-    return res
+    return lines, { srow, scol, erow, ecol }
   end
 
   ---@type fun():string
@@ -132,7 +128,7 @@ return function(M, P)
   function M.send_selected()
     local sel = P.extract_selected()
     if not sel then return end
-    M.send_command(sel)
+    M.send_command(P.join(sel, "\n"))
   end
 
   --- Send word under cursor.

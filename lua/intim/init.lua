@@ -68,7 +68,7 @@ for _, mod in ipairs({
 end
 
 --------------------------------------------------------------------------------
----Private.
+--- Private, yet reusable in other modules.
 
 --- Obtain current session name.
 ---@type fun(): string
@@ -77,5 +77,26 @@ function P.session() return M.state.tmux.session end
 -- Display error message, usually prior to early returning,
 -- to avoid polluting user with a whole stacktrace.
 function P.err(mess) vim.api.nvim_echo({ { mess } }, true, { err = true }) end
+
+--- Collapse array into a single string with the given separator.
+---@type fun(input: string[], sep:string):string
+function P.join(input, sep)
+  local res
+  for _, elt in ipairs(input) do
+    res = res and (res .. sep .. elt) or elt
+  end
+  return res
+end
+
+--- Separate string into `sep`arated chunks.
+---@type fun(input:string, sep:string):string[]
+function P.split(input, sep)
+  local res = {}
+  for chunk, s in input:gmatch("([^" .. sep .. "]*)(" .. sep .. "?)") do
+    table.insert(res, chunk)
+    if s == "" then break end
+  end
+  return res
+end
 
 return M

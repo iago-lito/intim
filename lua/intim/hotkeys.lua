@@ -8,6 +8,18 @@
 ---@type table<lang, Keys>
 local hotkeys = {}
 
+--- The strategy to set local lua functions to the operator option.
+--- https://github.com/neovim/neovim/issues/18132#issuecomment-1723577603
+local set_opfunc = vim.fn[vim.api.nvim_exec2(
+  [[
+  func s:set_opfunc(val)
+    let &opfunc = a:val
+  endfunc
+  echon get(function('s:set_opfunc'), 'name')
+  ]],
+  { output = true }
+).output]
+
 return function(M, P)
   -- Expose so it may be configured further by user.
   M.state.hotkeys = hotkeys
@@ -73,6 +85,24 @@ return function(M, P)
     local input = extract()
     local cmd = hk(input)
     M.send_command(cmd)
+  end
+
+  --- Use `:h map-operator` to edit sources with hotkeys.
+  function M.transform_hotkey(key)
+    local hk = P.hotkey(key)
+    if not hk then return end
+    set_opfunc(function(_)
+      local srow, scol = unpack(vim.api.nvim_buf_get_mark(0, "["))
+      local erow, ecol = unpack(vim.api.nvim_buf_get_mark(0, "]"))
+      srow = srow - 1
+      erow = erow - 1
+      ecol = ecol + 1
+      local input = vim.api.nvim_buf_get_text(0, srow, scol, erow, ecol, {})
+      local res = hk(P.join(input, "\n"))
+      local lines = P.split(res, "\n")
+      vim.api.nvim_buf_set_text(0, srow, scol, erow, ecol, lines)
+    end)
+    vim.api.nvim_feedkeys("g@", "n", false)
   end
 
   ---@type fun(key: string):Hotkey?
