@@ -108,12 +108,11 @@ return function(M, P)
           text[i] = line:sub(scol, ecol)
         end
       else
-        P.err(
+        error(
           "Intim: This action should be performed in visual mode, not "
             .. vim.inspect(mode)
             .. "."
         )
-        return
       end
     end
     local res
@@ -123,30 +122,23 @@ return function(M, P)
     return res
   end
 
+  ---@type fun():string
+  function P.extract_word() return vim.fn.expand("<cword>") end
+  function P.extract_WORD() return vim.fn.expand("<cWORD>") end
+
   ------------------------------------------------------------------------------
-  --- High-level mappings.
+  --- Exposed mappings.
 
   function M.send_selected()
     local sel = P.extract_selected()
+    if not sel then return end
     M.send_command(sel)
   end
 
-  local n = function(input)
-    vim.cmd.normal(vim.api.nvim_replace_termcodes(input, true, true, true))
-  end
-
   --- Send word under cursor.
-  function M.send_word()
-    n("viw")
-    M.send_selected()
-    n("<esc>")
-  end
-
-  function M.send_Word()
-    n("viW")
-    M.send_selected()
-    n("<esc>")
-  end
+  function M.send_word() M.send_command(P.extract_word()) end
+  --- Send `W`ORD under cursor.
+  function M.send_WORD() M.send_command(P.extract_WORD()) end
 
   ------------------------------------------------------------------------------
   -- Misc utils.

@@ -56,7 +56,14 @@ M.state = {
 }
 
 -- More 'state' may be added in subsequent modules adding functionality.
-for _, mod in ipairs({ "setup", "pass", "chunk", "statement", "loop" }) do
+for _, mod in ipairs({
+  "setup",
+  "pass",
+  "chunk",
+  "statement",
+  "loop",
+  "hotkeys",
+}) do
   require("intim." .. mod)(M, P)
 end
 
