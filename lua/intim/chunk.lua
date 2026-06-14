@@ -58,7 +58,7 @@ return function(M, P)
     local fn = get_chunk_fn()
     if not fn then return end
     local chunkfile = P.chunkfile()
-    local sel = P.extract_selected()
+    local sel = P.selected_text()
     P.write_chunk(sel)
     local cmd = fn(chunkfile)
     M.send_command(cmd)

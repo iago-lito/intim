@@ -55,18 +55,6 @@ M.state = {
   loops = M.loops,
 }
 
--- More 'state' may be added in subsequent modules adding functionality.
-for _, mod in ipairs({
-  "setup",
-  "pass",
-  "chunk",
-  "statement",
-  "loop",
-  "hotkeys",
-}) do
-  require("intim." .. mod)(M, P)
-end
-
 --------------------------------------------------------------------------------
 --- Private, yet reusable in other modules.
 
@@ -77,6 +65,16 @@ function P.session() return M.state.tmux.session end
 -- Display error message, usually prior to early returning,
 -- to avoid polluting user with a whole stacktrace.
 function P.err(mess) vim.api.nvim_echo({ { mess } }, true, { err = true }) end
+
+-- Decorate a function so it gracefully wraps the above.
+function P.guard(...)
+  local status, res = pcall(...)
+  if not status then
+    P.err(res)
+    return
+  end
+  return res
+end
 
 --- Collapse array into a single string with the given separator.
 ---@type fun(input: string[], sep:string):string
@@ -97,6 +95,26 @@ function P.split(input, sep)
     if s == "" then break end
   end
   return res
+end
+
+--- Remove fixed prefix from string if present.
+---@type fun(prefix: string, input: string): string
+function P.remove_prefix(expected, input)
+  local n = #expected
+  local actual = input:sub(1, n)
+  return (actual == expected) and input:sub(n + 1, #input) or input
+end
+
+-- More 'state' may be added in subsequent modules adding functionality.
+for _, mod in ipairs({
+  "setup",
+  "pass",
+  "chunk",
+  "statement",
+  "loop",
+  "hotkeys",
+}) do
+  require("intim." .. mod)(M, P)
 end
 
 return M

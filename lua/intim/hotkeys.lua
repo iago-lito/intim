@@ -8,18 +8,6 @@
 ---@type table<lang, Keys>
 local hotkeys = {}
 
---- The strategy to set local lua functions to the operator option.
---- https://github.com/neovim/neovim/issues/18132#issuecomment-1723577603
-local set_opfunc = vim.fn[vim.api.nvim_exec2(
-  [[
-  func s:set_opfunc(val)
-    let &opfunc = a:val
-  endfunc
-  echon get(function('s:set_opfunc'), 'name')
-  ]],
-  { output = true }
-).output]
-
 return function(M, P)
   -- Expose so it may be configured further by user.
   M.state.hotkeys = hotkeys
@@ -72,58 +60,88 @@ return function(M, P)
   end
 
   ------------------------------------------------------------------------------
-  --- Impl.
 
-  function M.hotkey_send_word(key) P.send_hotkey(key, P.extract_word) end
-  function M.hotkey_send_WORD(key) P.send_hotkey(key, P.extract_WORD) end
-  function M.hotkey_send_selected(key) P.send_hotkey(key, P.extract_selected) end
-
-  ---@type fun(key: string, extract: fun():string)
-  function P.send_hotkey(key, extract)
-    local hk = P.hotkey(key)
-    if not hk then return end
-    local input = extract()
-    local cmd = hk(input)
-    M.send_command(cmd)
-  end
-
-  --- Use `:h map-operator` to edit sources with hotkeys.
-  function M.transform_hotkey(key)
-    local hk = P.hotkey(key)
-    if not hk then return end
-    set_opfunc(function(_)
-      local srow, scol = unpack(vim.api.nvim_buf_get_mark(0, "["))
-      local erow, ecol = unpack(vim.api.nvim_buf_get_mark(0, "]"))
-      srow = srow - 1
-      erow = erow - 1
-      ecol = ecol + 1
-      local input = vim.api.nvim_buf_get_text(0, srow, scol, erow, ecol, {})
-      local res = hk(P.join(input, "\n"))
-      local lines = P.split(res, "\n")
-      vim.api.nvim_buf_set_text(0, srow, scol, erow, ecol, lines)
-    end)
-    vim.api.nvim_feedkeys("g@", "n", false)
-  end
-
-  ---@type fun(key: string):Hotkey?
+  -- Query hotkey within current lang.
+  ---@type fun(key: string):Hotkey
   function P.hotkey(key)
+    -- HERE: Investigate why this results in "",
+    -- but having LuaLS understand the connections among modules
+    -- and recognize this function.
     local lang = P.get_current_lang()
     local hks = M.state.hotkeys[lang]
     if not hks then
-      P.err("No Intim hotkey recorded for lang " .. vim.inspect(lang) .. ".")
-      return
+      error("No Intim hotkey recorded for lang " .. vim.inspect(lang) .. ".")
     end
     local hk = hks[key]
     if not hk then
-      P.err(
+      error(
         "No Intim hotkey recorded as "
           .. vim.inspect(key)
           .. " for lang "
           .. vim.inspect(lang)
           .. "."
       )
-      return
     end
     return hk
+  end
+
+  --- Given a mean to retrieve lines, execute the hotkey action.
+  ---@alias HotkeyVerb fun(hk: Hotkey, get_lines: GetLinesSpan)
+
+  --- Given a verb, execute from the correct input source.
+  ---@alias HotkeySource fun(hk: Hotkey, v: HotkeyVerb)
+
+  --- Transform and send result.
+  ---@type HotkeyVerb
+  function P.hotkey_send(hk, get_lines)
+    local lines = get_lines()
+    local input = P.join(lines, "\n")
+    local res = hk(input)
+    local cmd = P.split(res, "\n")
+    M.send_command(cmd)
+  end
+
+  --- Transform in-place within current buffer.
+  ---@type HotkeyVerb
+  function M.hotkey_transform(hk, get_lines)
+    local lines, span = get_lines()
+    local srow, scol, erow, ecol = unpack(span)
+    local input = P.join(lines, "\n")
+    local res = hk(input)
+    local rep = P.split(res, "\n")
+    vim.api.nvim_buf_set_text(0, srow, scol, erow, ecol, rep)
+  end
+
+  --- Input is the selected text.
+  ---@type HotkeySource
+  function M.hotkey_selected(hk, verb) verb(hk, P.selected_text) end
+
+  --- Input is the user object.
+  ---@type HotkeySource
+  function M.hotkey_object(hk, verb)
+    P.operator(function(_) verb(hk, P.object_text) end)
+  end
+
+  -- Combine.
+  ---@type [string, HotkeyVerb][]
+  local verbs = {
+    { "send", M.hotkey_send },
+    { "transform", M.hotkey_transform },
+  }
+  ---@type [string, HotkeySource][]
+  local sources = {
+    { "object", M.hotkey_object },
+    { "selected", M.hotkey_selected },
+  }
+  for _, i in ipairs(verbs) do
+    local vname, verb = unpack(i)
+    for _, j in ipairs(sources) do
+      local sname, source = unpack(j)
+      local fn_name = P.join({ "hotkey", vname, sname }, "_")
+      M[fn_name] = P.guard(function(key)
+        local hk = P.hotkey(key)
+        source(hk, verb)
+      end)
+    end
   end
 end

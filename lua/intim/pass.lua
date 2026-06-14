@@ -1,5 +1,7 @@
 --- Passing text to intim, lexical approach.
 
+---@alias GetLinesSpan fun():string[], [integer, integer, integer, integer]
+
 return function(M, P)
   --- Send text to the given (or current) tmux session.
   ---@type fun(input: string)
@@ -81,8 +83,8 @@ return function(M, P)
   end
 
   --- Extract visually selected text.
-  ---@type fun():string[], [integer, integer, integer, integer] (content (lines), span)
-  function P.extract_selected()
+  ---@type GetLinesSpan
+  function P.selected_text()
     local mode = vim.api.nvim_get_mode().mode
     local start = vim.fn.getpos("v")
     local stop = vim.fn.getpos(".")
@@ -118,34 +120,26 @@ return function(M, P)
     return lines, { srow, scol, erow, ecol }
   end
 
-  ---@type fun():string
-  function P.extract_word() return vim.fn.expand("<cword>") end
-  function P.extract_WORD() return vim.fn.expand("<cWORD>") end
-
   ------------------------------------------------------------------------------
   --- Exposed mappings.
 
-  function M.send_selected()
-    local sel = P.extract_selected()
-    if not sel then return end
-    M.send_command(P.join(sel, "\n"))
+  function M.send_object()
+    P.operator(function(_)
+      local lines = P.object_text()
+      local text = P.join(lines, "\n")
+      M.send_command(text)
+    end)
   end
 
-  --- Send word under cursor.
-  function M.send_word() M.send_command(P.extract_word()) end
-  --- Send `W`ORD under cursor.
-  function M.send_WORD() M.send_command(P.extract_WORD()) end
+  function M.send_selected()
+    local lines = P.selected_text()
+    if not lines then return end
+    local text = (P.join(lines, "\n"))
+    M.send_command(text)
+  end
 
   ------------------------------------------------------------------------------
   -- Misc utils.
-
-  --- Remove fixed prefix from string if present.
-  ---@type fun(prefix: string, input: string): string
-  function P.remove_prefix(expected, input)
-    local n = #expected
-    local actual = input:sub(1, n)
-    return (actual == expected) and input:sub(n + 1, #input) or input
-  end
 
   --- Obtain languages under cursor.
   --- https://github.com/nvim-treesitter/nvim-treesitter/discussions/6643#discussioncomment-9892537
@@ -156,5 +150,37 @@ return function(M, P)
     local parser = vim.treesitter.get_parser()
     if not parser then return vim.o.ft end
     return parser:language_for_range({ curline, 0, curline, 0 }):lang()
+  end
+
+  --- The strategy to set local lua functions to the operator option.
+  --- https://github.com/neovim/neovim/issues/18132#issuecomment-1723577603
+  ---@type fun(f: fun(string)) -- See `:h 'opfunc'`.
+  P.set_opfunc = vim.fn[vim.api.nvim_exec2(
+    [[
+    func s:set_opfunc(val)
+      let &opfunc = a:val
+    endfunc
+    echon get(function('s:set_opfunc'), 'name')
+    ]],
+    { output = true }
+  ).output]
+
+  --- Call during `opfunc` callback to obtain the text spanned by user object.
+  ---@type GetLinesSpan
+  function P.object_text()
+    local srow, scol = unpack(vim.api.nvim_buf_get_mark(0, "["))
+    local erow, ecol = unpack(vim.api.nvim_buf_get_mark(0, "]"))
+    srow = srow - 1
+    erow = erow - 1
+    ecol = ecol + 1
+    local text = vim.api.nvim_buf_get_text(0, srow, scol, erow, ecol, {})
+    return text, { srow, scol, erow, ecol }
+  end
+
+  --- Leverage the above to perform operator action immediately on user object.
+  ---@type fun(f: fun(string))
+  function P.operator(f)
+    P.set_opfunc(f)
+    vim.api.nvim_feedkeys("g@", "n", false)
   end
 end
