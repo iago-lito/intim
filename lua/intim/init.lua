@@ -1,120 +1,37 @@
-local M = {} -- Public interface module.
-local P = {} -- Private.
-M.P = P -- Expose internals to ease debugging.
+local B = {} -- (base, internal, root module)
 
----@alias lang string
----@alias Cmd string[]
+B.str = require("intim.strings")
+B.err = require("intim.errors")
+B.setup = require("intim.setup")
+B.session = require("intim.session")
+B.pass = require("intim.pass")
+B.chunk = require("intim.chunk")
+B.ts = require("intim.treesitter")
+B.statement = require("intim.statement")
+B.loop = require("intim.loop")
+B.hotkeys = require("intim.hotkeys")
 
---------------------------------------------------------------------------------
--- Internal mutable state, whose initialization is configurable as "options".
+-- The exposed, configurable "Intim" state.
+local I = require("intim.state")
+I.setup = B.setup.setup
+I.spawn = B.session.spawn
+I.kill = B.session.kill
 
-M.state = {
-  --- Where to store intim's data.
-  data = vim.fs.joinpath(vim.fn.stdpath("data"), "intim"),
-  tmux = {
-    --- The tmux session name to communicate within it.
-    session = "Intim",
-    --- The buffer used to pass/paste text.
-    buffer = "Intim",
-    --- The system command to run tmux with the session name.
-    ---@type fun(session_name: string): Cmd
-    spawn = function(name)
-      error(
-        "Missing tmux.cmd function "
-          .. "to explain how to obtain a tmux session with name "
-          .. vim.inspect(name)
-          .. "."
-      )
-    end,
-    --- The system command to kill the given tmux session.
-    ---@type fun(session_name: string): Cmd
-    kill = function(name) return { "tmux", "kill-session", "-t", name } end,
-  },
-  -- Command to invoke the interpreter right after the tmux session is launched.
-  -- Can also be a function, evaluated on invokation.
-  invoke = {
-    lua = "lua",
-    python = "python",
-    julia = "julia --project=.",
-    r = "R --no-save",
-  },
-  -- Lang-specific settings.
-  lua = {
-    -- Raise if persistent locals are supported within the interpreter.
-    use_locals = false,
-  },
-  --- Functions applied to lines under cursor prior to them being sent by intim.
-  --- Grouped by filetype. Applied in order.
-  line_preprocess = {
-    _before = { M.dedent },
-    python = { M.strip_python_doctest_prompt },
-    julia = { M.strip_julia_doctest_prompt },
-    r = { M.strip_r_doctest_prompt },
-    _after = { M.dedent },
-  },
-  loops = M.loops,
-}
+I.send = {}
+I.send.invoke = B.session.invoke
+I.send.revoke = B.session.revoke
+I.send.enter = B.pass.send_enter
+I.send.interrupt = B.pass.send_interrupt
+I.send.eof = B.pass.send_eof
+I.send.line = B.pass.send_line
+I.send.selected = B.pass.send_selected
+I.send.statement = B.statement.send
 
---------------------------------------------------------------------------------
---- Private, yet reusable in other modules.
+I.loop = {}
+I.loop.infiltrate = B.loop.infiltrate
+I.loop.step = B.loop.step
 
---- Obtain current session name.
----@type fun(): string
-function P.session() return M.state.tmux.session end
+-- Expose internals to ease debugging.
+I.internals = B
 
--- Display error message, usually prior to early returning,
--- to avoid polluting user with a whole stacktrace.
-function P.err(mess) vim.api.nvim_echo({ { mess } }, true, { err = true }) end
-
--- Decorate a function so it gracefully wraps the above.
-function P.guard(...)
-  local status, res = pcall(...)
-  if not status then
-    P.err(res)
-    return
-  end
-  return res
-end
-
---- Collapse array into a single string with the given separator.
----@type fun(input: string[], sep:string):string
-function P.join(input, sep)
-  local res
-  for _, elt in ipairs(input) do
-    res = res and (res .. sep .. elt) or elt
-  end
-  return res
-end
-
---- Separate string into `sep`arated chunks.
----@type fun(input:string, sep:string):string[]
-function P.split(input, sep)
-  local res = {}
-  for chunk, s in input:gmatch("([^" .. sep .. "]*)(" .. sep .. "?)") do
-    table.insert(res, chunk)
-    if s == "" then break end
-  end
-  return res
-end
-
---- Remove fixed prefix from string if present.
----@type fun(prefix: string, input: string): string
-function P.remove_prefix(expected, input)
-  local n = #expected
-  local actual = input:sub(1, n)
-  return (actual == expected) and input:sub(n + 1, #input) or input
-end
-
--- More 'state' may be added in subsequent modules adding functionality.
-for _, mod in ipairs({
-  "setup",
-  "pass",
-  "chunk",
-  "statement",
-  "loop",
-  "hotkeys",
-}) do
-  require("intim." .. mod)(M, P)
-end
-
-return M
+return I

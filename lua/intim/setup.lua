@@ -1,186 +1,101 @@
---- Setting up options and starting/killing intim.
+--- Setting up options.
 
-return function(M, P)
-  ------------------------------------------------------------------------------
-  --- Public.
+local P = {}
+local M = {}
+local I = require("intim.state")
 
-  --- Merge user parameters into state starting point.
-  function M.setup(o)
-    M.state = P.merge_tables(M.state, o, function(key, default, user)
-      if default == nil then
-        error("Unexpected option: " .. vim.inspect(key))
-      end
-      local value = user or default
-      if key == "data" then P.validate_or_create_dir("data", value) end
-      return value
-    end)
+--- Merge user parameters into state starting point.
+function M.setup(o)
+  P.merge_into(I, o, function(key, default, user)
+    if default == nil then error("Unexpected option: " .. vim.inspect(key)) end
+    local value = user == nil and default or user
+    if key == "data" then P.validate_or_create_dir("data", value) end
+    return value
+  end)
+end
+
+------------------------------------------------------------------------------
+--- Private.
+
+---@type fun(name: string, path: string)
+function P.validate_or_create_dir(name, path)
+  vim.validate(name, path, "string")
+  if vim.fn.isdirectory(path) > 0 then return end
+  if vim.uv.fs_stat(path) then
+    error("Not a folder for " .. name .. ": " .. path)
   end
-
-  --- Start tmux session.
-  function M.spawn()
-    local sess = P.session()
-    if P.is_session_open() then
-      P.err("Tmux session " .. vim.inspect(sess) .. " already open.")
-      return
-    end
-    -- Request tmux session.
-    local spawn = M.state.tmux["spawn"](sess)
-    local p = vim.system(spawn)
-    -- Wait until it's ready.
-    local wait = 500 -- ms.
-    local max = 5000 -- ms.
-    local acc = 0
-    while not P.is_session_open() do
-      vim.wait(wait)
-      acc = acc + wait
-      if acc >= max then
-        P.err(
-          "Could not spawn tmux session "
-            .. vim.inspect(sess)
-            .. " before "
-            .. max
-            .. "ms were elapsed?"
-        )
-        local r = p:wait()
-        P.err(
-          "retcode: "
-            .. r.code
-            .. "\nstdout: "
-            .. r.stdout
-            .. "\nstderr: "
-            .. r.stderr
-        )
-        return
-      end
-    end
-    M.invoke()
+  local parent = vim.fs.dirname(path)
+  if vim.fn.isdirectory(parent) == 0 then
+    error("Not a valid path to create directory within: " .. parent)
   end
+  vim.fn.mkdir(path)
+end
 
-  --- Spawn interpreter.
-  ---@type fun()
-  function M.invoke()
-    local lang = P.get_current_lang()
-    if not lang then
-      P.err("No lang set to pick interpreter?")
-      return
-    end
-    local invoke = M.state.invoke[lang]
-    invoke = type(invoke) == "function" and invoke() or invoke
-    if not invoke then
-      P.err(
-        "No interpreter invocation command set for lang "
-          .. vim.inspect(lang)
-          .. "?"
-      )
-      return
-    end
-    M.send_command(invoke)
+--- Recursively merge tables.
+--- @param lhs table Receiving value (mutated).
+--- @param rhs table Giving value (collected).
+--- @param merge fun(path: string, lval, rval):any Fuse non-table vals.
+--- @param path string? Path of table keys down the tree, useful for reporting.
+function P.merge_into(lhs, rhs, merge, path)
+  -- Update lhs keys from rhs ones.
+  for k, l in pairs(lhs) do
+    local p = path and path .. "." .. k or k
+    local r = rhs[k]
+    local m = P.recursive_merge(k, l, r, merge, p)
+    lhs[k] = m
   end
-
-  --- Exit interpreter.
-  function M.revoke() M.send_eof() end
-
-  --- Restart interpreter.
-  function M.reinvoke()
-    M.revoke()
-    M.invoke()
-  end
-
-  --- Terminate tmux session.
-  function M.kill()
-    local kill = M.state.tmux["kill"](P.session())
-    vim.system(kill)
-  end
-
-  --- Restart intim.
-  function M.respawn()
-    M.kill()
-    M.spawn()
-  end
-
-  ------------------------------------------------------------------------------
-  --- Private.
-
-  ---@type fun(name: string, path: string)
-  function P.validate_or_create_dir(name, path)
-    vim.validate(name, path, "string")
-    if vim.fn.isdirectory(path) > 0 then return end
-    if vim.uv.fs_stat(path) then
-      error("Not a folder for " .. name .. ": " .. path)
-    end
-    local parent = vim.fs.dirname(path)
-    if vim.fn.isdirectory(parent) == 0 then
-      error("Not a valid path to create directory within: " .. parent)
-    end
-    vim.fn.mkdir(path)
-  end
-
-  --- Recursively merge 'dict' tables using the given function.
-  --- The function receives the path to values to be fused
-  --- along with corresponding left and right values.
-  function P.merge_tables(lhs, rhs, merge, path)
-    local res = {}
-    -- Fill once from the left, checking for unexpected right values,
-    for k, l in pairs(lhs) do
-      local p = path and path .. "." .. k or k
-      local r = rhs[k]
-      local v = P.recursive_merge(k, l, r, merge, p)
-      res[k] = v
-    end
-    -- Then once from the right, skipping keys already there,
-    -- and checking for unexpected left values.
-    for k, r in pairs(rhs) do
-      local p = path and path .. "." .. k or k
-      local l = lhs[k]
-      if l == nil then res[k] = P.recursive_merge(k, nil, r, merge, p) end
-    end
-    return res
-  end
-
-  function P.recursive_merge(key, lhs, rhs, merge, path)
-    path = path or key
-    local ld = P.is_dict(lhs)
-    local rd = P.is_dict(rhs)
-    if ld ~= rd then
-      if rhs == nil then
-        rhs = {}
-      elseif lhs == nil then
-        lhs = {}
-      else
-        error(
-          "At key "
-            .. vim.inspect(path)
-            .. ": received dict on the "
-            .. (ld and "left" or "right")
-            .. " but on the "
-            .. (rd and "left" or "right")
-            .. " received: "
-            .. vim.inspect(ld and rhs or lhs)
-        )
-      end
-    end
-    if ld then
-      return P.merge_tables(lhs, rhs, merge, path)
-    else
-      return merge(path, lhs, rhs)
-    end
-  end
-
-  --- Naive attempt to characterize a `:help lua-dict` from other values.
-  function P.is_dict(table)
-    local t = type(table)
-    if t ~= "table" then return false end
-    local has_indices = false
-    for _, _ in ipairs(table) do
-      has_indices = true
-      break
-    end
-    return not has_indices
-  end
-
-  ---@type fun():boolean
-  function P.is_session_open()
-    return vim.system({ "tmux", "has-session", "-t", P.session() }):wait().code
-      == 0
+  -- Append rhs-only values, skipping over the ones already there.
+  for k, r in pairs(rhs) do
+    local p = path and path .. "." .. k or k
+    local l = lhs[k]
+    if l == nil then lhs[k] = P.recursive_merge(k, nil, r, merge, p) end
   end
 end
+
+--- Recursively merge any two values, returning the mutated lhs if a table.
+--- @param key string
+--- @param lhs any
+--- @param rhs any
+--- @param merge fun(path: string, lval, rval):any
+--- @param path string
+--- @return any
+function P.recursive_merge(key, lhs, rhs, merge, path)
+  path = path or key
+  if lhs == nil or rhs == nil then return merge(path, lhs, rhs) end
+  local ld = P.is_dict(lhs)
+  local rd = P.is_dict(rhs)
+  if ld ~= rd then
+    -- stylua: ignore
+    error(
+      "At key " .. vim.inspect(path)
+        .. ": received dict on the " .. (ld and "left" or "right")
+        .. " but on the " .. (rd and "left" or "right")
+        .. " received: "
+        .. (ld
+          and (rhs == nil and "nil" or vim.inspect(rhs))
+          or (lhs == nil and "nil" or vim.inspect(lhs))
+        ) .. "."
+    )
+  end
+  if ld then
+    P.merge_into(lhs, rhs, merge, path)
+    return lhs
+  else
+    return merge(path, lhs, rhs)
+  end
+end
+
+--- Naive attempt to characterize a `:help lua-dict` from other values.
+---@type fun(any):boolean
+function P.is_dict(table)
+  local t = type(table)
+  if t ~= "table" then return false end
+  local has_indices = false
+  for _, _ in ipairs(table) do
+    has_indices = true
+    break
+  end
+  return not has_indices
+end
+
+return M
