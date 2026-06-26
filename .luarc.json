@@ -1,0 +1,10 @@
+{
+  "runtime.version": "LuaJIT",
+  "workspace": {
+    "library": ["/usr/share/nvim/runtime"]
+  },
+  "diagnostics.groupFileStatus": {
+    "strict": "Opened",
+    "strong": "Opened"
+  }
+}

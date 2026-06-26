@@ -197,8 +197,8 @@ I.query.julia = vim.treesitter.query.parse(
 
 ---@type Parse<Julia>
 function I.parse.julia(capt)
-  local vars = {}
-  local iters = {}
+  local vars = {} ---@type string[]
+  local iters = {} ---@type string[]
   local name = "for "
   local n ---@type TSNode
   while true do
@@ -323,7 +323,7 @@ end
 ---@type fun(lang: lang, node: TSNode): Loop
 local function do_parse(lang, node)
   local loops = I.loops[lang]
-  local from_captures = I.parse[lang]
+  local from_captures = I.parse[lang] ---@type Parse<any>
   local q = I.query[lang]
   local capts = q:iter_captures(node, 0)
   local function get_node()

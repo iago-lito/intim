@@ -121,26 +121,16 @@ function HK.object(hk, verb)
 end
 
 -- Combine.
----@type [string, HotkeyVerb][]
-local verbs = {
-  { "send", HK.send },
-  { "transform", HK.transform },
-}
----@type [string, HotkeySource][]
-local sources = {
-  { "object", HK.object },
-  { "selected", HK.selected },
-}
-for _, i in ipairs(verbs) do
-  local verb, verb_fn = unpack(i)
-  for _, j in ipairs(sources) do
-    local source, source_fn = unpack(j)
-    local fn_name = verb .. "_" .. source
-    HK[fn_name] = err.guard(function(key)
-      local hk = HK.hotkey(key)
-      source_fn(hk, verb_fn)
-    end)
-  end
+---@param source HotkeySource
+---@param verb HotkeyVerb
+---@return fun(hk: Hotkey)
+local function combine(verb, source)
+  return function(hk) source(hk, verb) end
 end
+
+HK.send_object = combine(HK.send, HK.object)
+HK.send_selected = combine(HK.send, HK.selected)
+HK.transform_object = combine(HK.transform, HK.object)
+HK.transform_selected = combine(HK.transform, HK.selected)
 
 return HK

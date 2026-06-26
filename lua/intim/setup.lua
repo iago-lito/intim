@@ -5,6 +5,8 @@ local M = {}
 local str = require("intim.strings")
 local I = require("intim.state")
 
+--- @alias Options table<string, any>
+
 --- Merge user parameters into state starting point.
 function M.setup(o)
   P.merge_into(I, o, function(key, default, user)
@@ -37,8 +39,8 @@ function P.validate_or_create_dir(name, path)
 end
 
 --- Recursively merge tables.
---- @param lhs table Receiving value (mutated).
---- @param rhs table Giving value (collected).
+--- @param lhs Options Receiving value (mutated).
+--- @param rhs Options Giving value (collected).
 --- @param merge fun(path: string, lval, rval):any Fuse non-table vals.
 --- @param path string? Path of table keys down the tree, useful for reporting.
 function P.merge_into(lhs, rhs, merge, path)
@@ -95,6 +97,7 @@ end
 function P.is_dict(table)
   local t = type(table)
   if t ~= "table" then return false end
+  ---@cast table table<any, any>
   local has_indices = false
   for _, _ in ipairs(table) do
     has_indices = true

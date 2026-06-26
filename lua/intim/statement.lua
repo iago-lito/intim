@@ -31,7 +31,7 @@ local function do_find(lang, node)
   local kinds = find[lang].kinds or {}
   local fields = find[lang].fields or {}
   while true do
-    local parent = node:parent()
+    local parent = node:parent() ---@type TSNode? (not sure why inference fails)
     if not parent then return end
     local type = parent:type()
     for _, body in ipairs(kinds) do
@@ -51,7 +51,7 @@ end
 ---@type fun(lang: lang, statement: TSNode): TSNode?
 local function do_skip(lang, node)
   while true do
-    local sib = node:next_sibling()
+    local sib = node:next_sibling() ---@type TSNode? (inference failing?)
     if sib then
       if sib:type() ~= "comment" then return sib end
       node = sib
@@ -97,7 +97,7 @@ function S.send()
   local prefix = vim.api.nvim_buf_get_text(0, srow, 0, srow, scol, {})[1]
   local _, _, indent = prefix:find("^(%s*)")
   local lines = vim.api.nvim_buf_get_text(0, srow, scol, erow, ecol, {})
-  local text
+  local text ---@type string?
   for _, line in ipairs(lines) do
     text = (text and text .. "\n" or "") .. str.remove_prefix(indent, line)
   end

@@ -60,7 +60,7 @@ function C.send()
   local fn = C.get_fn()
   if not fn then return end
   local chunkfile = C.file()
-  local sel = C.selected_text()
+  local sel = pass.selected_text()
   C.write(sel)
   local cmd = fn(chunkfile)
   pass.send_command(cmd)

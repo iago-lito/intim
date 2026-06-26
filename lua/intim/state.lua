@@ -4,6 +4,8 @@
 
 local str = require("intim.strings")
 
+---@alias lang string
+
 return {
   --- Where to store intim's data.
   data = vim.fs.joinpath(vim.fn.stdpath("data"), "intim"),
@@ -39,8 +41,20 @@ return {
     -- Raise if persistent locals are supported within the interpreter.
     use_locals = false,
   },
+
+  --- Transformations to be applied prior to sending lines to intim.
+  --- @alias LinePreProcess fun(input:string):string
+  --- @type table<string, LinePreProcess?>
   line_preprocess = {
     _before = str.dedent,
     _after = str.dedent,
-  }
+  },
+
+  --- Determine current session name.
+  ---@type fun(): string
+  session = nil,
+
+  --- Determine current intim language.
+  ---@type fun():lang
+  current_lang = nil,
 }
