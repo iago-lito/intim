@@ -2,12 +2,17 @@
 
 local P = {}
 local M = {}
+local str = require("intim.strings")
 local I = require("intim.state")
 
 --- Merge user parameters into state starting point.
 function M.setup(o)
   P.merge_into(I, o, function(key, default, user)
-    if default == nil then error("Unexpected option: " .. vim.inspect(key)) end
+    if default == nil then
+      if not str.startswith(key, "hotkeys.") then
+        error("Unexpected option: " .. vim.inspect(key))
+      end
+    end
     local value = user == nil and default or user
     if key == "data" then P.validate_or_create_dir("data", value) end
     return value

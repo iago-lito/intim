@@ -32,5 +32,7 @@ end
 -- https://stackoverflow.com/a/72921992/3719101
 --- @type fun(input: string, suffix: string):boolean
 function str.endswith(input, suffix) return input:sub(-#suffix) == suffix end
+--- @type fun(input: string, prefix: string):boolean
+function str.startswith(input, prefix) return input:sub(1, #prefix) == prefix end
 
 return str

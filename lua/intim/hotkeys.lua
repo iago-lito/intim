@@ -92,54 +92,53 @@ end
 
 --- Transform and send result.
 ---@type HotkeyVerb
-function HK.hotkey_send(hk, get_lines)
+function HK.send(hk, get_lines)
   local lines = get_lines()
-  local input = HK.join(lines, "\n")
-  local res = hk(input)
-  local cmd = HK.split(res, "\n")
+  local input = str.join(lines, "\n")
+  local cmd = hk(input)
   pass.send_command(cmd)
 end
 
 --- Transform in-place within current buffer.
 ---@type HotkeyVerb
-function HK.hotkey_transform(hk, get_lines)
+function HK.transform(hk, get_lines)
   local lines, span = get_lines()
   local srow, scol, erow, ecol = unpack(span)
-  local input = HK.join(lines, "\n")
+  local input = str.join(lines, "\n")
   local res = hk(input)
-  local rep = HK.split(res, "\n")
+  local rep = str.split(res, "\n")
   vim.api.nvim_buf_set_text(0, srow, scol, erow, ecol, rep)
 end
 
 --- Input is the selected text.
 ---@type HotkeySource
-function HK.hotkey_selected(hk, verb) verb(hk, HK.selected_text) end
+function HK.selected(hk, verb) verb(hk, pass.selected_text) end
 
 --- Input is the user object.
 ---@type HotkeySource
-function HK.hotkey_object(hk, verb)
-  HK.operator(function(_) verb(hk, HK.object_text) end)
+function HK.object(hk, verb)
+  pass.operator(function(_) verb(hk, pass.object_text) end)
 end
 
 -- Combine.
 ---@type [string, HotkeyVerb][]
 local verbs = {
-  { "send", HK.hotkey_send },
-  { "transform", HK.hotkey_transform },
+  { "send", HK.send },
+  { "transform", HK.transform },
 }
 ---@type [string, HotkeySource][]
 local sources = {
-  { "object", HK.hotkey_object },
-  { "selected", HK.hotkey_selected },
+  { "object", HK.object },
+  { "selected", HK.selected },
 }
 for _, i in ipairs(verbs) do
-  local vname, verb = unpack(i)
+  local verb, verb_fn = unpack(i)
   for _, j in ipairs(sources) do
-    local sname, source = unpack(j)
-    local fn_name = str.join({ "hotkey", vname, sname }, "_")
+    local source, source_fn = unpack(j)
+    local fn_name = verb .. "_" .. source
     HK[fn_name] = err.guard(function(key)
       local hk = HK.hotkey(key)
-      source(hk, verb)
+      source_fn(hk, verb_fn)
     end)
   end
 end

@@ -26,6 +26,10 @@ I.send.eof = B.pass.send_eof
 I.send.line = B.pass.send_line
 I.send.selected = B.pass.send_selected
 I.send.statement = B.statement.send
+I.send.hotkey = {
+  object = B.hotkeys.send_object,
+  selected = B.hotkeys.send_selected,
+}
 
 I.loop = {}
 I.loop.infiltrate = B.loop.infiltrate
