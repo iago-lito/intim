@@ -17,23 +17,26 @@ I.setup = B.setup.setup
 I.spawn = B.session.spawn
 I.kill = B.session.kill
 
-I.send = {}
-I.send.invoke = B.session.invoke
-I.send.revoke = B.session.revoke
-I.send.enter = B.pass.send_enter
-I.send.interrupt = B.pass.send_interrupt
-I.send.eof = B.pass.send_eof
-I.send.line = B.pass.send_line
-I.send.selected = B.pass.send_selected
-I.send.statement = B.statement.send
-I.send.hotkey = {
-  object = B.hotkeys.send_object,
-  selected = B.hotkeys.send_selected,
+I.send = {
+  invoke = B.session.invoke,
+  revoke = B.session.revoke,
+  enter = B.pass.send_enter,
+  interrupt = B.pass.send_interrupt,
+  eof = B.pass.send_eof,
+  line = B.pass.send_line,
+  selected = B.pass.send_selected,
+  statement = B.statement.send,
+  hotkey = {
+    object = B.hotkeys.send_object,
+    selected = B.hotkeys.send_selected,
+  },
 }
 
-I.loop = {}
-I.loop.infiltrate = B.loop.infiltrate
-I.loop.step = B.loop.step
+I.loop = {
+  infiltrate = B.loop.infiltrate,
+  step = B.loop.step,
+}
+I.hotkeys = B.hotkeys
 
 -- Expose internals to ease debugging.
 I.internals = B

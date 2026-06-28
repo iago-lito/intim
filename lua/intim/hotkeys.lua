@@ -2,49 +2,44 @@
 --- Constant hotkey produce only their value regardless of input.
 
 local HK = {}
-local I = require("intim.state")
 local str = require("intim.strings")
-local err = require("intim.errors")
 local pass = require("intim.pass")
 
 --- A hotkey combines the key value and user-collected input
 --- into an expression that is either passed to intim or inserted in source.
 ---@alias Hotkey fun(input: string):string
----@alias Keys table<string, Hotkey>
----@type table<lang, Keys>
-I.hotkeys = {}
 
 ------------------------------------------------------------------------------
 --- Convenience hotkey creation for user.
 
 --- Constant hotkeys just send the same text regardless of input.
 ---@type fun(constant: string):Hotkey
-I.hotkeys.constant = function(c)
+HK.constant = function(c)
   return function(_) return c end
 end
 
 --- Prefix hotkeys send the input with a given prefix.
 ---@type fun(prefix: string):Hotkey
-I.hotkeys.prefix = function(p)
+HK.prefix = function(p)
   return function(i) return p .. i end
 end
 
 --- Suffix hotkeys send the input with a given suffix.
 ---@type fun(suffix: string):Hotkey
-I.hotkeys.suffix = function(s)
+HK.suffix = function(s)
   return function(i) return i .. s end
 end
 
 --- Call hotkeys send input under the form `head(input)`, `head[input]` *etc.*
 ---@type fun(head: string, wrap:[string,string]):Hotkey
-I.hotkeys.call = function(head, wrap)
+HK.call = function(head, wrap)
   local open, close = unpack(wrap or { "(", ")" })
   return function(i) return head .. open .. i .. close end
 end
 
 --- LaTeX hotkeys send input under the form `\name{input}`.
 ---@type fun(name: string):Hotkey
-I.hotkeys.latex_macro = function(name)
+HK.latex_macro = function(name)
   return function(i) return "\\" .. name .. "{" .. i .. "}" end
 end
 
@@ -53,7 +48,7 @@ end
 --- where (configurable) placeholders `%I` will be replaced by input
 --- and `%K` replaced by the key payload.
 ---@type fun(value: string, key_placeholder: string?, input_placeholder: string?):Hotkey
-I.hotkeys.generic = function(value, kp, ip)
+HK.generic = function(value, kp, ip)
   local key_placeholder = kp or "%K"
   local input_placeholder = ip or "%I"
   return function(input)
@@ -62,27 +57,6 @@ I.hotkeys.generic = function(value, kp, ip)
 end
 
 ------------------------------------------------------------------------------
-
--- Query hotkey within current lang.
----@type fun(key: string):Hotkey
-function HK.hotkey(key)
-  local lang = I.current_lang()
-  local hks = I.hotkeys[lang]
-  if not hks then
-    error("No Intim hotkey recorded for lang " .. vim.inspect(lang) .. ".")
-  end
-  local hk = hks[key]
-  if not hk then
-    error(
-      "No Intim hotkey recorded as "
-        .. vim.inspect(key)
-        .. " for lang "
-        .. vim.inspect(lang)
-        .. "."
-    )
-  end
-  return hk
-end
 
 --- Given a mean to retrieve lines, execute the hotkey action.
 ---@alias HotkeyVerb fun(hk: Hotkey, get_lines: GetLinesSpan)
