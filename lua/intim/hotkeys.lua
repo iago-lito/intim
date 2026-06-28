@@ -94,17 +94,13 @@ function HK.object(hk, verb)
   pass.operator(function(_) verb(hk, pass.object_text) end)
 end
 
--- Combine.
----@param source HotkeySource
+-- Combine into a mapping.
 ---@param verb HotkeyVerb
----@return fun(hk: Hotkey)
-local function combine(verb, source)
-  return function(hk) source(hk, verb) end
+---@param source HotkeySource
+---@param hk Hotkey
+---@return fun() -- Ready to be mapped.
+function HK.action(verb, source, hk)
+  return function() source(hk, verb) end
 end
-
-HK.send_object = combine(HK.send, HK.object)
-HK.send_selected = combine(HK.send, HK.selected)
-HK.transform_object = combine(HK.transform, HK.object)
-HK.transform_selected = combine(HK.transform, HK.selected)
 
 return HK

@@ -116,7 +116,7 @@ function P.selected_text()
       )
     end
   end
-  return lines, { srow, scol, erow, ecol }
+  return lines, { srow - 1, scol - 1, erow - 1, ecol }
 end
 
 ------------------------------------------------------------------------------
@@ -169,11 +169,9 @@ P.set_opfunc = vim.fn[vim.api.nvim_exec2(
 function P.object_text()
   local srow, scol = unpack(vim.api.nvim_buf_get_mark(0, "["))
   local erow, ecol = unpack(vim.api.nvim_buf_get_mark(0, "]"))
-  srow = srow - 1
-  erow = erow - 1
-  ecol = ecol + 1
-  local text = vim.api.nvim_buf_get_text(0, srow, scol, erow, ecol, {})
-  return text, { srow, scol, erow, ecol }
+  local text =
+    vim.api.nvim_buf_get_text(0, srow - 1, scol, erow - 1, ecol + 1, {})
+  return text, { srow - 1, scol, erow - 1, ecol + 1}
 end
 
 --- Leverage the above to perform operator action immediately on user object.

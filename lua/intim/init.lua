@@ -26,10 +26,6 @@ I.send = {
   line = B.pass.send_line,
   selected = B.pass.send_selected,
   statement = B.statement.send,
-  hotkey = {
-    object = B.hotkeys.send_object,
-    selected = B.hotkeys.send_selected,
-  },
 }
 
 I.loop = {
