@@ -86,7 +86,11 @@ end
 
 --- Input is the selected text.
 ---@type HotkeySource
-function HK.selected(hk, verb) verb(hk, pass.selected_text) end
+function HK.selected(hk, verb)
+  verb(hk, pass.selected_text)
+  -- Then exit visual mode and navigate to the start of result.
+  vim.cmd.normal({ vim.keycode("<esc>`<"), bang = true })
+end
 
 --- Input is the user object.
 ---@type HotkeySource
