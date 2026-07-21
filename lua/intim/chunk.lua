@@ -5,6 +5,7 @@ local C = {}
 local err = require("intim.errors").err
 local pass = require("intim.pass")
 local I = require("intim.state")
+local str = require("intim.strings")
 
 --- Construct sourcing command for the given language.
 ---@alias Chunk fun(filepath: string): string
@@ -28,8 +29,10 @@ function I.chunk.r(p) return "source(" .. lsr(p) .. ")" end
 --------------------------------------------------------------------------------
 --- Impl.
 
+---@return string
 function C.file() return I.data .. "/chunk" end
 
+---@type fun(input: string)
 function C.write(input)
   local name = C.file()
   local file = io.open(name, "w")
@@ -61,7 +64,7 @@ function C.send()
   if not fn then return end
   local chunkfile = C.file()
   local sel = pass.selected_text()
-  C.write(sel)
+  C.write(str.join(sel, '\n'))
   local cmd = fn(chunkfile)
   pass.send_command(cmd)
 end

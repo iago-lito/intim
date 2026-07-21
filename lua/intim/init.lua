@@ -26,6 +26,7 @@ I.send = {
   line = B.pass.send_line,
   selected = B.pass.send_selected,
   statement = B.statement.send,
+  chunk = B.chunk.send,
 }
 
 I.loop = {
