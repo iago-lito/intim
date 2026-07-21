@@ -107,4 +107,45 @@ function HK.action(verb, source, hk)
   return function() source(hk, verb) end
 end
 
+--------------------------------------------------------------------------------
+-- Assuming hotkeys will be handled the same, convenience bulk mapping.
+
+--- Prefix not provided result in no mapping created.
+---@class HotkeyPrefixes
+---  @field send string?
+---  @field transform string?
+---  @field send_word string?
+---  @field transform_word string?
+
+--- Define mappings for the actions given as prefixes.
+---@param prefixes HotkeyPrefixes
+---@param hotkeys table<string, Hotkey>
+function HK.define(prefixes, hotkeys)
+  local nmap = function(m, f, desc) vim.keymap.set("n", m, f, { desc = desc }) end
+  local vmap = function(m, f, desc) vim.keymap.set("v", m, f, { desc = desc }) end
+
+  ---@type table<string, [HotkeyVerb, string]>
+  local actions = {
+    send = { HK.send, "send" },
+    transform = { HK.transform, "transform" },
+    -- HERE: the following two verbs do not exist yet: create them.
+    -- send_word = {HK.send_word, "send" },
+    -- transform_word = {HK.transform_word, "send" },
+  }
+
+  ---@cast prefixes table<string, string>
+  for a, prefix in pairs(prefixes) do
+    local verb, desc = unpack(actions[a])
+    for key, hk in pairs(hotkeys) do
+      local map = prefix .. key
+      nmap(map, HK.action(verb, HK.object, hk), "intim " .. desc .. " object")
+      vmap(
+        map,
+        HK.action(verb, HK.selected, hk),
+        "intim " .. desc .. " selected"
+      )
+    end
+  end
+end
+
 return HK
