@@ -92,10 +92,26 @@ function HK.selected(hk, verb)
   vim.cmd.normal({ vim.keycode("<esc>`<"), bang = true })
 end
 
---- Input is the user object.
+--- Input is the user next textobject.
 ---@type HotkeySource
 function HK.object(hk, verb)
   pass.operator(function(_) verb(hk, pass.object_text) end)
+end
+
+-- Input is the word under cursor.
+---@type HotkeySource
+function HK.word(hk, verb)
+  HK.object(hk, verb)
+  vim.api.nvim_feedkeys("iw", "n", false) -- Don't remap
+end
+
+--- Construct a source for an arbitrary given custom object.
+---@type fun(object: string):HotkeySource
+function HK.thisobject(object)
+  return function(hk, verb)
+    HK.object(hk, verb)
+    vim.api.nvim_feedkeys(object, "m", true) -- Remap because input by user.
+  end
 end
 
 -- Combine into a mapping.
@@ -110,40 +126,27 @@ end
 --------------------------------------------------------------------------------
 -- Assuming hotkeys will be handled the same, convenience bulk mapping.
 
---- Prefix not provided result in no mapping created.
----@class HotkeyPrefixes
----  @field send string?
----  @field transform string?
----  @field send_word string?
----  @field transform_word string?
-
 --- Define mappings for the actions given as prefixes.
----@param prefixes HotkeyPrefixes
+---@param prefixes [string, HotkeyVerb, HotkeySource][]
 ---@param hotkeys table<string, Hotkey>
-function HK.define(prefixes, hotkeys)
-  local nmap = function(m, f, desc) vim.keymap.set("n", m, f, { desc = desc }) end
-  local vmap = function(m, f, desc) vim.keymap.set("v", m, f, { desc = desc }) end
-
-  ---@type table<string, [HotkeyVerb, string]>
-  local actions = {
-    send = { HK.send, "send" },
-    transform = { HK.transform, "transform" },
-    -- HERE: the following two verbs do not exist yet: create them.
-    -- send_word = {HK.send_word, "send" },
-    -- transform_word = {HK.transform_word, "send" },
-  }
-
-  ---@cast prefixes table<string, string>
-  for a, prefix in pairs(prefixes) do
-    local verb, desc = unpack(actions[a])
+---@param loc boolean? -- Lower to get global mappings instead.
+function HK.prefixed(prefixes, hotkeys, loc)
+  if loc == nil then loc = true end
+  for _, p in ipairs(prefixes) do
+    local prefix, verb, source = unpack(p)
     for key, hk in pairs(hotkeys) do
       local map = prefix .. key
-      nmap(map, HK.action(verb, HK.object, hk), "intim " .. desc .. " object")
-      vmap(
-        map,
-        HK.action(verb, HK.selected, hk),
-        "intim " .. desc .. " selected"
-      )
+      local mode = source == HK.selected and "v" or "n"
+      local opt = {}
+      -- Best-effort to describe the mapping.
+      opt.desc = "intim: "
+        .. (verb == HK.send and "send " or "transform ")
+        .. (
+          source == HK.selected and "selection"
+          or (source == HK.word and "word" or "object")
+        )
+      if loc then opt.buf = 0 end
+      vim.keymap.set(mode, map, HK.action(verb, source, hk), opt)
     end
   end
 end

@@ -28,9 +28,9 @@ function P.paste(input, buffer)
 end
 
 --- Send special tmux codes.
----@type fun(code: string):(fun())
-local function code(code)
-  return function() P.send(code) end
+---@type fun(c: string):(fun())
+local function code(c)
+  return function() P.send(c) end
 end
 P.send_enter = code("ENTER")
 P.send_space = code("SPACE")
@@ -175,7 +175,7 @@ function P.object_text()
 end
 
 --- Leverage the above to perform operator action immediately on user object.
----@type fun(f: fun(string))
+---@type fun(f: fun(_: string))
 function P.operator(f)
   P.set_opfunc(f)
   vim.api.nvim_feedkeys("g@", "n", false)
