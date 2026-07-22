@@ -8,6 +8,7 @@ local I = require("intim.state")
 --- @alias Options table<string, any>
 
 --- Merge user parameters into state starting point.
+--- Trigger setup callbacks registered by other modules.
 function M.setup(o)
   P.merge_into(I, o, function(key, default, user)
     if default == nil then
@@ -19,7 +20,17 @@ function M.setup(o)
     if key == "data" then P.validate_or_create_dir("data", value) end
     return value
   end)
+  for _, callback in pairs(M.setup_callbacks) do
+    callback()
+  end
 end
+
+---@type fun()[]
+M.setup_callbacks = {}
+
+--- Record for running when user calls 'setup'.
+---@type fun(callback: fun())
+function M.on_setup(callback) table.insert(M.setup_callbacks, callback) end
 
 ------------------------------------------------------------------------------
 --- Private.

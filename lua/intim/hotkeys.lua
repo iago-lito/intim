@@ -5,6 +5,7 @@ local HK = {}
 local str = require("intim.strings")
 local pass = require("intim.pass")
 local err = require("intim.errors")
+local ts = require("intim.treesitter")
 
 --- A hotkey combines the key value and user-collected input
 --- into an expression that is either passed to intim or inserted in source.
@@ -180,11 +181,12 @@ end
 -- Assuming hotkeys will be handled the same, convenience bulk mapping.
 
 --- Define mappings for the actions given as prefixes.
+---@param lang lang
 ---@param prefixes [string, HKVerb, HKSource][]
 ---@param hotkeys table<string, Hotkey>
----@param loc boolean? -- Lower to get global mappings instead.
-function HK.prefixed(prefixes, hotkeys, loc)
-  if loc == nil then loc = true end
+function HK.prefixed(lang, prefixes, hotkeys)
+  -- Collect all mappings info a cached table to avoid on_lang churn.
+  local collect = {} ---@type [string, string, fun(), table][]
   for _, p in ipairs(prefixes) do
     local prefix, vrb, src = unpack(p)
     verb.check(vrb)
@@ -195,10 +197,22 @@ function HK.prefixed(prefixes, hotkeys, loc)
       local map = prefix .. key
       local mode = src == HK.selected and "v" or "n"
       local opt = { desc = "intim: " .. vrb.name .. " " .. src.name }
-      if loc then opt.buf = 0 end
-      vim.keymap.set(mode, map, function() src.call(hk, vrb) end, opt)
+      local fn = function() src.call(hk, vrb) end
+      table.insert(collect, { mode, map, fn, opt })
     end
   end
+  --- Map/unmap depending on current lang.
+  ts.on_lang(lang, function()
+    for _, m in pairs(collect) do
+      local mode, map, fn, opt = unpack(m)
+      vim.keymap.set(mode, map, fn, opt)
+    end
+  end, function()
+    for _, m in pairs(collect) do
+      local mode, map, _, opt = unpack(m)
+      vim.keymap.del(mode, map, opt)
+    end
+  end)
 end
 
 return HK

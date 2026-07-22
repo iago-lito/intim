@@ -33,7 +33,13 @@ I.loop = {
   infiltrate = B.loop.infiltrate,
   step = B.loop.step,
 }
+
 I.hotkeys = B.hotkeys
+
+-- Extra utils.
+I.current_lang = B.ts.current_lang
+I.on_lang_change = B.ts.on_lang_change
+I.on_lang = B.ts.on_lang
 
 -- Expose internals to ease debugging.
 I.internals = B
