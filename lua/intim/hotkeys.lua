@@ -4,10 +4,23 @@
 local HK = {}
 local str = require("intim.strings")
 local pass = require("intim.pass")
+local err = require("intim.errors")
 
 --- A hotkey combines the key value and user-collected input
 --- into an expression that is either passed to intim or inserted in source.
----@alias Hotkey fun(input: string):string
+---@class Hotkey
+---@field name string
+---@field call HotKeyCall
+---@field proof any
+---@alias HotKeyCall fun(input: string):string
+
+local hotkey, _, check_hotkey = err.stamp("hotkey")
+
+-- Convenience 'make hotkey'.
+---@type fun(name: string, call: HotKeyCall):Hotkey
+local function mkhk(name, call)
+  return { name = name, call = call, proof = hotkey }
+end
 
 ------------------------------------------------------------------------------
 --- Convenience hotkey creation for user.
@@ -15,32 +28,38 @@ local pass = require("intim.pass")
 --- Constant hotkeys just send the same text regardless of input.
 ---@type fun(constant: string):Hotkey
 HK.constant = function(c)
-  return function(_) return c end
+  return mkhk("constant", function(_) return c end)
 end
 
 --- Prefix hotkeys send the input with a given prefix.
 ---@type fun(prefix: string):Hotkey
 HK.prefix = function(p)
-  return function(i) return p .. i end
+  return mkhk("prefix", function(i) return p .. i end)
 end
 
 --- Suffix hotkeys send the input with a given suffix.
 ---@type fun(suffix: string):Hotkey
 HK.suffix = function(s)
-  return function(i) return i .. s end
+  return mkhk("suffix", function(i) return i .. s end)
 end
 
 --- Call hotkeys send input under the form `head(input)`, `head[input]` *etc.*
 ---@type fun(head: string, wrap:[string,string]):Hotkey
 HK.call = function(head, wrap)
   local open, close = unpack(wrap or { "(", ")" })
-  return function(i) return head .. open .. i .. close end
+  return mkhk(
+    "call" .. open .. close,
+    function(i) return head .. open .. i .. close end
+  )
 end
 
 --- LaTeX hotkeys send input under the form `\name{input}`.
 ---@type fun(name: string):Hotkey
 HK.latex_macro = function(name)
-  return function(i) return "\\" .. name .. "{" .. i .. "}" end
+  return mkhk(
+    "latex macro",
+    function(i) return "\\" .. name .. "{" .. i .. "}" end
+  )
 end
 
 --- Generic hotkeys send input under the form given by their value
@@ -51,67 +70,89 @@ end
 HK.generic = function(value, kp, ip)
   local key_placeholder = kp or "%K"
   local input_placeholder = ip or "%I"
-  return function(input)
-    return input:gsub(key_placeholder, value):gsub(input_placeholder, input)
-  end
+  return mkhk("generic " .. vim.inspect(value), function(input)
+    local res =
+      input:gsub(key_placeholder, value):gsub(input_placeholder, input)
+    return res
+  end)
 end
 
 ------------------------------------------------------------------------------
 
 --- Given a mean to retrieve lines, execute the hotkey action.
----@alias HotkeyVerb fun(hk: Hotkey, get_lines: GetLinesSpan)
+---@class HotkeyVerb
+---@field name string
+---@field call HotkeyVerbCall
+---@field proof table
+---@alias HotkeyVerbCall fun(hk: Hotkey, get_lines: GetLinesSpan)
+
+local verb_proof, _, check_verb = err.stamp("verb")
+---@type fun(name: string, call: HotkeyVerbCall):HotkeyVerb
+local function mkverb(name, call)
+  return { name = name, call = call, proof = verb_proof }
+end
 
 --- Given a verb, execute from the correct input source.
----@alias HotkeySource fun(hk: Hotkey, v: HotkeyVerb)
+---@class HotkeySource
+---@field name string
+---@field call HotkeySourceCall
+---@field proof table
+---@alias HotkeySourceCall fun(hk: Hotkey, v: HotkeyVerb)
+
+local source_proof, _, check_source = err.stamp("source")
+---@type fun(name:string, call: HotkeySourceCall):HotkeySource
+local function mksource(name, call)
+  return { name = name, call = call, proof = source_proof }
+end
 
 --- Transform and send result.
 ---@type HotkeyVerb
-function HK.send(hk, get_lines)
+HK.send = mkverb("send", function(hk, get_lines)
   local lines = get_lines()
   local input = str.join(lines, "\n")
-  local cmd = hk(input)
+  local cmd = hk.call(input)
   pass.send_command(cmd)
-end
+end)
 
 --- Transform in-place within current buffer.
 ---@type HotkeyVerb
-function HK.transform(hk, get_lines)
+HK.transform = mkverb("transform", function(hk, get_lines)
   local lines, span = get_lines()
   local srow, scol, erow, ecol = unpack(span)
   local input = str.join(lines, "\n")
-  local res = hk(input)
+  local res = hk.call(input)
   local rep = str.split(res, "\n")
   vim.api.nvim_buf_set_text(0, srow, scol, erow, ecol, rep)
-end
+end)
 
 --- Input is the selected text.
 ---@type HotkeySource
-function HK.selected(hk, verb)
-  verb(hk, pass.selected_text)
+HK.selected = mksource("selected", function(hk, verb)
+  verb.call(hk, pass.selected_text)
   -- Then exit visual mode and navigate to the start of result.
   vim.cmd.normal({ vim.keycode("<esc>`<"), bang = true })
-end
+end)
 
 --- Input is the user next textobject.
 ---@type HotkeySource
-function HK.object(hk, verb)
-  pass.operator(function(_) verb(hk, pass.object_text) end)
-end
+HK.object = mksource("object", function(hk, verb)
+  pass.operator(function(_) verb.call(hk, pass.object_text) end)
+end)
 
 -- Input is the word under cursor.
 ---@type HotkeySource
-function HK.word(hk, verb)
+HK.word = mksource("word", function(hk, verb)
   HK.object(hk, verb)
   vim.api.nvim_feedkeys("iw", "n", false) -- Don't remap
-end
+end)
 
 --- Construct a source for an arbitrary given custom object.
 ---@type fun(object: string):HotkeySource
 function HK.thisobject(object)
-  return function(hk, verb)
+  return mksource("object " .. vim.inspect(object), function(hk, verb)
     HK.object(hk, verb)
     vim.api.nvim_feedkeys(object, "m", true) -- Remap because input by user.
-  end
+  end)
 end
 
 -- Combine into a mapping.
@@ -120,7 +161,10 @@ end
 ---@param hk Hotkey
 ---@return fun() -- Ready to be mapped.
 function HK.action(verb, source, hk)
-  return function() source(hk, verb) end
+  check_verb(verb)
+  check_source(source)
+  check_hotkey(hk)
+  return function() source.call(hk, verb) end
 end
 
 --------------------------------------------------------------------------------
@@ -134,19 +178,16 @@ function HK.prefixed(prefixes, hotkeys, loc)
   if loc == nil then loc = true end
   for _, p in ipairs(prefixes) do
     local prefix, verb, source = unpack(p)
+    check_verb(verb)
+    check_source(source)
     for key, hk in pairs(hotkeys) do
+      err.check_string(key)
+      check_hotkey(hk)
       local map = prefix .. key
       local mode = source == HK.selected and "v" or "n"
-      local opt = {}
-      -- Best-effort to describe the mapping.
-      opt.desc = "intim: "
-        .. (verb == HK.send and "send " or "transform ")
-        .. (
-          source == HK.selected and "selection"
-          or (source == HK.word and "word" or "object")
-        )
+      local opt = { desc = "intim: " .. verb.name .. " " .. source.name }
       if loc then opt.buf = 0 end
-      vim.keymap.set(mode, map, HK.action(verb, source, hk), opt)
+      vim.keymap.set(mode, map, function() source.call(hk, verb) end, opt)
     end
   end
 end
