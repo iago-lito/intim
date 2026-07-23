@@ -131,6 +131,8 @@ HK.transform = verb.make("transform", function(hk, get_lines)
   vim.api.nvim_buf_set_text(0, srow, scol, erow, ecol, rep)
 end)
 
+--- TODO new verb: insert-mode inject?
+
 --------------------------------------------------------------------------------
 --- Expose predefined sources.
 
@@ -180,12 +182,12 @@ end
 --------------------------------------------------------------------------------
 -- Assuming hotkeys will be handled the same, convenience bulk mapping.
 
---- Define mappings for the actions given as prefixes.
+--- Define maps for the actions given as prefixes.
 ---@param lang lang
 ---@param prefixes [string, HKVerb, HKSource][]
 ---@param hotkeys table<string, Hotkey>
 function HK.prefixed(lang, prefixes, hotkeys)
-  -- Collect all mappings info a cached table to avoid on_lang churn.
+  -- Collect all maps info a cached table to avoid on_lang churn.
   local collect = {} ---@type [string, string, fun(), table][]
   for _, p in ipairs(prefixes) do
     local prefix, vrb, src = unpack(p)
@@ -194,27 +196,52 @@ function HK.prefixed(lang, prefixes, hotkeys)
     for key, hk in pairs(hotkeys) do
       err.check_string(key)
       hotkey.check(hk)
-      local map = prefix .. key
+      local lhs = prefix .. key
       local mode = src == HK.selected and "v" or "n"
       local opt = { desc = "intim: " .. vrb.name .. " " .. src.name }
-      local fn = function() src.call(hk, vrb) end
-      table.insert(collect, { mode, map, fn, opt })
+      local rhs = function() src.call(hk, vrb) end
+      table.insert(collect, { mode, lhs, rhs, opt })
     end
   end
   --- Map/unmap depending on current lang.
-  ts.on_buflang(lang, function(bufnr)
-    for _, m in pairs(collect) do
-      local mode, map, fn, opt = unpack(m)
-      opt.buf = bufnr
-      vim.keymap.set(mode, map, fn, opt)
+  -- Skip over maps already defined, but remember the ones set.
+  ---@alias Set table<string, table<string, boolean>> {mode: {lhs}}
+  local newset = function() return { v = {}, n = {} } end ---@type fun():Set
+  local set = newset()
+  local others = newset()
+  ts.on_buflang(
+    lang,
+    -- On enter.
+    function(buf)
+      -- Query maps already set.
+      for _, mode in ipairs({ "v", "n" }) do
+        others[mode] = {}
+        local query = vim.api.nvim_buf_get_keymap(buf, mode)
+        for _, s in ipairs(query) do ---@cast s {lhs: string}
+          others[mode][s.lhs] = true
+        end
+      end
+      -- Record maps actually set.
+      set = newset()
+      for _, m in pairs(collect) do
+        local mode, lhs, rhs, opt = unpack(m)
+        if not others[mode][lhs] then
+          opt.buf = buf
+          vim.keymap.set(mode, lhs, rhs, opt)
+          set[mode][lhs] = true
+        end
+      end
+    end,
+    -- On leave.
+    function(buf)
+      -- Delete only the maps set.
+      for mode, s in pairs(set) do
+        for lhs, _ in pairs(s) do
+          vim.api.nvim_buf_del_keymap(buf, mode, lhs)
+        end
+      end
     end
-  end, function(bufnr)
-    for _, m in pairs(collect) do
-      local mode, map, _, opt = unpack(m)
-      opt.buf = bufnr
-      vim.keymap.del(mode, map, opt)
-    end
-  end)
+  )
 end
 
 return HK
