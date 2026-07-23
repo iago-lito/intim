@@ -14,8 +14,8 @@ local I = require("intim.state")
 ---@type table<lang, StatementFind>
 local find = {}
 
-find.lua = { kinds = { "block", "source_file" } }
 find.lua = { kinds = { "block", "chunk" } }
+find.julia = { kinds = { "block", "source_file" } }
 find.python = { kinds = { "block", "module" } }
 find.r = { kinds = { "program" }, fields = { "body" } }
 
