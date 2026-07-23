@@ -57,8 +57,8 @@ local function do_skip(lang, node)
       node = sib
     else
       -- Climb up, throwing back to caller.
-      -- If no next node is found, just reach to EOF.
-      local function bottom() vim.cmd.normal("G$") end
+      -- If no next node is found, just reach to EOL.
+      local function bottom() vim.cmd.normal("$l") end
       local p = node:parent()
       if not p then
         bottom()
@@ -82,9 +82,10 @@ end
 function S.send()
   local start, lang = ts.current_node_lang()
   if not S.supported(lang) then
-    error(
+    err(
       "No semantic statement implemented for lang " .. vim.inspect(lang) .. "."
     )
+    return
   end
   local node = do_find(lang, start)
   if not node then

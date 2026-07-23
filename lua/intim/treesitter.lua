@@ -25,7 +25,7 @@ function TS.current_node_lang()
     -- Return back to actual content if the cursor lies past EOL.
     vim.cmd.normal("$")
   end
-  local node = vim.treesitter.get_node()
+  local node = vim.treesitter.get_node({ ignore_injections = false })
   if not node then error("No TSNode found at given location.") end
   return node, lang
 end
