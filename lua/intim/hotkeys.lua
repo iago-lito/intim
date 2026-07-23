@@ -202,14 +202,16 @@ function HK.prefixed(lang, prefixes, hotkeys)
     end
   end
   --- Map/unmap depending on current lang.
-  ts.on_lang(lang, function()
+  ts.on_buflang(lang, function(bufnr)
     for _, m in pairs(collect) do
       local mode, map, fn, opt = unpack(m)
+      opt.buf = bufnr
       vim.keymap.set(mode, map, fn, opt)
     end
-  end, function()
+  end, function(bufnr)
     for _, m in pairs(collect) do
       local mode, map, _, opt = unpack(m)
+      opt.buf = bufnr
       vim.keymap.del(mode, map, opt)
     end
   end)
