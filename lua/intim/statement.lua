@@ -58,7 +58,7 @@ local function do_skip(lang, node)
     else
       -- Climb up, throwing back to caller.
       -- If no next node is found, just reach to EOL.
-      local function bottom() vim.cmd.normal("$l") end
+      local function bottom() vim.cmd.normal({ "$l", bang = true }) end
       local p = node:parent()
       if not p then
         bottom()

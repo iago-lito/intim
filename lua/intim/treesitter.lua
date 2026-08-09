@@ -23,7 +23,7 @@ function TS.current_node_lang()
   vim.treesitter.get_parser(0):parse()
   if vim.fn.col("$") <= vim.fn.col(".") then
     -- Return back to actual content if the cursor lies past EOL.
-    vim.cmd.normal("$")
+    vim.cmd.normal({"$", bang = true})
   end
   local node = vim.treesitter.get_node({ ignore_injections = false })
   if not node then error("No TSNode found at given location.") end
