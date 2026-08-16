@@ -7,6 +7,10 @@ local I = require("intim.state")
 ---@alias Cmd string[]
 ---@alias GetLinesSpan fun():string[], [integer, integer, integer, integer]
 
+--- No-op: get no lines.
+---@type GetLinesSpan
+function P.notext() return {}, { 0, -1, 0, -1 } end
+
 --- Send text to the given (or current) tmux session.
 ---@type fun(input: string)
 function P.send(input)

@@ -131,7 +131,31 @@ HK.transform = verb.make("transform", function(hk, get_lines)
   vim.api.nvim_buf_set_text(0, srow, scol, erow, ecol, rep)
 end)
 
---- TODO new verb: insert-mode inject?
+--- Inject within insert-mode.
+local warn = {} ---@type table<string, boolean> (only issue warning once per hk)
+---@type HKVerb
+HK.insert = verb.make("insert", function(hk, _)
+  -- Inject null placeholder,
+  -- assuming it will *likely* not clash with user-defined keys.
+  -- TODO: make it configurable instead so user can guaranteed that themself?
+  local exp = hk.call("\0") -- Expand with null placeholder.
+  local split = str.split(exp, "%z") -- Split on null placeholder.
+  -- Set cursor after first placeholder match.
+  local first = table.remove(split, 1)
+  if #split > 1 and not warn[hk.name] then
+    warn[hk.name] = true
+    err.err(
+      "Several placeholders but only 1 cursor: "
+        .. "maybe use a proper snippet engine instead?"
+    )
+  end
+  -- Do it anyway.
+  local rest = str.join(split, "")
+  vim.api.nvim_put({ first }, "c", false, true)
+  local pos = vim.api.nvim_win_get_cursor(0)
+  vim.api.nvim_put({ rest }, "c", false, true)
+  vim.api.nvim_win_set_cursor(0, pos)
+end)
 
 --------------------------------------------------------------------------------
 --- Expose predefined sources.
@@ -156,6 +180,13 @@ HK.word = source.make("word", function(hk, vrb)
   HK.object.call(hk, vrb)
   vim.api.nvim_feedkeys("iw", "n", false) -- Don't remap
 end)
+
+-- No input: for cursor in insert-mode.
+---@type HKSource
+HK.cursor = source.make(
+  "cursor",
+  function(hk, vrb) vrb.call(hk, pass.notext) end
+)
 
 --- Construct a source for an arbitrary given custom object.
 ---@type fun(object: string):HKSource
@@ -197,7 +228,9 @@ function HK.prefixed(lang, prefixes, hotkeys)
       err.check_string(key)
       hotkey.check(hk)
       local lhs = prefix .. key
-      local mode = src == HK.selected and "v" or "n"
+      local mode = "n"
+      if src == HK.selected then mode = "v" end
+      if src == HK.cursor then mode = "i" end
       local opt = { desc = "intim: " .. vrb.name .. " " .. src.name }
       local rhs = function() src.call(hk, vrb) end
       table.insert(collect, { mode, lhs, rhs, opt })
@@ -206,7 +239,8 @@ function HK.prefixed(lang, prefixes, hotkeys)
   --- Map/unmap depending on current lang.
   -- Skip over maps already defined, but remember the ones set.
   ---@alias Set table<string, table<string, boolean>> {mode: {lhs}}
-  local newset = function() return { v = {}, n = {} } end ---@type fun():Set
+  ---@return Set
+  local newset = function() return { v = {}, n = {}, i = {} } end
   local set = newset()
   local others = newset()
   ts.on_buflang(
