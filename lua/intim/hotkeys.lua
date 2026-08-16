@@ -94,16 +94,14 @@ HK.latex_macro = function(name)
 end
 
 --- Generic hotkeys send input under the form given by their value
---- interpreted as a transformation template like `%I = %I.%K()`
---- where (configurable) placeholders `%I` will be replaced by input
---- and `%K` replaced by the key payload.
----@type fun(value: string, key_placeholder: string?, input_placeholder: string?):Hotkey
-HK.generic = function(value, kp, ip)
-  local key_placeholder = kp or "%K"
-  local input_placeholder = ip or "%I"
+--- interpreted as a transformation template like `\0 = \0.call()`
+--- where null char `\0` will be replaced by input.
+--- TODO: make the placeholder configurable in case user needs to input \0.
+---@type fun(value: string):Hotkey
+HK.generic = function(value)
   return hotkey.make("generic " .. vim.inspect(value), function(input)
-    local res =
-      input:gsub(key_placeholder, value):gsub(input_placeholder, input)
+    local split = str.split(value, "%z")
+    local res = str.join(split, input)
     return res
   end)
 end
