@@ -10,6 +10,7 @@ B.ts = require("intim.treesitter")
 B.statement = require("intim.statement")
 B.loop = require("intim.loop")
 B.hotkeys = require("intim.hotkeys")
+B.colors = require("intim.colors")
 
 -- The exposed, configurable "Intim" state.
 local I = require("intim.state")
