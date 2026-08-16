@@ -164,7 +164,7 @@ function P.object_text()
   local erow, ecol = unpack(vim.api.nvim_buf_get_mark(0, "]"))
   local text =
     vim.api.nvim_buf_get_text(0, srow - 1, scol, erow - 1, ecol + 1, {})
-  return text, { srow - 1, scol, erow - 1, ecol + 1}
+  return text, { srow - 1, scol, erow - 1, ecol + 1 }
 end
 
 --- Leverage the above to perform operator action immediately on user object.

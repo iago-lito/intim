@@ -59,19 +59,19 @@ local source = methods("source")
 --- Constant hotkeys just send the same text regardless of input.
 ---@type fun(constant: string):Hotkey
 HK.constant = function(c)
-  return hotkey.make("constant", function(_) return c end)
+  return hotkey.make("constant " .. vim.inspect(c), function(_) return c end)
 end
 
 --- Prefix hotkeys send the input with a given prefix.
 ---@type fun(prefix: string):Hotkey
 HK.prefix = function(p)
-  return hotkey.make("prefix", function(i) return p .. i end)
+  return hotkey.make("prefix " .. vim.inspect(p), function(i) return p .. i end)
 end
 
 --- Suffix hotkeys send the input with a given suffix.
 ---@type fun(suffix: string):Hotkey
 HK.suffix = function(s)
-  return hotkey.make("suffix", function(i) return i .. s end)
+  return hotkey.make("suffix " .. vim.inspect(s), function(i) return i .. s end)
 end
 
 --- Call hotkeys send input under the form `head(input)`, `head[input]` *etc.*
@@ -79,7 +79,7 @@ end
 HK.call = function(head, wrap)
   local open, close = unpack(wrap or { "(", ")" })
   return hotkey.make(
-    "call" .. open .. close,
+    "call " .. vim.inspect(head .. open .. close),
     function(i) return head .. open .. i .. close end
   )
 end
@@ -229,7 +229,8 @@ function HK.prefixed(lang, prefixes, hotkeys)
       local mode = "n"
       if src == HK.selected then mode = "v" end
       if src == HK.cursor then mode = "i" end
-      local opt = { desc = "intim: " .. vrb.name .. " " .. src.name }
+      local opt =
+        { desc = "intim: " .. vrb.name .. " " .. src.name .. ": " .. hk.name }
       local rhs = function() src.call(hk, vrb) end
       table.insert(collect, { mode, lhs, rhs, opt })
     end
