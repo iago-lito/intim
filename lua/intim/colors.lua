@@ -5,6 +5,8 @@ local I = require("intim.state")
 
 ---@alias Query vim.treesitter.Query
 
+local lang = "lua"
+
 --------------------------------------------------------------------------------
 --- Retrieve (root) identifiers and paths like `a.b.c`.
 
@@ -70,12 +72,12 @@ end
 -- Color using this.. weird trick?
 -- https://github.com/neovim/neovim/issues/41354
 
-local intim_patterns ---@type integer[]
-local toggle_counter = 0
+-- Keep track of the generated pattern for every root identifier or path.
+local intim_patterns ---@type table<string, integer>
+local toggle_counter = 0 -- Always increase even if the patterns did not change.
 
 ---@type fun(_: lang):Query?
-local function get_query()
-  local lang = I.current_lang()
+local function get_query(lang)
   local q = vim.treesitter.query.get(lang, "highlights")
   if not q then
     err.err("No query file found for " .. vim.inspect(lang) .. ".")
@@ -84,7 +86,7 @@ local function get_query()
 end
 
 local function start_coloring()
-  local lang = I.current_lang()
+  -- Obtain the last current pattern index.
   local current = get_query(lang)
   if not current then return end
   local pats = current.info.patterns
@@ -94,8 +96,18 @@ local function start_coloring()
   end
   local q = [[;query
     ;; extends
-    ((identifier) @variable.builtin (#set! priority 190))
-    ("." @lsp.type.function (#set! priority 190))
+    ((identifier) @intim.var.pats
+      (#not-has-parent? @intim.var.pats dot_index_expression)
+      (#match? @intim.var.pats "pats")
+      (#set! priority 200))
+    ((dot_index_expression
+      table: ((identifier) @intim.var.str
+              (#match? @intim.var.str "str")
+              (#set! priority 200))
+      field: ((identifier) @intim.err.str.dedent
+              (#match? @intim.err.str.dedent "dedent")
+              (#set! priority 200))
+    ))
   ]]
   -- https://github.com/neovim/neovim/issues/41352
   q = str.dedent(str.remove_prefix(";query\n", q))
@@ -118,7 +130,6 @@ local function start_coloring()
 end
 
 local function end_coloring()
-  local lang = I.current_lang()
   local q = get_query(lang)
   if not q then return end
   for _, pat in ipairs(intim_patterns) do
@@ -127,6 +138,9 @@ local function end_coloring()
   vim.treesitter.stop(0)
   vim.treesitter.start(0, lang)
 end
+
+vim.cmd.highlight { "link", "@intim.var", "DiffText", bang = true }
+vim.cmd.highlight { "link", "@intim.err", "Error", bang = true }
 
 -- DEBUG.
 vim.keymap.set({ "n" }, "UP", M.collect)
